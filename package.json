@@ -1,0 +1,10 @@
+{
+  "name": "dredge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A rest api builder in typescript",
+  "scripts": {},
+  "keywords": [],
+  "author": "Dhiraj Arun",
+  "license": "MIT"
+}
