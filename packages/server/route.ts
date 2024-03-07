@@ -15,12 +15,6 @@ type DefaultValue<TValue, TFallback> = TValue extends UnsetMarker
   ? TFallback
   : TValue;
 
-class Rest {
-  path: () => {};
-  get: () => {};
-  update: () => {};
-}
-
 interface Procedure {
   slash: (
     name: string,
@@ -101,40 +95,10 @@ class RouteBuilder {
   }
 }
 
-interface Path {
-  name: string;
+interface Path<N extends string, T> {
+  name: N;
   isDynamic: boolean;
-  parser: Parser;
-}
-
-interface Route<
-  Context extends object,
-  IBody,
-  Queries extends object,
-  Paths extends Array<Path>,
-  Slug extends object
-> {
-  _def: {};
-
-  path<T extends string, P extends Parser | undefined>(
-    name: T,
-    parser?: P
-  ): Route<
-    Context,
-    IBody,
-    Queries,
-    [
-      ...Paths,
-      { name: T; isDynamic: P extends Parser ? true : false; parser: Parser }
-    ],
-    P extends Parser ? Slug & Record<T, ParserWithoutInput<P>> : Slug
-  >;
-
-  paths<P extends (string | [string, Parser])[]>(
-    ...ps: P
-  ): Route<Context, IBody, Queries, Slug>;
-
-  // paths<T extends Path[]>(): Route<Context, "added", Queries, [], P>;
+  parser: T;
 }
 
 type RouteBuilderDef = {
@@ -151,24 +115,61 @@ type RouteBuilderDef = {
   resolver?: ProcedureBuilderResolver;
 };
 
-function createNewBuilder(
-  def1: AnyProcedureBuilderDef,
-  def2: Partial<AnyProcedureBuilderDef>
-): AnyProcedureBuilder {
-  const { middlewares = [], inputs, meta, ...rest } = def2;
+type StaticPath<N> = {
+  _name: N;
+  _isDynamic: false;
+};
+type DynamicPath<N, T> = {
+  _name: N;
+  _isDynamic: true;
+  _value: T;
+};
 
-  // TODO: maybe have a fn here to warn about calls
-  return createBuilder({
-    ...mergeWithoutOverrides(def1, rest),
-    middlewares: [...def1.middlewares, ...middlewares],
-  });
+// extends Array<string | [string, unknown]>
+interface Route<Context, IBody, Queries, Paths> {
+  _def: RouteBuilderDef;
+  path<N extends string, P>(
+    name: N,
+    parser?: P
+  ): Route<
+    Context,
+    IBody,
+    Queries,
+    Paths extends Array<unknown>
+      ? [...Paths, P extends Parser ? [N, P] : N]
+      : "Path must be array"
+  >;
+
+  paths<P>(...ps: P): Route<Context, IBody, Queries, []>;
 }
 
-function createBuilder(initDef: Partial<AnyProcedureBuilderDef> = {}) {
+// function createNewBuilder(
+//   def1: AnyProcedureBuilderDef,
+//   def2: Partial<AnyProcedureBuilderDef>
+// ): AnyProcedureBuilder {
+//   const { middlewares = [], inputs, meta, ...rest } = def2;
+
+//   // TODO: maybe have a fn here to warn about calls
+//   return createBuilder({
+//     ...mergeWithoutOverrides(def1, rest),
+//     middlewares: [...def1.middlewares, ...middlewares],
+//   });
+// }
+
+// initDef: Partial<AnyProcedureBuilderDef> = {}
+function createBuilder() {
   return {
     path: (path: string, parser?: Parser) => {},
-  } as Route<{}, unknown, {}, [], {}>;
+  } as Route<{}, unknown, {}, []>;
 }
 
-let rb = routeBuilder() as Route<{}, unknown, {}, [], {}>;
-let xb = rb.path("user", z.enum(["dhrj", "vi"]));
+let rb = createBuilder() as Route<{}, unknown, {}, []>;
+let xb = rb.path("user");
+let xbb = xb.path("username", z.enum(["dhrjarun", "vi"]));
+let xxxb = rb.paths("user", ["username", z.enum(["dhrjarun", "vi"])]);
+
+type x = {
+  [Key in 0 | 1 | 3]: "hey";
+};
+
+const xxx: x = ["hey", "hey", "hey"];
