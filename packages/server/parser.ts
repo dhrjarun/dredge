@@ -38,6 +38,12 @@ export type ParserWithInputOutput<TInput, TParsedInput> = ParserZodEsque<
 
 export type Parser = ParserWithInputOutput<any, any> | ParserWithoutInput<any>;
 
+export type inferParserType<P> = P extends ParserWithoutInput<infer T>
+  ? T
+  : P extends ParserWithInputOutput<infer TI, infer TO>
+  ? TO
+  : never;
+
 export type inferParser<TParser extends Parser> =
   TParser extends ParserWithInputOutput<infer $TIn, infer $TOut>
     ? {

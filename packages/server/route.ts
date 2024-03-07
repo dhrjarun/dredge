@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { Parser, ParserWithoutInput, getParseFn, inferParser } from "./parser";
+import {
+  Parser,
+  ParserWithoutInput,
+  getParseFn,
+  inferParser,
+  inferParserType,
+} from "./parser";
 import { Simplify } from "./types";
 
 type IntersectIfDefined<TType, TWith> = TType extends UnsetMarker
@@ -126,8 +132,9 @@ type DynamicPath<N, T> = {
 };
 
 // extends Array<string | [string, unknown]>
-interface Route<Context, IBody, Queries, Paths> {
+interface Route<Context, IBody, Queries, Paths extends Array<unknown>> {
   _def: RouteBuilderDef;
+
   path<N extends string, P>(
     name: N,
     parser?: P
@@ -140,7 +147,30 @@ interface Route<Context, IBody, Queries, Paths> {
       : "Path must be array"
   >;
 
-  paths<P>(...ps: P): Route<Context, IBody, Queries, []>;
+  paths<const T extends (string | [string, Parser])[]>(
+    ...paths: T
+  ): Route<Context, IBody, Queries, T>;
+
+  queries<const T extends { [key: string]: Parser }>(
+    queries: T
+  ): Route<Context, IBody, T, Paths>;
+
+  post<P extends Parser>(parser: P): Route<Context, P, Queries, Paths>;
+
+  resolve(
+    cb: (args: {
+      ctx: Context;
+      body: inferParserType<IBody>;
+      slug: {
+        [key in Exclude<Paths[number], string> as key extends [string, Parser]
+          ? key[0]
+          : never]: key extends [string, Parser]
+          ? inferParserType<key[1]>
+          : never;
+      };
+      queries: {};
+    }) => void
+  ): void;
 }
 
 // function createNewBuilder(
@@ -166,10 +196,23 @@ function createBuilder() {
 let rb = createBuilder() as Route<{}, unknown, {}, []>;
 let xb = rb.path("user");
 let xbb = xb.path("username", z.enum(["dhrjarun", "vi"]));
-let xxxb = rb.paths("user", ["username", z.enum(["dhrjarun", "vi"])]);
+let xxxb = rb.paths("user", ["username", z.enum(["dhrjarun", "vi"])], "c", [
+  "age",
+  z.number(),
+]);
+let xxxxb = xxxb.queries({
+  name: z.string(),
+  age: z.number(),
+  gender: z.enum(["male", "female"]),
+});
+xxxxb.resolve(({ slug }) => {});
 
-type x = {
-  [Key in 0 | 1 | 3]: "hey";
-};
+type _TupleOf<T, N extends number, R extends unknown[]> = R["length"] extends N
+  ? R
+  : _TupleOf<T, N, [T, ...R]>;
 
-const xxx: x = ["hey", "hey", "hey"];
+export type Tuple<T, N extends number> = N extends N
+  ? number extends N
+    ? T[]
+    : _TupleOf<T, N, []>
+  : never;
