@@ -246,3 +246,20 @@ let route = createBuilder()
       body: "info from body" as const,
     });
   });
+
+type Path<T> = T extends [
+  infer First extends string | [string, Parser],
+  ...infer Tail
+]
+  ? `${First extends [string, infer P]
+      ? inferParserType<P>
+      : First}/${Path<Tail>}`
+  : "";
+
+type PathTuple = [
+  "aaa",
+  "bbb" | "BBB",
+  ["username", z.ZodEnum<["dhrjarun", "dd"]>]
+];
+
+type PathStr = Path<PathTuple>;
