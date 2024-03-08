@@ -1,218 +1,248 @@
 import { z } from "zod";
 import {
+  ParseFn,
   Parser,
   ParserWithoutInput,
   getParseFn,
-  inferParser,
   inferParserType,
 } from "./parser";
-import { Simplify } from "./types";
+import { Overwrite } from "./types";
 
-type IntersectIfDefined<TType, TWith> = TType extends UnsetMarker
-  ? TWith
-  : TWith extends UnsetMarker
-  ? TType
-  : Simplify<TType & TWith>;
-
-/** @internal */
-export const unsetMarker = Symbol("unsetMarker");
-type UnsetMarker = typeof unsetMarker;
-type DefaultValue<TValue, TFallback> = TValue extends UnsetMarker
-  ? TFallback
-  : TValue;
-
-interface Procedure {
-  slash: (
-    name: string,
-    validation: boolean | ((value: string) => boolean)
-  ) => Procedure;
-
-  queries: () => {};
-  query: () => {};
-
-  get: () => {};
-  post: () => {};
-  put: () => {};
-  delete: () => {};
-  patch: () => {};
-
-  use: () => Procedure;
-  resolve: (payload: {
-    slug: Record<string, string>;
-    body: unknown;
-    headers: Record<string, string>;
-    queries: unknown;
-    ctx: unknown;
-  }) => {};
+interface MiddlewareResult<C> {
+  ctx: C;
 }
 
-class RouteBuilder {
-  _paths: {
-    name: string;
-    isDynamic: boolean;
-    parser: Parser;
-  }[];
-  _queries: Record<
-    string,
-    {
-      parser: Parser;
-    }
-  >;
-  body: {
-    parser: Parser;
-  };
-  method: string;
-
-  middlewares: Function[];
-  resolver: Function;
-
-  path(name: string, schema?: Parser) {
-    this._paths.push({
-      name,
-      isDynamic: !!schema,
-      parser: getParseFn(schema || (() => {})),
-    });
-  }
-
-  queries(schema: Record<string, Parser>) {
-    Object.entries(schema).forEach(([key, value]) => {
-      this._queries[key] = {
-        parser: getParseFn(value),
-      };
-    });
-  }
-
-  get(parser: Parser) {
-    this.method = "get";
-    this.body = {
-      parser: getParseFn(parser),
+type MiddlewareFunction<
+  Context,
+  ContextOverride,
+  Paths extends Array<unknown>,
+  SearchParams,
+  Method,
+  IBody
+> = {
+  (opts: {
+    ctx: Context;
+    path: string;
+    params: {
+      [key in Exclude<Paths[number], string> as key extends [string, Parser]
+        ? key[0]
+        : never]: key extends [string, Parser]
+        ? inferParserType<key[1]>
+        : never;
     };
-  }
-
-  post(parser: Parser) {
-    this.method = "post";
-    this.body = {
-      parser: getParseFn(parser),
+    searchParams: {
+      [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
     };
-  }
+    method: Method;
+    body: inferParserType<IBody>;
 
-  use(fn: Function) {
-    this.middlewares.push(fn);
-  }
+    next: {
+      (): MiddlewareResult<Context>;
+      <$ContextOverride>(opts: {
+        ctx: $ContextOverride;
+      }): MiddlewareResult<$ContextOverride>;
+    };
+  }): MiddlewareResult<ContextOverride>;
+};
+
+interface ResolverResult<OBody> {
+  body: OBody;
+  headers: Record<string, string>;
+  status: number;
+  statusText: string;
 }
 
-interface Path<N extends string, T> {
-  name: N;
-  isDynamic: boolean;
-  parser: T;
-}
+type ResolverFunction<
+  Context,
+  Paths extends Array<unknown>,
+  SearchParams,
+  Method,
+  IBody,
+  OBody
+> = {
+  (opts: {
+    ctx: Context;
+    path: string;
+    params: {
+      [key in Exclude<Paths[number], string> as key extends [string, Parser]
+        ? key[0]
+        : never]: key extends [string, Parser]
+        ? inferParserType<key[1]>
+        : never;
+    };
+    searchParams: {
+      [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+    };
+    method: Method;
+    body: inferParserType<IBody>;
+
+    send: {
+      (): MiddlewareResult<unknown>;
+      <$OBody>(opts: {
+        body?: $OBody;
+        headers?: Record<string, string>;
+        status?: number;
+        statusText?: string;
+      }): ResolverResult<$OBody>;
+    };
+  }): ResolverResult<OBody>;
+};
 
 type RouteBuilderDef = {
-  method: "get" | "post" | "put" | "delete";
-  pathname: string[];
-  slug: Record<string, Parser>;
-  path: { name: string; parser: Parser }[];
-  searchParams: Record<string, Parser>;
+  method?: "get" | "post" | "put" | "delete";
+  paths: (string | [string, ParseFn<any>])[];
+  searchParams: Record<string, ParseFn<any>>;
 
-  iBody: Parser[];
-  oBody: Parser[];
+  iBody?: ParseFn<any>;
+  oBody?: ParseFn<any>;
 
-  middlewares: AnyMiddlewareFunctison[];
-  resolver?: ProcedureBuilderResolver;
+  middlewares: MiddlewareFunction<any, any, any, any, any, any>[];
+  resolver?: Function;
 };
 
-type StaticPath<N> = {
-  _name: N;
-  _isDynamic: false;
-};
-type DynamicPath<N, T> = {
-  _name: N;
-  _isDynamic: true;
-  _value: T;
-};
-
-// extends Array<string | [string, unknown]>
-interface Route<Context, IBody, Queries, Paths extends Array<unknown>> {
+interface Route<
+  Context,
+  Paths extends Array<unknown>,
+  SearchParams,
+  Method,
+  IBody = never,
+  OBody = never
+> {
   _def: RouteBuilderDef;
 
-  path<N extends string, P>(
-    name: N,
-    parser?: P
+  // path<N extends string, P>(
+  //   name: N,
+  //   parser?: P
+  // ): Route<
+  //   Context,
+  //   IBody,
+  //   Queries,
+  //   Paths extends Array<unknown>
+  //     ? [...Paths, P extends Parser ? [N, P] : N]
+  //     : "Path must be array"
+  // >;
+
+  path<const T extends (string | [string, Parser])[]>(
+    ...paths: T
+  ): Route<Context, T, SearchParams, Method, IBody>;
+
+  searchParam<const T extends { [key: string]: Parser }>(
+    queries: T
+  ): Route<Context, Paths, T, Method, IBody>;
+
+  use<ContextOverride>(
+    fn: MiddlewareFunction<
+      Context,
+      ContextOverride,
+      Paths,
+      SearchParams,
+      Method,
+      IBody
+    >
   ): Route<
-    Context,
-    IBody,
-    Queries,
-    Paths extends Array<unknown>
-      ? [...Paths, P extends Parser ? [N, P] : N]
-      : "Path must be array"
+    Overwrite<Context, ContextOverride>,
+    Paths,
+    SearchParams,
+    Method,
+    IBody
   >;
 
-  paths<const T extends (string | [string, Parser])[]>(
-    ...paths: T
-  ): Route<Context, IBody, Queries, T>;
+  resolve<OBody>(
+    fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
+  ): Route<
+    Context,
+    Paths,
+    SearchParams,
+    Method,
+    IBody,
+    ParserWithoutInput<OBody>
+  >;
 
-  queries<const T extends { [key: string]: Parser }>(
-    queries: T
-  ): Route<Context, IBody, T, Paths>;
-
-  post<P extends Parser>(parser: P): Route<Context, P, Queries, Paths>;
-
-  resolve(
-    cb: (args: {
-      ctx: Context;
-      body: inferParserType<IBody>;
-      slug: {
-        [key in Exclude<Paths[number], string> as key extends [string, Parser]
-          ? key[0]
-          : never]: key extends [string, Parser]
-          ? inferParserType<key[1]>
-          : never;
-      };
-      queries: {};
-    }) => void
-  ): void;
+  get(): Route<Context, Paths, SearchParams, "get", IBody>;
+  post<P>(parser: P): Route<Context, Paths, SearchParams, "post", P>;
+  put<P>(parser: P): Route<Context, Paths, SearchParams, "put", P>;
+  delete(): Route<Context, Paths, SearchParams, "delete", IBody>;
 }
 
-// function createNewBuilder(
-//   def1: AnyProcedureBuilderDef,
-//   def2: Partial<AnyProcedureBuilderDef>
-// ): AnyProcedureBuilder {
-//   const { middlewares = [], inputs, meta, ...rest } = def2;
+function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
+  const { middlewares = [], paths = [], searchParams = {}, ...rest } = initDef;
 
-//   // TODO: maybe have a fn here to warn about calls
-//   return createBuilder({
-//     ...mergeWithoutOverrides(def1, rest),
-//     middlewares: [...def1.middlewares, ...middlewares],
-//   });
-// }
+  const _def: RouteBuilderDef = {
+    middlewares,
+    paths,
+    searchParams,
+    ...rest,
+  };
 
-// initDef: Partial<AnyProcedureBuilderDef> = {}
-function createBuilder() {
-  return {
-    path: (path: string, parser?: Parser) => {},
-  } as Route<{}, unknown, {}, []>;
+  const builder = {
+    _def,
+    path: (...args) => {
+      const paths: any = args.map((item) => {
+        if (typeof item === "string") return item;
+        if (Array.isArray(item)) {
+          return [item[0], getParseFn(item[1])];
+        }
+
+        throw new Error("Invalid paths");
+      });
+
+      return createBuilder({
+        ..._def,
+        paths,
+      });
+    },
+
+    searchParam: (queries) => {
+      const searchParams: RouteBuilderDef["searchParams"] = {};
+
+      return createBuilder({
+        ..._def,
+        searchParams,
+      });
+    },
+
+    use: (cb) => {
+      const middlewares = _def.middlewares;
+      middlewares.push(cb);
+      return createBuilder({
+        ..._def,
+        middlewares,
+      });
+    },
+  } as Route<{}, [], {}, string, unknown>;
+
+  return builder;
 }
 
-let rb = createBuilder() as Route<{}, unknown, {}, []>;
-let xb = rb.path("user");
-let xbb = xb.path("username", z.enum(["dhrjarun", "vi"]));
-let xxxb = rb.paths("user", ["username", z.enum(["dhrjarun", "vi"])], "c", [
-  "age",
-  z.number(),
-]);
-let xxxxb = xxxb.queries({
-  name: z.string(),
-  age: z.number(),
-  gender: z.enum(["male", "female"]),
-});
-xxxxb.resolve(({ slug }) => {});
-
-type _TupleOf<T, N extends number, R extends unknown[]> = R["length"] extends N
-  ? R
-  : _TupleOf<T, N, [T, ...R]>;
-
-export type Tuple<T, N extends number> = N extends N
-  ? number extends N
-    ? T[]
-    : _TupleOf<T, N, []>
-  : never;
+let route = createBuilder()
+  .path("user", ["username", z.enum(["dhrjarun", "dd"])], "c", [
+    "age",
+    z.number(),
+  ])
+  .searchParam({
+    byId: z.string(),
+  })
+  .use(({ next, ctx }) => {
+    return next({
+      ctx: {
+        info: "The box",
+      },
+    });
+  })
+  .use(({ next, ctx, params }) => {
+    return next({
+      ctx: {
+        anotherInfo: "The big box",
+      },
+    });
+  })
+  .post(
+    z.object({
+      id: z.string(),
+    })
+  )
+  .resolve(({ send, body, params, searchParams, method }) => {
+    return send({
+      body: "info from body" as const,
+    });
+  });
