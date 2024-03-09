@@ -6,11 +6,15 @@ import {
   getParseFn,
   inferParserType,
 } from "./parser";
-import { Overwrite } from "./types";
+import { Overwrite, Simplify } from "./types";
 
 interface MiddlewareResult<C> {
   ctx: C;
 }
+
+export type inferSearchParamsType<SearchParams> = Simplify<{
+  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+}>;
 
 type MiddlewareFunction<
   Context,
@@ -100,11 +104,11 @@ type RouteBuilderDef = {
   resolver?: Function;
 };
 
-interface Route<
+export interface Route<
   Context,
+  Method,
   Paths extends Array<unknown>,
   SearchParams,
-  Method,
   IBody = never,
   OBody = never
 > {
@@ -124,11 +128,11 @@ interface Route<
 
   path<const T extends (string | [string, Parser])[]>(
     ...paths: T
-  ): Route<Context, T, SearchParams, Method, IBody>;
+  ): Route<Context, Method, T, SearchParams, IBody>;
 
   searchParam<const T extends { [key: string]: Parser }>(
     queries: T
-  ): Route<Context, Paths, T, Method, IBody>;
+  ): Route<Context, Method, Paths, T, IBody>;
 
   use<ContextOverride>(
     fn: MiddlewareFunction<
@@ -141,9 +145,9 @@ interface Route<
     >
   ): Route<
     Overwrite<Context, ContextOverride>,
+    Method,
     Paths,
     SearchParams,
-    Method,
     IBody
   >;
 
@@ -151,20 +155,20 @@ interface Route<
     fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
   ): Route<
     Context,
+    Method,
     Paths,
     SearchParams,
-    Method,
     IBody,
     ParserWithoutInput<OBody>
   >;
 
-  get(): Route<Context, Paths, SearchParams, "get", IBody>;
-  post<P>(parser: P): Route<Context, Paths, SearchParams, "post", P>;
-  put<P>(parser: P): Route<Context, Paths, SearchParams, "put", P>;
-  delete(): Route<Context, Paths, SearchParams, "delete", IBody>;
+  get(): Route<Context, "get", Paths, SearchParams, IBody>;
+  post<P>(parser: P): Route<Context, "post", Paths, SearchParams, P>;
+  put<P>(parser: P): Route<Context, "put", Paths, SearchParams, P>;
+  delete(): Route<Context, "delete", Paths, SearchParams, IBody>;
 }
 
-function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
+export function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const { middlewares = [], paths = [], searchParams = {}, ...rest } = initDef;
 
   const _def: RouteBuilderDef = {
@@ -209,7 +213,7 @@ function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         middlewares,
       });
     },
-  } as Route<{}, [], {}, string, unknown>;
+  } as Route<{}, string, [], {}, unknown>;
 
   return builder;
 }
@@ -247,13 +251,13 @@ let route = createBuilder()
     });
   });
 
-type Path<T> = T extends [
+export type inferPathType<T> = T extends [
   infer First extends string | [string, Parser],
   ...infer Tail
 ]
   ? `${First extends [string, infer P]
       ? inferParserType<P>
-      : First}/${Path<Tail>}`
+      : First}/${inferPathType<Tail>}`
   : "";
 
 type PathTuple = [
@@ -262,4 +266,4 @@ type PathTuple = [
   ["username", z.ZodEnum<["dhrjarun", "dd"]>]
 ];
 
-type PathStr = Path<PathTuple>;
+type PathStr = inferPathType<PathTuple>;
