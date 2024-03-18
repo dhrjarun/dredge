@@ -19,7 +19,8 @@ export type inferSearchParamsType<SearchParams> = Simplify<{
 type MiddlewareFunction<
   Context,
   ContextOverride,
-  Paths extends Array<unknown>,
+  Paths extends Array<string>,
+  Params,
   SearchParams,
   Method,
   IBody
@@ -28,11 +29,9 @@ type MiddlewareFunction<
     ctx: Context;
     path: string;
     params: {
-      [key in Exclude<Paths[number], string> as key extends [string, Parser]
-        ? key[0]
-        : never]: key extends [string, Parser]
-        ? inferParserType<key[1]>
-        : never;
+      [key in keyof Params]: Params[key] extends null
+        ? string
+        : inferParserType<Params[key]>;
     };
     searchParams: {
       [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
@@ -58,21 +57,27 @@ interface ResolverResult<OBody> {
 
 type ResolverFunction<
   Context,
-  Paths extends Array<unknown>,
-  SearchParams,
   Method,
+  Paths extends Array<string>,
+  Params,
+  SearchParams,
   IBody,
   OBody
 > = {
   (opts: {
     ctx: Context;
     path: string;
+    // params: {
+    //   [key in Exclude<Paths[number], string> as key extends [string, Parser]
+    //     ? key[0]
+    //     : never]: key extends [string, Parser]
+    //     ? inferParserType<key[1]>
+    //     : never;
+    // };
     params: {
-      [key in Exclude<Paths[number], string> as key extends [string, Parser]
-        ? key[0]
-        : never]: key extends [string, Parser]
-        ? inferParserType<key[1]>
-        : never;
+      [key in keyof Params]: Params[key] extends null
+        ? string
+        : inferParserType<Params[key]>;
     };
     searchParams: {
       [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
@@ -94,29 +99,31 @@ type ResolverFunction<
 
 type RouteBuilderDef = {
   method?: "get" | "post" | "put" | "delete";
-  paths: (string | [string, ParseFn<any>])[];
+  paths: string[];
+  params: Record<string, ParseFn<any>>;
   searchParams: Record<string, ParseFn<any>>;
 
   iBody?: ParseFn<any>;
   oBody?: ParseFn<any>;
 
-  middlewares: MiddlewareFunction<any, any, any, any, any, any>[];
-  resolver?: ResolverFunction<any, any, any, any, any, any>;
+  middlewares: MiddlewareFunction<any, any, any, any, any, any, any>[];
+  resolver?: ResolverFunction<any, any, any, any, any, any, any>;
 };
 
 export interface Route<
   Context,
   Method,
-  Paths extends Array<unknown>,
-  SearchParams,
+  Paths extends Array<string> = [],
+  Params = {},
+  SearchParams = {},
   IBody = never,
   OBody = never
 > {
   _def: RouteBuilderDef;
 
-  error(
-    fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
-  ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
+  // error(
+  //   fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
+  // ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
 
   // path<N extends string, P>(
   //   name: N,
@@ -136,22 +143,50 @@ export interface Route<
   //   paths: T,
   //   paramSchema?: P
   // );
-  // paths<const T extends string[]>(...paths: T): Route<>
-  // params<const T extends Record<Extract<T[number], `:${string}`>, Parser>>(): Route<>
+  // path<const T extends (string | [string, Parser])[]>(
+  //   ...paths: T
+  // ): Route<Context, Method, T, SearchParams, IBody>;
 
-  path<const T extends (string | [string, Parser])[]>(
+  path<const T extends string[]>(
     ...paths: T
-  ): Route<Context, Method, T, SearchParams, IBody>;
+  ): Route<
+    Context,
+    Method,
+    [...Paths, ...T],
+    Params & {
+      [key in T[number] as key extends `:${infer N}` ? N : never]: null;
+    },
+    SearchParams,
+    IBody,
+    OBody
+  >;
+
+  params<
+    const T extends {
+      [key in keyof Params as Params[key] extends null ? key : never]?: Parser;
+    }
+  >(
+    arg: T
+  ): Route<
+    Context,
+    Method,
+    Paths,
+    Overwrite<Params, T>,
+    SearchParams,
+    IBody,
+    OBody
+  >;
 
   searchParam<const T extends { [key: string]: Parser }>(
     queries: T
-  ): Route<Context, Method, Paths, T, IBody>;
+  ): Route<Context, Method, Paths, Params, T, IBody>;
 
   use<ContextOverride>(
     fn: MiddlewareFunction<
       Context,
       ContextOverride,
       Paths,
+      Params,
       SearchParams,
       Method,
       IBody
@@ -160,39 +195,56 @@ export interface Route<
     Overwrite<Context, ContextOverride>,
     Method,
     Paths,
+    Params,
     SearchParams,
     IBody
   >;
 
   resolve<OBody>(
-    fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
+    fn: ResolverFunction<
+      Context,
+      Method,
+      Paths,
+      Params,
+      SearchParams,
+      IBody,
+      OBody
+    >
   ): Route<
     Context,
     Method,
     Paths,
+    Params,
     SearchParams,
     IBody,
     ParserWithoutInput<OBody>
   >;
 
-  get(): Route<Context, "get", Paths, SearchParams, IBody>;
+  get(): Route<Context, "get", Paths, Params, SearchParams, IBody>;
   post<P extends Parser>(
     parser: P
-  ): Route<Context, "post", Paths, SearchParams, P>;
+  ): Route<Context, "post", Paths, Params, SearchParams, P>;
   put<P extends Parser>(
     parser: P
-  ): Route<Context, "put", Paths, SearchParams, P>;
-  delete(): Route<Context, "delete", Paths, SearchParams, IBody>;
+  ): Route<Context, "put", Paths, Params, SearchParams, P>;
+  delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody>;
 }
 
 type Method = "get" | "post" | "put" | "delete";
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
-  const { middlewares = [], paths = [], searchParams = {}, ...rest } = initDef;
+  const {
+    middlewares = [],
+    paths = [],
+    params = {},
+    searchParams = {},
+    ...rest
+  } = initDef;
 
   const _def: RouteBuilderDef = {
     middlewares,
     paths,
+    params,
     searchParams,
     ...rest,
   };
@@ -216,16 +268,26 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
   const builder = {
     _def,
-    path: (...args) => {
-      const paths: any = args.map((item) => {
-        if (typeof item === "string") return item;
-        if (Array.isArray(item)) {
-          return [item[0], getParseFn(item[1])];
-        }
 
-        throw new Error("Invalid paths");
-      });
+    // path: (...args) => {
+    //   const paths: any = args.map((item) => {
+    //     if (typeof item === "string") return item;
+    //     if (Array.isArray(item)) {
+    //       return [item[0], getParseFn(item[1])];
+    //     }
 
+    //     throw new Error("Invalid paths");
+    //   });
+
+    //   const _paths = _def.paths;
+
+    //   return createRouteBuilder({
+    //     ..._def,
+    //     paths: [..._paths, ...paths],
+    //   });
+    // },
+
+    path: (...paths) => {
       const _paths = _def.paths;
 
       return createRouteBuilder({
@@ -234,10 +296,29 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    searchParam: (queries) => {
+    params: (arg) => {
+      const params: RouteBuilderDef["params"] = {};
+
+      Object.entries(arg).forEach(([key, value]) => {
+        if (value) {
+          params[key] = getParseFn(value as Parser);
+        }
+      });
+
+      const _params = _def.params;
+      return createRouteBuilder({
+        ..._def,
+        params: {
+          ..._params,
+          ...params,
+        },
+      });
+    },
+
+    searchParam: (shape) => {
       const searchParams: RouteBuilderDef["searchParams"] = {};
 
-      Object.entries(queries).forEach(([key, value]) => {
+      Object.entries(shape).forEach(([key, value]) => {
         searchParams[key] = getParseFn(value);
       });
 
@@ -284,16 +365,17 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         resolver: fn,
       });
     },
-  } as Route<{}, string, [], {}, unknown>;
+  } as Route<{}, string, [], {}, {}, unknown>;
 
   return builder;
 }
 
 let route = createRouteBuilder()
-  .path("user", ["username", z.enum(["dhrjarun", "dd"])], "c", [
-    "age",
-    z.number(),
-  ])
+  .path("user", ":username", "c", ":age")
+  .params({
+    username: z.enum(["dhrjarun", "dd"]),
+    age: z.string().transform((value) => Number(value)),
+  })
   .searchParam({
     byId: z.string(),
   })
