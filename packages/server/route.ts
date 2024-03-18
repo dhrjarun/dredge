@@ -110,6 +110,10 @@ type RouteBuilderDef = {
   resolver?: ResolverFunction<any, any, any, any, any, any, any>;
 };
 
+// TODO
+// implement error
+// after middleware
+// path and head methods
 export interface Route<
   Context,
   Method,
@@ -404,13 +408,32 @@ let route = createRouteBuilder()
     });
   });
 
-export type inferPathType<T> = T extends [
-  infer First extends string | [string, Parser],
-  ...infer Tail
-]
-  ? `${First extends [string, infer P]
-      ? inferParserType<P>
-      : First}/${inferPathType<Tail>}`
-  : "";
+// export type inferPathType<T> = T extends [
+//   infer First extends string | [string, Parser],
+//   ...infer Tail
+// ]
+//   ? `${First extends [string, infer P]
+//       ? inferParserType<P>
+//       : First}/${inferPathType<Tail>}`
+//   : "";
 
 export type AnyRoute = Route<any, any, any, any, any>;
+
+export type inferPathType<
+  Paths,
+  Params extends Record<string, Parser>
+> = Paths extends [infer First extends string, ...infer Tail extends string[]]
+  ? `${First extends `:${infer N}`
+      ? Params[N] extends Parser
+        ? inferParserType<Params[N]>
+        : string
+      : First}/${inferPathType<Tail, Params>}`
+  : "";
+
+type pathStr = inferPathType<
+  ["user", ":username", "c", ":age"],
+  {
+    username: z.ZodEnum<["dhrjarun", "dd"]>;
+    age: z.ZodNumber;
+  }
+>;

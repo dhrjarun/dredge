@@ -3,13 +3,14 @@ import type { AnyRoute } from "./route";
 type RouteMap = Record<string, AnyRoute>;
 
 export interface DredgeApi<T> {
+  _root: Path;
   // _routes: Record<string, AnyRoute | RouteMap>;
 
   // addRoutes<const R extends AnyRoute[]>(
   //   routes: R
   // ): DredgeApi<T extends Array<AnyRoute> ? [...T, ...R] : R>;
 
-  caller(): Function;
+  // caller(): Function;
 }
 
 export function buildDredgeApi<const R extends AnyRoute[]>(
@@ -35,9 +36,7 @@ export function buildDredgeApi<const R extends AnyRoute[]>(
   });
 
   return {
-    caller: () => {
-      return function (path: string, options: {}) {};
-    },
+    _root,
   } as DredgeApi<[]>;
 }
 

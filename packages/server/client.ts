@@ -5,20 +5,21 @@ import {
   Route,
   createRouteBuilder,
 } from "./route";
-import { inferParserType } from "./parser";
+import { Parser, inferParserType } from "./parser";
 import { DredgeApi, buildDredgeApi } from "./api";
 import z from "zod";
 
-type ApiOptions<R> = R extends Route<
+type ClientOptions<R> = R extends Route<
   any,
   infer Method,
   infer Path,
-  infer SearchParams,
+  any,
+  infer SearchParams extends Record<string, Parser>,
   infer IBody
 >
   ? {
       method: Method;
-      path: inferPathType<Path>;
+      path: inferPathType<Path, SearchParams>;
       searchParams: inferSearchParamsType<SearchParams>;
       body: inferParserType<IBody>;
     }
@@ -38,25 +39,26 @@ interface DredgeClient<Api extends DredgeApi<any>> {
     R extends ExtractRouteBy<inferRoutes<Api>[number], "get">,
     P extends RoutePath<R>
   >(
-    path: inferPathType<P>,
+    path: inferPathType<P, RouteParams<R>>,
     options: Omit<
-      ApiOptions<ExtractRouteBy<R, any, P>>,
+      ClientOptions<ExtractRouteBy<R, any, P>>,
       "method" | "path" | "body"
     >
   );
-  put(
-    path: Api extends DredgeApi<infer Routes extends AnyRoute[]>
-      ? RouteArrayToPathStr<Routes, "put">
-      : ""
-  );
-  delete();
   post<
     R extends ExtractRouteBy<inferRoutes<Api>[number], "post">,
     P extends RoutePath<R>
   >(
-    path: inferPathType<P>,
-    options: Omit<ApiOptions<ExtractRouteBy<R, any, P>>, "method" | "path">
+    path: inferPathType<P, RouteParams<R>>,
+    options: Omit<ClientOptions<ExtractRouteBy<R, any, P>>, "method" | "path">
   );
+
+  // put(
+  //   path: Api extends DredgeApi<infer Routes extends AnyRoute[]>
+  //     ? RouteArrayToPathStr<Routes, "put">
+  //     : ""
+  // );
+  // delete();
 }
 
 const dredge = {} as DredgeClient<Api>;
@@ -78,19 +80,22 @@ dredge.post("posts/dhrjarun/", {
   body: "here is the body",
 });
 
-type RouteArrayToPathStr<T, Method extends string = string> = T extends [
-  infer First extends AnyRoute,
-  ...infer Tail
-]
-  ? First extends Route<any, infer $Method, infer Path, any, any>
-    ? $Method extends Method
-      ? inferPathType<Path> | RouteArrayToPathStr<Tail, Method>
-      : RouteArrayToPathStr<Tail, Method>
-    : ""
-  : "";
+// type RouteArrayToPathStr<T, Method extends string = string> = T extends [
+//   infer First extends AnyRoute,
+//   ...infer Tail
+// ]
+//   ? First extends Route<any, infer $Method, infer Path, any, any>
+//     ? $Method extends Method
+//       ? inferPathType<Path> | RouteArrayToPathStr<Tail, Method>
+//       : RouteArrayToPathStr<Tail, Method>
+//     : ""
+//   : "";
 
 let userRoute = createRouteBuilder()
-  .path("user", ["username", z.enum(["dhrjarun", "dd"])])
+  .path("user", ":username")
+  .params({
+    username: z.enum(["dhrjarun", "dd"]),
+  })
   .searchParam({
     size: z.string(),
   })
@@ -107,7 +112,10 @@ let userRoute = createRouteBuilder()
   });
 
 let postRoute = createRouteBuilder()
-  .path("posts", ["user", z.enum(["dhrjarun", "dd"])])
+  .path("posts", ":user")
+  .params({
+    user: z.enum(["dhrjarun", "dd"]),
+  })
   .searchParam({
     size: z.string(),
   })
@@ -125,7 +133,19 @@ type Api = typeof api;
 type RoutePath<R> = R extends Route<any, any, infer Path, any, any>
   ? Path
   : never;
+
+type RouteParams<R> = R extends Route<
+  any,
+  any,
+  any,
+  infer Params extends Record<string, Parser>,
+  any,
+  any
+>
+  ? Params
+  : never;
 type RouteSearchParams<R> = R extends Route<
+  any,
   any,
   any,
   any,
