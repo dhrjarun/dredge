@@ -1,161 +1,123 @@
-import { Parser, inferParserType } from "./parser";
-import type { Route, inferPathType, inferSearchParamsType } from "./route";
+import type { AnyRoute } from "./route";
+
 type RouteMap = Record<string, AnyRoute>;
-import { createBuilder } from "./route";
-import z from "zod";
 
-type AnyRoute = Route<any, any, any, any, any>;
+export interface DredgeApi<T> {
+  // _routes: Record<string, AnyRoute | RouteMap>;
 
-interface DredgeApi<T> {
-  _routes: Record<string, AnyRoute | RouteMap>;
+  // addRoutes<const R extends AnyRoute[]>(
+  //   routes: R
+  // ): DredgeApi<T extends Array<AnyRoute> ? [...T, ...R] : R>;
 
-  addRoutes<const R extends AnyRoute[]>(
-    routes: R
-  ): DredgeApi<T extends Array<AnyRoute> ? [...T, ...R] : R>;
+  caller(): Function;
 }
 
-function buildDredgeApi() {
-  const _routes = {};
+export function buildDredgeApi<const R extends AnyRoute[]>(
+  routes: R
+): DredgeApi<R> {
+  const _root = new Path({
+    name: "$root",
+  });
 
-  return {} as DredgeApi<[]>;
-}
+  routes.forEach((route) => {
+    const def = route._def;
+    const paths = def.paths as string[];
 
-let userRoute = createBuilder()
-  .path("user", ["username", z.enum(["dhrjarun", "dd"])])
-  .searchParam({
-    size: z.string(),
-  })
-  .get()
-  .resolve(({ send, body, params, searchParams, method }) => {
-    return send({
-      body: [
-        {
-          id: "u1",
-          username: "dhrjarun",
-        },
-      ],
+    let current = _root;
+    paths.forEach((name, index) => {
+      const isLast = index + 1 == paths.length;
+
+      if (!current.hasChild(name)) {
+        current.addChild(name, isLast ? route : undefined);
+      }
+      current = current.getChild(name)!;
     });
   });
 
-let postRoute = createBuilder()
-  .path("posts", ["user", z.enum(["dhrjarun", "dd"])])
-  .searchParam({
-    size: z.string(),
-  })
-  .post(z.string())
-  .resolve(({ send }) => {
-    return send({
-      body: [{ id: "p1", title: "Post1" }],
-    });
-  });
+  return {
+    caller: () => {
+      return function (path: string, options: {}) {};
+    },
+  } as DredgeApi<[]>;
+}
 
-const api = buildDredgeApi().addRoutes([userRoute, postRoute]);
+class Path {
+  name: string;
+  isParam: boolean;
+  route: AnyRoute | null = null;
 
-type Api = typeof api;
+  children: Map<string, Path>;
+  dynamicChild: Path | null = null;
 
-type UserRoute = Api extends DredgeApi<infer R extends AnyRoute[]>
-  ? R[0]
-  : never;
-type PostRoute = Api extends DredgeApi<infer R extends AnyRoute[]>
-  ? R[1]
-  : never;
+  constructor(options: { name: string; isParam?: boolean; route?: AnyRoute }) {
+    const { name, isParam = false, route } = options;
+    this.name = name;
+    this.isParam = isParam;
+    this.route = route ?? null;
+  }
 
-type RoutePath<R> = R extends Route<any, any, infer Path, any, any>
-  ? Path
-  : never;
-type RouteSearchParams<R> = R extends Route<
-  any,
-  any,
-  any,
-  infer SearchParams,
-  any
->
-  ? SearchParams
-  : never;
+  hasStaticChild(name: string) {
+    this.children.has(name);
+  }
 
-type ApiOptions<R> = R extends Route<
-  any,
-  infer Method,
-  infer Path,
-  infer SearchParams,
-  infer IBody
->
-  ? {
-      method: Method;
-      path: inferPathType<Path>;
-      searchParams: inferSearchParamsType<SearchParams>;
-      body: inferParserType<IBody>;
+  hasChild(name: string) {
+    if (name.startsWith(":")) {
+      return this.hasDynamicChild();
     }
-  : never;
 
-type inferRoutes<Api> = Api extends DredgeApi<infer Routes extends AnyRoute[]>
-  ? Routes
-  : never;
+    return this.hasStaticChild(name);
+  }
 
-//   Api extends DredgeApi<infer Routes extends AnyRoute[]>
-//       ? Extract<Routes[number], Route<any, "get", any, any, any>>
-//       : never,
+  hasDynamicChild() {
+    return this.dynamicChild!!;
+  }
 
-type ExtractRouteBy<R, Method, Path extends Array<any> = any> = Extract<
-  R,
-  Route<any, Method, Path, any, any>
->;
+  // addChild(path: Path) {
+  //   if (path.isParam && this.dynamicChild) {
+  //     throw "Dynamic Path already exist..";
+  //   }
 
-interface DredgeClient<Api extends DredgeApi<any>> {
-  get<
-    R extends ExtractRouteBy<inferRoutes<Api>[number], "get">,
-    P extends RoutePath<R>
-  >(
-    path: inferPathType<P>,
-    options: Omit<
-      ApiOptions<ExtractRouteBy<R, any, P>>,
-      "method" | "path" | "body"
-    >
-  );
-  put(
-    path: Api extends DredgeApi<infer Routes extends AnyRoute[]>
-      ? RouteArrayToPathStr<Routes, "put">
-      : ""
-  );
-  delete();
-  post<
-    R extends ExtractRouteBy<inferRoutes<Api>[number], "post">,
-    P extends RoutePath<R>
-  >(
-    path: inferPathType<P>,
-    options: Omit<ApiOptions<ExtractRouteBy<R, any, P>>, "method" | "path">
-  );
+  //   if (path.isParam) {
+  //     this.dynamicChild = path;
+  //     return;
+  //   }
+
+  //   this.children.set(path.name, path);
+  // }
+
+  addChild(name: string, route?: AnyRoute) {
+    if (name.startsWith(":")) {
+      this.dynamicChild = new Path({
+        name: name.replace(":", ""),
+        isParam: true,
+        route,
+      });
+    }
+
+    this.children.set(
+      name,
+      new Path({
+        name,
+        route,
+      })
+    );
+  }
+
+  getStaticChild(name: string) {
+    return this.children.get(name);
+  }
+  getDynamicChild() {
+    return this.dynamicChild;
+  }
+
+  getChild(name: string) {
+    if (name.startsWith(":")) {
+      return this.getDynamicChild();
+    }
+
+    return this.getStaticChild(name);
+  }
 }
-
-const dredge = {} as DredgeClient<Api>;
-
-dredge.get("user/dd/", {
-  searchParams: {
-    size: "20",
-  },
-});
-dredge.get("user/dhrjarun/", {
-  searchParams: {
-    size: "2",
-  },
-});
-dredge.post("posts/dhrjarun/", {
-  searchParams: {
-    size: "2",
-  },
-  body: "here is the body",
-});
-
-type RouteArrayToPathStr<T, Method extends string = string> = T extends [
-  infer First extends AnyRoute,
-  ...infer Tail
-]
-  ? First extends Route<any, infer $Method, infer Path, any, any>
-    ? $Method extends Method
-      ? inferPathType<Path> | RouteArrayToPathStr<Tail, Method>
-      : RouteArrayToPathStr<Tail, Method>
-    : ""
-  : "";
 
 // type FilterRouteArrayByMethod<T, Method extends string> = T extends [
 //   infer First extends AnyRoute,

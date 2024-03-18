@@ -101,7 +101,7 @@ type RouteBuilderDef = {
   oBody?: ParseFn<any>;
 
   middlewares: MiddlewareFunction<any, any, any, any, any, any>[];
-  resolver?: Function;
+  resolver?: ResolverFunction<any, any, any, any, any, any>;
 };
 
 export interface Route<
@@ -114,6 +114,10 @@ export interface Route<
 > {
   _def: RouteBuilderDef;
 
+  error(
+    fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
+  ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
+
   // path<N extends string, P>(
   //   name: N,
   //   parser?: P
@@ -125,6 +129,15 @@ export interface Route<
   //     ? [...Paths, P extends Parser ? [N, P] : N]
   //     : "Path must be array"
   // >;
+  // path<
+  //   const T extends string[],
+  //   const P extends Record<Extract<T[number], `:${string}`>, Parser>
+  // >(
+  //   paths: T,
+  //   paramSchema?: P
+  // );
+  // paths<const T extends string[]>(...paths: T): Route<>
+  // params<const T extends Record<Extract<T[number], `:${string}`>, Parser>>(): Route<>
 
   path<const T extends (string | [string, Parser])[]>(
     ...paths: T
@@ -163,12 +176,18 @@ export interface Route<
   >;
 
   get(): Route<Context, "get", Paths, SearchParams, IBody>;
-  post<P>(parser: P): Route<Context, "post", Paths, SearchParams, P>;
-  put<P>(parser: P): Route<Context, "put", Paths, SearchParams, P>;
+  post<P extends Parser>(
+    parser: P
+  ): Route<Context, "post", Paths, SearchParams, P>;
+  put<P extends Parser>(
+    parser: P
+  ): Route<Context, "put", Paths, SearchParams, P>;
   delete(): Route<Context, "delete", Paths, SearchParams, IBody>;
 }
 
-export function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
+type Method = "get" | "post" | "put" | "delete";
+
+export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const { middlewares = [], paths = [], searchParams = {}, ...rest } = initDef;
 
   const _def: RouteBuilderDef = {
@@ -177,6 +196,23 @@ export function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     searchParams,
     ...rest,
   };
+
+  function method(method: Method, parser?: Parser) {
+    if (_def.method) throw "Method already defined";
+
+    if (parser) {
+      return createRouteBuilder({
+        ..._def,
+        method,
+        iBody: getParseFn(parser),
+      });
+    }
+
+    return createRouteBuilder({
+      ..._def,
+      method,
+    });
+  }
 
   const builder = {
     _def,
@@ -190,27 +226,62 @@ export function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         throw new Error("Invalid paths");
       });
 
-      return createBuilder({
+      const _paths = _def.paths;
+
+      return createRouteBuilder({
         ..._def,
-        paths,
+        paths: [..._paths, ...paths],
       });
     },
 
     searchParam: (queries) => {
       const searchParams: RouteBuilderDef["searchParams"] = {};
 
-      return createBuilder({
+      Object.entries(queries).forEach(([key, value]) => {
+        searchParams[key] = getParseFn(value);
+      });
+
+      const _searchParams = _def.searchParams;
+      return createRouteBuilder({
         ..._def,
-        searchParams,
+        searchParams: {
+          ..._searchParams,
+          ...searchParams,
+        },
       });
     },
 
     use: (cb) => {
       const middlewares = _def.middlewares;
       middlewares.push(cb);
-      return createBuilder({
+      return createRouteBuilder({
         ..._def,
         middlewares,
+      });
+    },
+
+    get: () => {
+      return method("get");
+    },
+
+    post: (parser) => {
+      return method("post", parser);
+    },
+
+    put: (parser) => {
+      return method("put", parser);
+    },
+
+    delete: () => {
+      return method("delete");
+    },
+
+    resolve: (fn) => {
+      if (_def.resolver) throw "Resolver already exist";
+
+      return createRouteBuilder({
+        ..._def,
+        resolver: fn,
       });
     },
   } as Route<{}, string, [], {}, unknown>;
@@ -218,7 +289,7 @@ export function createBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   return builder;
 }
 
-let route = createBuilder()
+let route = createRouteBuilder()
   .path("user", ["username", z.enum(["dhrjarun", "dd"])], "c", [
     "age",
     z.number(),
@@ -260,10 +331,4 @@ export type inferPathType<T> = T extends [
       : First}/${inferPathType<Tail>}`
   : "";
 
-type PathTuple = [
-  "aaa",
-  "bbb" | "BBB",
-  ["username", z.ZodEnum<["dhrjarun", "dd"]>]
-];
-
-type PathStr = inferPathType<PathTuple>;
+export type AnyRoute = Route<any, any, any, any, any>;
