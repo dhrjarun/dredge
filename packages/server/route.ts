@@ -48,12 +48,35 @@ type MiddlewareFunction<
   }): MiddlewareResult<ContextOverride>;
 };
 
-interface ResolverResult<OBody> {
+export interface ResolverResult<OBody> {
   body: OBody;
   headers: Record<string, string>;
   status: number;
   statusText: string;
 }
+
+type ErrorResolverFunction = {
+  (opts: {
+    method: string;
+    path: string;
+    params: Record<string, string>;
+    searchParams: Record<string, string>;
+    body: unknown;
+
+    error: unknown;
+    errorOrigin: string;
+
+    send: {
+      (): MiddlewareResult<unknown>;
+      <$OBody>(opts: {
+        body?: $OBody;
+        headers?: Record<string, string>;
+        status?: number;
+        statusText?: string;
+      }): ResolverResult<$OBody>;
+    };
+  }): ResolverResult<unknown>;
+};
 
 type ResolverFunction<
   Context,
@@ -83,7 +106,7 @@ type ResolverFunction<
       [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
     };
     method: Method;
-    body: inferParserType<IBody>;
+    body: IBody extends null ? never : inferParserType<IBody>;
 
     send: {
       (): MiddlewareResult<unknown>;
@@ -113,21 +136,23 @@ type RouteBuilderDef = {
 // TODO
 // implement error
 // after middleware
-// path and head methods
+// patch and head methods
+// support for async await in middleware and resolver
+// IBody and OBody default type
 export interface Route<
   Context,
   Method,
   Paths extends Array<string> = [],
   Params = {},
   SearchParams = {},
-  IBody = never,
-  OBody = never
+  IBody = null,
+  OBody = null
 > {
   _def: RouteBuilderDef;
 
-  // error(
-  //   fn: ResolverFunction<Context, Paths, SearchParams, Method, IBody, OBody>
-  // ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
+  error(
+    fn: ErrorResolverFunction
+  ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
 
   // path<N extends string, P>(
   //   name: N,
@@ -395,6 +420,12 @@ let route = createRouteBuilder()
       ctx: {
         anotherInfo: "The big box",
       },
+    });
+  })
+  .error(({ send }) => {
+    return send({
+      body: "",
+      headers: {},
     });
   })
   .post(
