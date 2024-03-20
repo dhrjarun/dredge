@@ -14,10 +14,11 @@ type inferRoutes<Api> = Api extends DredgeApi<infer Routes extends AnyRoute[]>
   ? Routes
   : never;
 
-type ExtractRouteBy<R, Method, Path extends Array<any> = any> = Extract<
+type ExtractRouteBy<
   R,
-  Route<any, Method, Path, any, any>
->;
+  Method extends string,
+  Path extends Array<any> = any
+> = Extract<R, Route<any, Method, Path, any, any, any>>;
 
 type ClientPath<R> = R extends Route<
   any,
@@ -42,7 +43,7 @@ type ClientOptions<R> = R extends Route<
       method: Method;
       path: inferPathType<Path, SearchParams>;
       searchParams: inferSearchParamsType<SearchParams>;
-      body: IBody extends null ? never : inferParserType<IBody>;
+      body: inferParserType<IBody>;
     }
   : never;
 
@@ -103,16 +104,17 @@ function buildDirectClient<T>(
   const { initialCtx = {} } = options;
   const root = api._root;
 
-  function createSteps(
+  function executeRoute(
     route: AnyRoute,
-    clientOptions: ClientOptions<AnyRoute>
+    clientOptions: Omit<ClientOptions<AnyRoute>, "method">
   ) {
     const routeDef = route?._def;
 
-    const { path, searchParams, method, body } = clientOptions;
+    const { path, searchParams, body } = clientOptions;
     const paths = path.split("/");
     const parsedSearchParams = {};
     const parsedParams = {};
+    let parsedBody: unknown;
     let currentCtx: any = {
       ...initialCtx,
     };
@@ -146,7 +148,7 @@ function buildDirectClient<T>(
             step = "BODY_VALIDATION";
             break;
           case "BODY_VALIDATION":
-            if()
+            parsedBody = routeDef.iBody?.(body);
 
             step = "MIDDLEWARE_CALLS";
             break;
@@ -159,7 +161,7 @@ function buildDirectClient<T>(
                 params: parsedParams,
                 searchParams: parsedSearchParams,
                 path: paths.join("/"),
-                body: null,
+                body: parsedBody,
                 next(nextOptions?: any) {
                   return {
                     ctx: {
@@ -180,12 +182,12 @@ function buildDirectClient<T>(
               throw "No resolver exist";
             }
             resolverResult = routeDef.resolver({
-              method: "get",
+              method: routeDef.method,
               ctx: currentCtx,
               params: parsedParams,
               searchParams: parsedSearchParams,
               path: paths.join("/"),
-              body: null,
+              body: parsedBody,
               send(resolverOptions?: any) {
                 return resolverOptions;
               },
@@ -204,37 +206,44 @@ function buildDirectClient<T>(
     return resolverResult!;
   }
 
+  function findRoute(method: string, path: string) {
+    // TODO validate pathStr
+    const pathArray = path.split("/");
+
+    let current = root;
+    pathArray.forEach((item, index) => {
+      const child = root.getStaticChild(item) || root.getDynamicChild();
+
+      if (!child) {
+        throw "Invalid path";
+      }
+
+      current = child;
+    });
+
+    const routeDef = current.route?._def;
+    if (!routeDef) {
+      throw "Invalid path, no route exist";
+    }
+    if (routeDef.method !== "get") {
+      throw "Invalid path, no get method";
+    }
+
+    return current.route!;
+  }
+
   return {
-    get: (pathStr, options) => {
-      // TODO validate pathStr
-      const paths = pathStr.split("/");
-
-      let current = root;
-      paths.forEach((item, index) => {
-        const child = root.getStaticChild(item) || root.getDynamicChild();
-
-        if (!child) {
-          throw "Invalid path";
-        }
-
-        current = child;
-      });
-
-      const routeDef = current.route?._def;
-      if (!routeDef) {
-        throw "Invalid path, no route exist";
-      }
-      if (routeDef.method !== "get") {
-        throw "Invalid path, no get method";
-      }
-
-      const result = createSteps(current.route!, {
-        ...options,
-        path: "",
-        method: "get",
-      });
-      // TODO: return response object {body, headers, status, statusText}
-    },
+    // get: (pathStr, options) => {
+    //   const route = findRoute("get", pathStr);
+    //   const result = executeRoute(route, {
+    //     ...options,
+    //     path: pathStr,
+    //     body: undefined,
+    //   });
+    //   return {
+    //     ...result,
+    //   };
+    // },
   } as DredgeClient<DredgeApi<T>>;
 }
 
@@ -303,7 +312,7 @@ dredge.get("user/dhrjarun/", {
     size: "20",
   },
 });
-dredge.get("user/dhrjarun/", {
+dredge.get("user/dd/", {
   searchParams: {
     size: "2",
   },
@@ -314,6 +323,7 @@ const postRes = dredge.post("posts/dhrjarun/", {
   },
   body: "here is the body",
 });
+
 const putRes = dredge.put("edit/FirstName/", {
   body: {
     name: "ok",

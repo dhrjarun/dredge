@@ -142,8 +142,8 @@ type RouteBuilderDef = {
 export interface Route<
   Context,
   Method,
-  Paths extends Array<string> = [],
-  Params = {},
+  Paths extends Array<string>,
+  Params,
   SearchParams = {},
   IBody = null,
   OBody = null
@@ -448,7 +448,8 @@ let route = createRouteBuilder()
 //       : First}/${inferPathType<Tail>}`
 //   : "";
 
-export type AnyRoute = Route<any, any, any, any, any>;
+// export type AnyRoute = Route<any, string, string[], {}, {}, any, any>;
+export type AnyRoute = Route<any, any, any, any, any, any, any>;
 
 export type inferPathType<
   Paths,
