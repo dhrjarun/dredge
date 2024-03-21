@@ -43,6 +43,8 @@ export function buildDredgeApi<const R extends AnyRoute[]>(
 class Path {
   name: string;
   isParam: boolean;
+
+  // TODO: fix this, it should be different methods
   route: AnyRoute | null = null;
 
   children: Map<string, Path>;

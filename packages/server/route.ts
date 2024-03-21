@@ -1,12 +1,6 @@
 import { z } from "zod";
-import {
-  ParseFn,
-  Parser,
-  ParserWithoutInput,
-  getParseFn,
-  inferParserType,
-} from "./parser";
-import { Overwrite, Simplify } from "./types";
+import { Parser, ParserWithoutInput, inferParserType } from "./parser";
+import { MaybePromise, Overwrite, Simplify } from "./types";
 
 interface MiddlewareResult<C> {
   ctx: C;
@@ -45,7 +39,7 @@ type MiddlewareFunction<
         ctx: $ContextOverride;
       }): MiddlewareResult<$ContextOverride>;
     };
-  }): MiddlewareResult<ContextOverride>;
+  }): MaybePromise<MiddlewareResult<ContextOverride>>;
 };
 
 export interface ResolverResult<OBody> {
@@ -75,7 +69,7 @@ type ErrorResolverFunction = {
         statusText?: string;
       }): ResolverResult<$OBody>;
     };
-  }): ResolverResult<unknown>;
+  }): MaybePromise<ResolverResult<unknown>>;
 };
 
 type ResolverFunction<
@@ -117,33 +111,34 @@ type ResolverFunction<
         statusText?: string;
       }): ResolverResult<$OBody>;
     };
-  }): ResolverResult<OBody>;
+  }): MaybePromise<ResolverResult<OBody>>;
+  _type?: string | undefined;
 };
 
 type RouteBuilderDef = {
   method?: "get" | "post" | "put" | "delete";
   paths: string[];
-  params: Record<string, ParseFn<any>>;
-  searchParams: Record<string, ParseFn<any>>;
+  params: Record<string, Parser>;
+  searchParams: Record<string, Parser>;
 
-  iBody?: ParseFn<any>;
-  oBody?: ParseFn<any>;
+  iBody?: Parser;
+  oBody?: Parser;
 
   middlewares: MiddlewareFunction<any, any, any, any, any, any, any>[];
+  errorResolver?: ErrorResolverFunction;
   resolver?: ResolverFunction<any, any, any, any, any, any, any>;
 };
 
 // TODO
-// implement error
-// after middleware
 // patch and head methods
-// support for async await in middleware and resolver
 // IBody and OBody default type
+// OBody Schema implementation
+// after middleware
 export interface Route<
   Context,
   Method,
-  Paths extends Array<string>,
-  Params,
+  Paths extends Array<string> = [],
+  Params = {},
   SearchParams = {},
   IBody = null,
   OBody = null
@@ -285,7 +280,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       return createRouteBuilder({
         ..._def,
         method,
-        iBody: getParseFn(parser),
+        iBody: parser,
       });
     }
 
@@ -316,8 +311,32 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     //   });
     // },
 
+    error: (fn) => {
+      return createRouteBuilder({
+        ..._def,
+        errorResolver: fn,
+      });
+    },
+
     path: (...paths) => {
       const _paths = _def.paths;
+
+      const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
+      paths.forEach((item) => {
+        if (!pathRegex.test(item)) {
+          throw `invalid path -> ${item}`;
+        }
+      });
+
+      const newParamPaths = paths.reduce((acc: string[], item) => {
+        if (item.startsWith(":")) acc.push(item);
+        return acc;
+      }, []);
+      _paths.forEach((item) => {
+        if (newParamPaths.includes(item)) {
+          throw `param '${item}' is already defined`;
+        }
+      });
 
       return createRouteBuilder({
         ..._def,
@@ -325,16 +344,24 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    params: (arg) => {
-      const params: RouteBuilderDef["params"] = {};
+    params: (params) => {
+      const _params = _def.params;
+      const _paths = _def.paths;
 
-      Object.entries(arg).forEach(([key, value]) => {
-        if (value) {
-          params[key] = getParseFn(value as Parser);
+      Object.entries(params).forEach(([path, parser]) => {
+        // check if it is already defined - might not be useful sometimes
+        if (_params[path]) {
+          throw `${path} param schema already defined`;
         }
+
+        // check if path is defined or not - I guess it doesn't need. it would be useful to define params before defining corresponding path
+        if (!_paths.includes(`:${path}`)) {
+          throw `:${path} is not defined`;
+        }
+
+        // validate parser
       });
 
-      const _params = _def.params;
       return createRouteBuilder({
         ..._def,
         params: {
@@ -344,14 +371,18 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    searchParam: (shape) => {
-      const searchParams: RouteBuilderDef["searchParams"] = {};
+    searchParam: (searchParams) => {
+      const _searchParams = _def.searchParams;
 
-      Object.entries(shape).forEach(([key, value]) => {
-        searchParams[key] = getParseFn(value);
+      // check if it already defined
+      Object.entries(searchParams).forEach(([name, parser]) => {
+        if (_searchParams[name]) {
+          throw `${name} searchParam schema already defined`;
+        }
+
+        // validate parser
       });
 
-      const _searchParams = _def.searchParams;
       return createRouteBuilder({
         ..._def,
         searchParams: {
@@ -448,8 +479,15 @@ let route = createRouteBuilder()
 //       : First}/${inferPathType<Tail>}`
 //   : "";
 
-// export type AnyRoute = Route<any, string, string[], {}, {}, any, any>;
-export type AnyRoute = Route<any, any, any, any, any, any, any>;
+export type AnyRoute = Route<
+  any,
+  string,
+  string[],
+  Record<string, Parser>,
+  Record<string, Parser>,
+  any,
+  any
+>;
 
 export type inferPathType<
   Paths,
@@ -460,7 +498,7 @@ export type inferPathType<
         ? inferParserType<Params[N]>
         : string
       : First}/${inferPathType<Tail, Params>}`
-  : "";
+  : string;
 
 type pathStr = inferPathType<
   ["user", ":username", "c", ":age"],

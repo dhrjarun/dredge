@@ -6,9 +6,10 @@ import {
   createRouteBuilder,
   ResolverResult,
 } from "./route";
-import { Parser, inferParserType } from "./parser";
+import { Parser, getParseFn, inferParserType } from "./parser";
 import { DredgeApi, buildDredgeApi } from "./api";
 import z from "zod";
+import { MaybePromise } from "./types";
 
 type inferRoutes<Api> = Api extends DredgeApi<infer Routes extends AnyRoute[]>
   ? Routes
@@ -31,6 +32,7 @@ type ClientPath<R> = R extends Route<
   ? inferPathType<Path, Params>
   : never;
 
+// TODO: AnyClientOptions
 type ClientOptions<R> = R extends Route<
   any,
   infer Method,
@@ -46,6 +48,14 @@ type ClientOptions<R> = R extends Route<
       body: inferParserType<IBody>;
     }
   : never;
+
+class ClientResponse<T> {
+  promise: Promise<any>;
+
+  constructor(p = Promise.resolve()) {
+    this.promise = p;
+  }
+}
 
 type ClientResult<R> = R extends Route<
   any,
@@ -79,22 +89,22 @@ interface DredgeClient<Api extends DredgeApi<any>> {
   get<R extends ExtractRouteBy<inferRoutes<Api>[number], "get">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path" | "body">
-  ): ClientResult<R>;
+  ): Promise<ClientResult<R>>;
 
   post<R extends ExtractRouteBy<inferRoutes<Api>[number], "post">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path">
-  ): ClientResult<R>;
+  ): Promise<ClientResult<R>>;
 
   put<R extends ExtractRouteBy<inferRoutes<Api>[number], "put">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path">
-  ): ClientResult<R>;
+  ): Promise<ClientResult<R>>;
 
   delete<R extends ExtractRouteBy<inferRoutes<Api>[number], "delete">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path" | "body">
-  ): ClientResult<R>;
+  ): Promise<ClientResult<R>>;
 }
 
 function buildDirectClient<T>(
@@ -104,6 +114,7 @@ function buildDirectClient<T>(
   const { initialCtx = {} } = options;
   const root = api._root;
 
+  // parsed body with promise
   function executeRoute(
     route: AnyRoute,
     clientOptions: Omit<ClientOptions<AnyRoute>, "method">
@@ -112,13 +123,22 @@ function buildDirectClient<T>(
 
     const { path, searchParams, body } = clientOptions;
     const paths = path.split("/");
+    const params: Record<string, string> = routeDef.paths.reduce(
+      (acc, item, index) => {
+        if (item.startsWith(":")) {
+          acc[item.replace(":", "")] = paths[index];
+        }
+        return acc;
+      },
+      {}
+    );
     const parsedSearchParams = {};
     const parsedParams = {};
     let parsedBody: unknown;
     let currentCtx: any = {
       ...initialCtx,
     };
-    let resolverResult: ResolverResult<any>;
+    let resolverResult: MaybePromise<ResolverResult<any>>;
 
     let step:
       | "PARAM_VALIDATION"
@@ -135,27 +155,29 @@ function buildDirectClient<T>(
             routeDef.paths.forEach((item, index) => {
               if (item.startsWith(":")) {
                 const parser = routeDef.params[item.replace(":", "")];
-                parsedParams[item] = parser?.(paths[index]) || paths[index];
+                parsedParams[item] =
+                  getParseFn(parser)(paths[index]) || paths[index];
               }
             });
             step = "SEARCH_PARAM_VALIDATION";
             break;
           case "SEARCH_PARAM_VALIDATION":
-            Object.entries(routeDef.searchParams).forEach(([key, parserFn]) => {
-              parsedSearchParams[key] = parserFn(searchParams[key]);
+            Object.entries(routeDef.searchParams).forEach(([key, parser]) => {
+              parsedSearchParams[key] = getParseFn(parser)(searchParams[key]);
             });
 
             step = "BODY_VALIDATION";
             break;
           case "BODY_VALIDATION":
-            parsedBody = routeDef.iBody?.(body);
+            if (routeDef.iBody) {
+              parsedBody = getParseFn(routeDef.iBody)(body);
+            }
 
             step = "MIDDLEWARE_CALLS";
             break;
           case "MIDDLEWARE_CALLS":
-            // middlewares calls
-            routeDef.middlewares.forEach((fn) => {
-              const middlewareResult = fn({
+            routeDef.middlewares.forEach(async (fn) => {
+              const middlewareResult = await fn({
                 method: "get",
                 ctx: currentCtx,
                 params: parsedParams,
@@ -196,8 +218,17 @@ function buildDirectClient<T>(
             step = "DONE";
             break;
         }
-      } catch (err) {
-        // resolverResult = routeDef.
+      } catch (error) {
+        resolverResult = routeDef.errorResolver?.({
+          error,
+          errorOrigin: step,
+          ...clientOptions,
+          params,
+          method: routeDef.method!,
+          send(resolverOptions?: any) {
+            return resolverOptions;
+          },
+        })!;
 
         step = "DONE";
       }
@@ -233,17 +264,17 @@ function buildDirectClient<T>(
   }
 
   return {
-    // get: (pathStr, options) => {
-    //   const route = findRoute("get", pathStr);
-    //   const result = executeRoute(route, {
-    //     ...options,
-    //     path: pathStr,
-    //     body: undefined,
-    //   });
-    //   return {
-    //     ...result,
-    //   };
-    // },
+    get: (pathStr, options) => {
+      const route = findRoute("get", pathStr);
+      const result = executeRoute(route, {
+        ...options,
+        path: pathStr,
+        body: undefined,
+      });
+      return {
+        ...result,
+      };
+    },
   } as DredgeClient<DredgeApi<T>>;
 }
 
@@ -296,6 +327,9 @@ let editRoute = createRouteBuilder()
       name: z.string(),
     })
   )
+  .use(({ next }) => {
+    return next();
+  })
   .resolve(({ send }) => {
     return send({
       body: true,
