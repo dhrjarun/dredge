@@ -49,14 +49,6 @@ type ClientOptions<R> = R extends Route<
     }
   : never;
 
-class ClientResponse<T> {
-  promise: Promise<any>;
-
-  constructor(p = Promise.resolve()) {
-    this.promise = p;
-  }
-}
-
 type ClientResult<R> = R extends Route<
   any,
   any,
@@ -67,11 +59,13 @@ type ClientResult<R> = R extends Route<
   infer OBody
 >
   ? {
-      body: inferParserType<OBody>;
+      parsed: () => Promise<inferParserType<OBody>>;
+    } & Promise<{
+      body: OBody extends Parser ? inferParserType<OBody> : unknown;
       headers: Record<string, string>;
       status: number;
       statusText: string;
-    }
+    }>
   : never;
 
 interface DredgeClient<Api extends DredgeApi<any>> {
@@ -89,24 +83,28 @@ interface DredgeClient<Api extends DredgeApi<any>> {
   get<R extends ExtractRouteBy<inferRoutes<Api>[number], "get">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path" | "body">
-  ): Promise<ClientResult<R>>;
+  ): ClientResult<R>;
 
   post<R extends ExtractRouteBy<inferRoutes<Api>[number], "post">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path">
-  ): Promise<ClientResult<R>>;
+  ): ClientResult<R>;
 
   put<R extends ExtractRouteBy<inferRoutes<Api>[number], "put">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path">
-  ): Promise<ClientResult<R>>;
+  ): ClientResult<R>;
 
   delete<R extends ExtractRouteBy<inferRoutes<Api>[number], "delete">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path" | "body">
-  ): Promise<ClientResult<R>>;
+  ): ClientResult<R>;
 }
 
+// TODO
+// refactor executeRoute and findRoute
+// create response
+// ctx mergeDeep
 function buildDirectClient<T>(
   api: DredgeApi<T>,
   options: { initialCtx?: object } = {}
@@ -114,7 +112,6 @@ function buildDirectClient<T>(
   const { initialCtx = {} } = options;
   const root = api._root;
 
-  // parsed body with promise
   function executeRoute(
     route: AnyRoute,
     clientOptions: Omit<ClientOptions<AnyRoute>, "method">
@@ -252,15 +249,12 @@ function buildDirectClient<T>(
       current = child;
     });
 
-    const routeDef = current.route?._def;
+    const routeDef = current.getRoute(method)!._def;
     if (!routeDef) {
       throw "Invalid path, no route exist";
     }
-    if (routeDef.method !== "get") {
-      throw "Invalid path, no get method";
-    }
 
-    return current.route!;
+    return current.getRoute(method)!;
   }
 
   return {
@@ -271,9 +265,38 @@ function buildDirectClient<T>(
         path: pathStr,
         body: undefined,
       });
-      return {
-        ...result,
+
+      const response = new Promise((resolve, reject) => {
+        if (result instanceof Promise) {
+          result
+            .then((re) => {
+              resolve(re);
+            })
+            .catch((err) => {
+              reject(err);
+            });
+        } else {
+          resolve(result);
+        }
+      }) as ClientResult<any>;
+
+      response.parsed = () => {
+        return new Promise((resolve, reject) => {
+          if (result instanceof Promise) {
+            result
+              .then((re) => {
+                resolve(re.body);
+              })
+              .catch((err) => {
+                reject(err);
+              });
+          } else {
+            resolve(result.body);
+          }
+        });
       };
+
+      return response;
     },
   } as DredgeClient<DredgeApi<T>>;
 }

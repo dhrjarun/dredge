@@ -29,10 +29,13 @@ export function buildDredgeApi<const R extends AnyRoute[]>(
       const isLast = index + 1 == paths.length;
 
       if (!current.hasChild(name)) {
-        current.addChild(name, isLast ? route : undefined);
+        // current.addChild(name, isLast ? route : undefined);
+        current.addChild(name);
       }
       current = current.getChild(name)!;
     });
+
+    current.setRoute(route);
   });
 
   return {
@@ -44,21 +47,34 @@ class Path {
   name: string;
   isParam: boolean;
 
-  // TODO: fix this, it should be different methods
-  route: AnyRoute | null = null;
+  routes = new Map<string, AnyRoute>();
 
   children: Map<string, Path>;
   dynamicChild: Path | null = null;
 
-  constructor(options: { name: string; isParam?: boolean; route?: AnyRoute }) {
-    const { name, isParam = false, route } = options;
+  constructor(options: {
+    name: string;
+    isParam?: boolean;
+    routes?: AnyRoute[];
+  }) {
+    const { name, isParam = false, routes = [] } = options;
     this.name = name;
     this.isParam = isParam;
-    this.route = route ?? null;
+
+    routes.forEach((item) => {
+      this.routes[item._def.method || "get"] = item;
+    });
   }
 
   hasStaticChild(name: string) {
     this.children.has(name);
+  }
+
+  getRoute(method: string) {
+    return this.routes.get(method);
+  }
+  setRoute(route: AnyRoute) {
+    this.routes[route._def.method || "get"] = route;
   }
 
   hasChild(name: string) {
@@ -73,6 +89,8 @@ class Path {
     return this.dynamicChild!!;
   }
 
+  // execute: ()
+
   // addChild(path: Path) {
   //   if (path.isParam && this.dynamicChild) {
   //     throw "Dynamic Path already exist..";
@@ -86,12 +104,12 @@ class Path {
   //   this.children.set(path.name, path);
   // }
 
-  addChild(name: string, route?: AnyRoute) {
+  addChild(name: string, routes?: AnyRoute[]) {
     if (name.startsWith(":")) {
       this.dynamicChild = new Path({
         name: name.replace(":", ""),
         isParam: true,
-        route,
+        routes,
       });
     }
 
@@ -99,7 +117,7 @@ class Path {
       name,
       new Path({
         name,
-        route,
+        routes,
       })
     );
   }

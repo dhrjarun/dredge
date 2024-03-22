@@ -116,7 +116,7 @@ type ResolverFunction<
 };
 
 type RouteBuilderDef = {
-  method?: "get" | "post" | "put" | "delete";
+  method: "get" | "post" | "put" | "delete";
   paths: string[];
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
@@ -258,6 +258,7 @@ type Method = "get" | "post" | "put" | "delete";
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const {
+    method = "get",
     middlewares = [],
     paths = [],
     params = {},
@@ -270,10 +271,11 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     paths,
     params,
     searchParams,
+    method,
     ...rest,
   };
 
-  function method(method: Method, parser?: Parser) {
+  function executeMethod(method: Method, parser?: Parser) {
     if (_def.method) throw "Method already defined";
 
     if (parser) {
@@ -402,19 +404,19 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
 
     get: () => {
-      return method("get");
+      return executeMethod("get");
     },
 
     post: (parser) => {
-      return method("post", parser);
+      return executeMethod("post", parser);
     },
 
     put: (parser) => {
-      return method("put", parser);
+      return executeMethod("put", parser);
     },
 
     delete: () => {
-      return method("delete");
+      return executeMethod("delete");
     },
 
     resolve: (fn) => {
