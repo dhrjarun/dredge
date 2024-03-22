@@ -276,8 +276,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   };
 
   function executeMethod(method: Method, parser?: Parser) {
-    if (_def.method) throw "Method already defined";
-
     if (parser) {
       return createRouteBuilder({
         ..._def,
@@ -495,12 +493,12 @@ export type inferPathType<
   Paths,
   Params extends Record<string, Parser>
 > = Paths extends [infer First extends string, ...infer Tail extends string[]]
-  ? `${First extends `:${infer N}`
+  ? `/${First extends `:${infer N}`
       ? Params[N] extends Parser
         ? inferParserType<Params[N]>
         : string
-      : First}/${inferPathType<Tail, Params>}`
-  : string;
+      : First}${inferPathType<Tail, Params>}`
+  : "";
 
 type pathStr = inferPathType<
   ["user", ":username", "c", ":age"],

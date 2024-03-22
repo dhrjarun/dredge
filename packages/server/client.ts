@@ -3,25 +3,54 @@ import {
   inferSearchParamsType,
   AnyRoute,
   Route,
-  createRouteBuilder,
   ResolverResult,
 } from "./route";
 import { Parser, getParseFn, inferParserType } from "./parser";
-import { DredgeApi, buildDredgeApi } from "./api";
-import z from "zod";
+import { DredgeApi, DredgePath } from "./api";
 import { MaybePromise } from "./types";
 
-type inferRoutes<Api> = Api extends DredgeApi<infer Routes extends AnyRoute[]>
+export type inferRoutes<Api> = Api extends DredgeApi<
+  infer Routes extends AnyRoute[]
+>
   ? Routes
   : never;
 
-type ExtractRouteBy<
+type ExtractRouteByMethod<R, Method extends string> = Extract<
+  R,
+  Route<any, Method, any, any, any, any>
+>;
+export type ExtractRouteByPath<R, Path extends string> = R extends Route<
+  any,
+  any,
+  infer PathArray,
+  infer Params extends Record<string, Parser>,
+  any,
+  any,
+  any
+>
+  ? Path extends inferPathType<PathArray, Params>
+    ? R
+    : never
+  : never;
+type ExtractRoute<
   R,
   Method extends string,
-  Path extends Array<any> = any
-> = Extract<R, Route<any, Method, Path, any, any, any>>;
+  Path extends string = string
+> = R extends Route<
+  any,
+  infer M,
+  infer PathArray,
+  infer Params extends Record<string, Parser>,
+  any,
+  any,
+  any
+>
+  ? [Method, Path] extends [M, inferPathType<PathArray, Params>]
+    ? R
+    : never
+  : never;
 
-type ClientPath<R> = R extends Route<
+export type ClientPath<R> = R extends Route<
   any,
   any,
   infer Path,
@@ -32,7 +61,9 @@ type ClientPath<R> = R extends Route<
   ? inferPathType<Path, Params>
   : never;
 
-// TODO: AnyClientOptions
+// TODO:
+// AnyClientOptions
+// remove searchParam and body if not needed
 type ClientOptions<R> = R extends Route<
   any,
   infer Method,
@@ -68,6 +99,9 @@ type ClientResult<R> = R extends Route<
     }>
   : never;
 
+// TODO
+// global request method
+// refactor types for the methods
 interface DredgeClient<Api extends DredgeApi<any>> {
   // get<
   //   R extends ExtractRouteBy<inferRoutes<Api>[number], "get">,
@@ -80,50 +114,79 @@ interface DredgeClient<Api extends DredgeApi<any>> {
   //   >
   // );
 
-  get<R extends ExtractRouteBy<inferRoutes<Api>[number], "get">>(
+  get<R extends ExtractRouteByMethod<inferRoutes<Api>[number], "get">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path" | "body">
   ): ClientResult<R>;
 
-  post<R extends ExtractRouteBy<inferRoutes<Api>[number], "post">>(
+  post<
+    P extends ClientPath<
+      ExtractRouteByMethod<inferRoutes<Api>[number], "post">
+    >,
+    R extends ExtractRoute<inferRoutes<Api>[number], "post", P>
+    // R extends ExtractRouteByPath<
+    //   ExtractRouteByMethod<inferRoutes<Api>[number], "post">,
+    //   P
+    // >
+  >(
+    path: P,
+    options: Omit<ClientOptions<R>, "method" | "path">
+  ): ClientResult<R>;
+  // post<
+  //   R extends ExtractRouteBy<inferRoutes<Api>[number], "post">,
+  //   P extends RoutePath<R>
+  // >(
+  //   path: inferPathType<P, RouteParams<R>>,
+  //   options: Omit<ClientOptions<ExtractRouteBy<R, any, P>>, "method" | "path">
+  // );
+
+  put<R extends ExtractRouteByMethod<inferRoutes<Api>[number], "put">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path">
   ): ClientResult<R>;
 
-  put<R extends ExtractRouteBy<inferRoutes<Api>[number], "put">>(
-    path: ClientPath<R>,
-    options: Omit<ClientOptions<R>, "method" | "path">
-  ): ClientResult<R>;
-
-  delete<R extends ExtractRouteBy<inferRoutes<Api>[number], "delete">>(
+  delete<R extends ExtractRouteByMethod<inferRoutes<Api>[number], "delete">>(
     path: ClientPath<R>,
     options: Omit<ClientOptions<R>, "method" | "path" | "body">
   ): ClientResult<R>;
 }
 
 // TODO
-// refactor executeRoute and findRoute
-// create response
 // ctx mergeDeep
-function buildDirectClient<T>(
+export function buildDirectClient<T>(
   api: DredgeApi<T>,
   options: { initialCtx?: object } = {}
 ) {
   const { initialCtx = {} } = options;
   const root = api._root;
 
-  function executeRoute(
-    route: AnyRoute,
-    clientOptions: Omit<ClientOptions<AnyRoute>, "method">
+  async function executeRoute(
+    root: DredgePath,
+    clientOptions: ClientOptions<AnyRoute>
   ) {
-    const routeDef = route?._def;
+    const { path, searchParams, body, method } = clientOptions;
+    const pathArray = path.split("/").slice(1);
 
-    const { path, searchParams, body } = clientOptions;
-    const paths = path.split("/");
+    let current = root;
+    pathArray.forEach((item, index) => {
+      const child = current.getStaticChild(item) || current.getDynamicChild();
+
+      if (!child) {
+        throw "Invalid path";
+      }
+
+      current = child;
+    });
+
+    const routeDef = current.getRoute(method)!._def;
+    if (!routeDef) {
+      throw "Invalid path, no route exist";
+    }
+
     const params: Record<string, string> = routeDef.paths.reduce(
       (acc, item, index) => {
         if (item.startsWith(":")) {
-          acc[item.replace(":", "")] = paths[index];
+          acc[item.replace(":", "")] = pathArray[index];
         }
         return acc;
       },
@@ -149,25 +212,29 @@ function buildDirectClient<T>(
       try {
         switch (step) {
           case "PARAM_VALIDATION":
-            routeDef.paths.forEach((item, index) => {
+            for (const [index, item] of routeDef.paths.entries()) {
               if (item.startsWith(":")) {
                 const parser = routeDef.params[item.replace(":", "")];
                 parsedParams[item] =
-                  getParseFn(parser)(paths[index]) || paths[index];
+                  (await getParseFn(parser)(pathArray[index])) ||
+                  pathArray[index];
               }
-            });
+            }
+
             step = "SEARCH_PARAM_VALIDATION";
             break;
           case "SEARCH_PARAM_VALIDATION":
-            Object.entries(routeDef.searchParams).forEach(([key, parser]) => {
-              parsedSearchParams[key] = getParseFn(parser)(searchParams[key]);
-            });
+            for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+              parsedSearchParams[key] = await getParseFn(parser)(
+                searchParams[key]
+              );
+            }
 
             step = "BODY_VALIDATION";
             break;
           case "BODY_VALIDATION":
             if (routeDef.iBody) {
-              parsedBody = getParseFn(routeDef.iBody)(body);
+              parsedBody = await getParseFn(routeDef.iBody)(body);
             }
 
             step = "MIDDLEWARE_CALLS";
@@ -175,11 +242,11 @@ function buildDirectClient<T>(
           case "MIDDLEWARE_CALLS":
             routeDef.middlewares.forEach(async (fn) => {
               const middlewareResult = await fn({
-                method: "get",
+                method,
                 ctx: currentCtx,
                 params: parsedParams,
                 searchParams: parsedSearchParams,
-                path: paths.join("/"),
+                path: pathArray.join("/"),
                 body: parsedBody,
                 next(nextOptions?: any) {
                   return {
@@ -201,11 +268,11 @@ function buildDirectClient<T>(
               throw "No resolver exist";
             }
             resolverResult = routeDef.resolver({
-              method: routeDef.method,
+              method,
               ctx: currentCtx,
               params: parsedParams,
               searchParams: parsedSearchParams,
-              path: paths.join("/"),
+              path: pathArray.join("/"),
               body: parsedBody,
               send(resolverOptions?: any) {
                 return resolverOptions;
@@ -221,7 +288,7 @@ function buildDirectClient<T>(
           errorOrigin: step,
           ...clientOptions,
           params,
-          method: routeDef.method!,
+          method,
           send(resolverOptions?: any) {
             return resolverOptions;
           },
@@ -234,162 +301,94 @@ function buildDirectClient<T>(
     return resolverResult!;
   }
 
-  function findRoute(method: string, path: string) {
-    // TODO validate pathStr
-    const pathArray = path.split("/");
+  function makeRequest(options: ClientOptions<AnyRoute>) {
+    const result = executeRoute(root, options);
 
-    let current = root;
-    pathArray.forEach((item, index) => {
-      const child = root.getStaticChild(item) || root.getDynamicChild();
+    const response = result as ClientResult<any>;
 
-      if (!child) {
-        throw "Invalid path";
-      }
+    response.parsed = () => {
+      return new Promise((resolve, reject) => {
+        result
+          .then((re) => {
+            resolve(re.body);
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      });
+    };
 
-      current = child;
-    });
-
-    const routeDef = current.getRoute(method)!._def;
-    if (!routeDef) {
-      throw "Invalid path, no route exist";
-    }
-
-    return current.getRoute(method)!;
+    return response;
   }
 
   return {
-    get: (pathStr, options) => {
-      const route = findRoute("get", pathStr);
-      const result = executeRoute(route, {
+    get: (path, options) => {
+      return makeRequest({
+        path,
+        method: "get",
         ...options,
-        path: pathStr,
         body: undefined,
       });
+    },
 
-      const response = new Promise((resolve, reject) => {
-        if (result instanceof Promise) {
-          result
-            .then((re) => {
-              resolve(re);
-            })
-            .catch((err) => {
-              reject(err);
-            });
-        } else {
-          resolve(result);
-        }
-      }) as ClientResult<any>;
+    post: (path, options) => {
+      return makeRequest({
+        path,
+        method: "post",
+        ...options,
+      });
+    },
 
-      response.parsed = () => {
-        return new Promise((resolve, reject) => {
-          if (result instanceof Promise) {
-            result
-              .then((re) => {
-                resolve(re.body);
-              })
-              .catch((err) => {
-                reject(err);
-              });
-          } else {
-            resolve(result.body);
-          }
-        });
-      };
+    delete: (path, options) => {
+      return makeRequest({
+        path,
+        method: "delete",
+        ...options,
+        body: undefined,
+      });
+    },
 
-      return response;
+    put: (path, options) => {
+      return makeRequest({
+        path,
+        method: "put",
+        ...options,
+      });
     },
   } as DredgeClient<DredgeApi<T>>;
 }
 
-let userRoute = createRouteBuilder()
-  .path("user", ":username")
-  .params({
-    username: z.enum(["dhrjarun", "dd"]),
-  })
-  .searchParam({
-    size: z.string(),
-  })
-  .get()
-  .resolve(({ send, body, params, searchParams, method }) => {
-    return send({
-      body: [
-        {
-          id: "u1",
-          username: "dhrjarun",
-        },
-      ],
-    });
-  });
+// const api = buildDredgeApi([userRoute, postRoute, editRoute]);
+// const dredge = buildDirectClient(api, {
+//   initialCtx: {},
+// });
 
-let postRoute = createRouteBuilder()
-  .path("posts", ":user")
-  .params({
-    user: z.enum(["dhrjarun", "dd"]),
-  })
-  .searchParam({
-    size: z.string(),
-  })
-  .post(z.string())
-  .resolve(({ send }) => {
-    return send({
-      body: [{ id: "p1", title: "Post1" }],
-    });
-  });
+// dredge.get("/user/dhrjarun", {
+//   searchParams: {
+//     size: "20",
+//   },
+// });
+// dredge.get("/user/dd", {
+//   searchParams: {
+//     size: "2",
+//   },
+// });
+// const postRes = dredge.post("/posts/dhrjarun", {
+//   searchParams: {
+//     size: "2",
+//   },
+//   body: "here is the body",
+// });
 
-let editRoute = createRouteBuilder()
-  .path("edit", ":name")
-  .params({
-    name: z.enum(["FirstName", "LastName"]),
-  })
-  .searchParam({
-    size: z.string(),
-    withHistory: z.boolean(),
-  })
-  .put(
-    z.object({
-      name: z.string(),
-    })
-  )
-  .use(({ next }) => {
-    return next();
-  })
-  .resolve(({ send }) => {
-    return send({
-      body: true,
-    });
-  });
-
-const api = buildDredgeApi([userRoute, postRoute, editRoute]);
-const dredge = buildDirectClient(api, {
-  initialCtx: {},
-});
-
-dredge.get("user/dhrjarun/", {
-  searchParams: {
-    size: "20",
-  },
-});
-dredge.get("user/dd/", {
-  searchParams: {
-    size: "2",
-  },
-});
-const postRes = dredge.post("posts/dhrjarun/", {
-  searchParams: {
-    size: "2",
-  },
-  body: "here is the body",
-});
-
-const putRes = dredge.put("edit/FirstName/", {
-  body: {
-    name: "ok",
-  },
-  searchParams: {
-    size: "",
-    withHistory: false,
-  },
-});
+// const putRes = dredge.put("/edit/FirstName", {
+//   body: {
+//     name: "ok",
+//   },
+//   searchParams: {
+//     size: "",
+//     withHistory: false,
+//   },
+// });
 
 // type RouteArrayToPathStr<T, Method extends string = string> = T extends [
 //   infer First extends AnyRoute,
@@ -401,8 +400,6 @@ const putRes = dredge.put("edit/FirstName/", {
 //       : RouteArrayToPathStr<Tail, Method>
 //     : ""
 //   : "";
-
-type Api = typeof api;
 
 type RoutePath<R> = R extends Route<any, any, infer Path, any, any>
   ? Path

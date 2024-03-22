@@ -3,7 +3,7 @@ import type { AnyRoute } from "./route";
 type RouteMap = Record<string, AnyRoute>;
 
 export interface DredgeApi<T> {
-  _root: Path;
+  _root: DredgePath;
   // _routes: Record<string, AnyRoute | RouteMap>;
 
   // addRoutes<const R extends AnyRoute[]>(
@@ -16,7 +16,7 @@ export interface DredgeApi<T> {
 export function buildDredgeApi<const R extends AnyRoute[]>(
   routes: R
 ): DredgeApi<R> {
-  const _root = new Path({
+  const _root = new DredgePath({
     name: "$root",
   });
 
@@ -26,10 +26,7 @@ export function buildDredgeApi<const R extends AnyRoute[]>(
 
     let current = _root;
     paths.forEach((name, index) => {
-      const isLast = index + 1 == paths.length;
-
       if (!current.hasChild(name)) {
-        // current.addChild(name, isLast ? route : undefined);
         current.addChild(name);
       }
       current = current.getChild(name)!;
@@ -43,14 +40,14 @@ export function buildDredgeApi<const R extends AnyRoute[]>(
   } as DredgeApi<[]>;
 }
 
-class Path {
+export class DredgePath {
   name: string;
   isParam: boolean;
 
   routes = new Map<string, AnyRoute>();
 
-  children: Map<string, Path>;
-  dynamicChild: Path | null = null;
+  children = new Map<string, DredgePath>();
+  dynamicChild: DredgePath | null = null;
 
   constructor(options: {
     name: string;
@@ -67,14 +64,14 @@ class Path {
   }
 
   hasStaticChild(name: string) {
-    this.children.has(name);
+    return this.children.has(name);
   }
 
   getRoute(method: string) {
     return this.routes.get(method);
   }
   setRoute(route: AnyRoute) {
-    this.routes[route._def.method || "get"] = route;
+    this.routes.set(route._def.method || "get", route);
   }
 
   hasChild(name: string) {
@@ -86,7 +83,7 @@ class Path {
   }
 
   hasDynamicChild() {
-    return this.dynamicChild!!;
+    return !!this.dynamicChild;
   }
 
   // execute: ()
@@ -106,16 +103,17 @@ class Path {
 
   addChild(name: string, routes?: AnyRoute[]) {
     if (name.startsWith(":")) {
-      this.dynamicChild = new Path({
+      this.dynamicChild = new DredgePath({
         name: name.replace(":", ""),
         isParam: true,
         routes,
       });
+      return;
     }
 
     this.children.set(
       name,
-      new Path({
+      new DredgePath({
         name,
         routes,
       })
