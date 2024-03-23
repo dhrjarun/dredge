@@ -1,6 +1,7 @@
-import { z } from "zod";
 import { Parser, ParserWithoutInput, inferParserType } from "./parser";
 import { MaybePromise, Overwrite, Simplify } from "./types";
+
+type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
 
 interface MiddlewareResult<C> {
   ctx: C;
@@ -84,13 +85,7 @@ type ResolverFunction<
   (opts: {
     ctx: Context;
     path: string;
-    // params: {
-    //   [key in Exclude<Paths[number], string> as key extends [string, Parser]
-    //     ? key[0]
-    //     : never]: key extends [string, Parser]
-    //     ? inferParserType<key[1]>
-    //     : never;
-    // };
+
     params: {
       [key in keyof Params]: Params[key] extends null
         ? string
@@ -116,7 +111,7 @@ type ResolverFunction<
 };
 
 type RouteBuilderDef = {
-  method: "get" | "post" | "put" | "delete";
+  method: HTTPMethod;
   paths: string[];
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
@@ -244,6 +239,10 @@ export interface Route<
     ParserWithoutInput<OBody>
   >;
 
+  method<M extends HTTPMethod, P extends Parser>(
+    method: M,
+    parser?: P
+  ): Route<Context, M, Paths, Params, SearchParams, P>;
   get(): Route<Context, "get", Paths, Params, SearchParams, IBody>;
   post<P extends Parser>(
     parser: P
@@ -253,8 +252,6 @@ export interface Route<
   ): Route<Context, "put", Paths, Params, SearchParams, P>;
   delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody>;
 }
-
-type Method = "get" | "post" | "put" | "delete";
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const {
@@ -275,41 +272,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     ...rest,
   };
 
-  function executeMethod(method: Method, parser?: Parser) {
-    if (parser) {
-      return createRouteBuilder({
-        ..._def,
-        method,
-        iBody: parser,
-      });
-    }
-
-    return createRouteBuilder({
-      ..._def,
-      method,
-    });
-  }
-
   const builder = {
     _def,
-
-    // path: (...args) => {
-    //   const paths: any = args.map((item) => {
-    //     if (typeof item === "string") return item;
-    //     if (Array.isArray(item)) {
-    //       return [item[0], getParseFn(item[1])];
-    //     }
-
-    //     throw new Error("Invalid paths");
-    //   });
-
-    //   const _paths = _def.paths;
-
-    //   return createRouteBuilder({
-    //     ..._def,
-    //     paths: [..._paths, ...paths],
-    //   });
-    // },
 
     error: (fn) => {
       return createRouteBuilder({
@@ -324,7 +288,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
       paths.forEach((item) => {
         if (!pathRegex.test(item)) {
-          throw `invalid path -> ${item}`;
+          throw `invalid path ${item}`;
         }
       });
 
@@ -401,20 +365,19 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    get: () => {
-      return executeMethod("get");
-    },
+    method: (method, parser) => {
+      if (parser) {
+        return createRouteBuilder({
+          ..._def,
+          method,
+          iBody: parser,
+        });
+      }
 
-    post: (parser) => {
-      return executeMethod("post", parser);
-    },
-
-    put: (parser) => {
-      return executeMethod("put", parser);
-    },
-
-    delete: () => {
-      return executeMethod("delete");
+      return createRouteBuilder({
+        ..._def,
+        method,
+      });
     },
 
     resolve: (fn) => {
@@ -427,57 +390,13 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
   } as Route<{}, string, [], {}, {}, unknown>;
 
+  const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
+  for (const item of aliases) {
+    builder[item] = (bodyParser?: Parser) => builder.method(item, bodyParser);
+  }
+
   return builder;
 }
-
-let route = createRouteBuilder()
-  .path("user", ":username", "c", ":age")
-  .params({
-    username: z.enum(["dhrjarun", "dd"]),
-    age: z.string().transform((value) => Number(value)),
-  })
-  .searchParam({
-    byId: z.string(),
-  })
-  .use(({ next, ctx }) => {
-    return next({
-      ctx: {
-        info: "The box",
-      },
-    });
-  })
-  .use(({ next, ctx, params }) => {
-    return next({
-      ctx: {
-        anotherInfo: "The big box",
-      },
-    });
-  })
-  .error(({ send }) => {
-    return send({
-      body: "",
-      headers: {},
-    });
-  })
-  .post(
-    z.object({
-      id: z.string(),
-    })
-  )
-  .resolve(({ send, body, params, searchParams, method }) => {
-    return send({
-      body: "info from body" as const,
-    });
-  });
-
-// export type inferPathType<T> = T extends [
-//   infer First extends string | [string, Parser],
-//   ...infer Tail
-// ]
-//   ? `${First extends [string, infer P]
-//       ? inferParserType<P>
-//       : First}/${inferPathType<Tail>}`
-//   : "";
 
 export type AnyRoute = Route<
   any,
@@ -499,11 +418,3 @@ export type inferPathType<
         : string
       : First}${inferPathType<Tail, Params>}`
   : "";
-
-type pathStr = inferPathType<
-  ["user", ":username", "c", ":age"],
-  {
-    username: z.ZodEnum<["dhrjarun", "dd"]>;
-    age: z.ZodNumber;
-  }
->;
