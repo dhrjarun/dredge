@@ -4,38 +4,23 @@ import {
   AnyRoute,
   Route,
   ResolverResult,
+  HTTPMethod,
 } from "./route";
 import { Parser, getParseFn, inferParserType } from "./parser";
 import { DredgeApi, DredgePath } from "./api";
-import { MaybePromise } from "./types";
+import { MaybePromise, Simplify } from "./types";
 
 export type inferRoutes<Api> = Api extends DredgeApi<
   infer Routes extends AnyRoute[]
 >
   ? Routes
   : never;
+export type inferRouteUnion<Api> = inferRoutes<Api>[number];
 
-type ExtractRouteByMethod<R, Method extends string> = Extract<
+export type ExtractRoute<
   R,
-  Route<any, Method, any, any, any, any>
->;
-export type ExtractRouteByPath<R, Path extends string> = R extends Route<
-  any,
-  any,
-  infer PathArray,
-  infer Params extends Record<string, Parser>,
-  any,
-  any,
-  any
->
-  ? Path extends inferPathType<PathArray, Params>
-    ? R
-    : never
-  : never;
-type ExtractRoute<
-  R,
-  Method extends string,
-  Path extends string = string
+  Method extends HTTPMethod,
+  Path extends string = any
 > = R extends Route<
   any,
   infer M,
@@ -63,7 +48,7 @@ export type ClientPath<R> = R extends Route<
 
 // TODO:
 // AnyClientOptions
-// remove searchParam and body if not needed
+// refactor
 type ClientOptions<R> = R extends Route<
   any,
   infer Method,
@@ -75,9 +60,12 @@ type ClientOptions<R> = R extends Route<
   ? {
       method: Method;
       path: inferPathType<Path, SearchParams>;
-      searchParams: inferSearchParamsType<SearchParams>;
-      body: inferParserType<IBody>;
-    }
+    } & (Method extends "get" | "delete"
+      ? {}
+      : { body: inferParserType<IBody> }) &
+      (keyof SearchParams extends never
+        ? {}
+        : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
 
 type ClientResult<R> = R extends Route<
@@ -99,10 +87,24 @@ type ClientResult<R> = R extends Route<
     }>
   : never;
 
-// TODO
-// global request method
-// refactor types for the methods
+type DredgeClientMethod<Api, Method extends HTTPMethod> = <
+  P extends ClientPath<ExtractRoute<inferRouteUnion<Api>, Method>>,
+  R extends ExtractRoute<inferRouteUnion<Api>, Method, P>
+>(
+  path: P,
+  options: Simplify<Omit<ClientOptions<R>, "method" | "path">>
+) => ClientResult<R>;
+
 interface DredgeClient<Api extends DredgeApi<any>> {
+  <
+    P extends ClientPath<inferRouteUnion<Api>>,
+    M extends RouteMethod<ExtractRoute<inferRouteUnion<Api>, any, P>>,
+    R extends ExtractRoute<inferRouteUnion<Api>, M, P>
+  >(
+    path: P,
+    options: Simplify<{ method: M } & Omit<ClientOptions<R>, "path" | "method">>
+  ): ClientResult<R>;
+
   // get<
   //   R extends ExtractRouteBy<inferRoutes<Api>[number], "get">,
   //   P extends RoutePath<R>
@@ -114,24 +116,30 @@ interface DredgeClient<Api extends DredgeApi<any>> {
   //   >
   // );
 
-  get<R extends ExtractRouteByMethod<inferRoutes<Api>[number], "get">>(
-    path: ClientPath<R>,
-    options: Omit<ClientOptions<R>, "method" | "path" | "body">
-  ): ClientResult<R>;
+  // get<
+  //   P extends ClientPath<ExtractRoute<inferRouteUnion<Api>, "get">>,
+  //   R extends ExtractRoute<inferRouteUnion<Api>, "get", P>
+  // >(
+  //   path: P,
+  //   options: Omit<ClientOptions<R>, "method" | "path">
+  // ): ClientResult<R>;
 
-  post<
-    P extends ClientPath<
-      ExtractRouteByMethod<inferRoutes<Api>[number], "post">
-    >,
-    R extends ExtractRoute<inferRoutes<Api>[number], "post", P>
-    // R extends ExtractRouteByPath<
-    //   ExtractRouteByMethod<inferRoutes<Api>[number], "post">,
-    //   P
-    // >
-  >(
-    path: P,
-    options: Omit<ClientOptions<R>, "method" | "path">
-  ): ClientResult<R>;
+  get: DredgeClientMethod<Api, "get">;
+  post: DredgeClientMethod<Api, "post">;
+  put: DredgeClientMethod<Api, "put">;
+  delete: DredgeClientMethod<Api, "delete">;
+  patch: DredgeClientMethod<Api, "patch">;
+  head: DredgeClientMethod<Api, "head">;
+
+  // post<
+  //   P extends ClientPath<
+  //     ExtractRouteByMethod<inferRoutes<Api>[number], "post">
+  //   >,
+  //   R extends ExtractRoute<inferRoutes<Api>[number], "post", P>
+  // >(
+  //   path: P,
+  //   options: Omit<ClientOptions<R>, "method" | "path">
+  // ): ClientResult<R>;
   // post<
   //   R extends ExtractRouteBy<inferRoutes<Api>[number], "post">,
   //   P extends RoutePath<R>
@@ -139,25 +147,15 @@ interface DredgeClient<Api extends DredgeApi<any>> {
   //   path: inferPathType<P, RouteParams<R>>,
   //   options: Omit<ClientOptions<ExtractRouteBy<R, any, P>>, "method" | "path">
   // );
-
-  put<R extends ExtractRouteByMethod<inferRoutes<Api>[number], "put">>(
-    path: ClientPath<R>,
-    options: Omit<ClientOptions<R>, "method" | "path">
-  ): ClientResult<R>;
-
-  delete<R extends ExtractRouteByMethod<inferRoutes<Api>[number], "delete">>(
-    path: ClientPath<R>,
-    options: Omit<ClientOptions<R>, "method" | "path" | "body">
-  ): ClientResult<R>;
 }
 
 // TODO
 // ctx mergeDeep
 export function buildDirectClient<T>(
   api: DredgeApi<T>,
-  options: { initialCtx?: object } = {}
+  options: { ctx?: object } = {}
 ) {
-  const { initialCtx = {} } = options;
+  const { ctx = {} } = options;
   const root = api._root;
 
   async function executeRoute(
@@ -301,8 +299,11 @@ export function buildDirectClient<T>(
     return resolverResult!;
   }
 
-  function makeRequest(options: ClientOptions<AnyRoute>) {
-    const result = executeRoute(root, options);
+  const client = ((path, options) => {
+    const result = executeRoute(root, {
+      ...options,
+      path,
+    });
 
     const response = result as ClientResult<any>;
 
@@ -319,87 +320,39 @@ export function buildDirectClient<T>(
     };
 
     return response;
+  }) as DredgeClient<DredgeApi<T>>;
+
+  const aliases = ["get", "post", "put", "patch", "head", "delete"] as const;
+
+  for (const method of aliases) {
+    client[method] = (path: string, options) =>
+      client(path as any, { ...options, method }) as any;
   }
 
-  return {
-    get: (path, options) => {
-      return makeRequest({
-        path,
-        method: "get",
-        ...options,
-        body: undefined,
-      });
-    },
-
-    post: (path, options) => {
-      return makeRequest({
-        path,
-        method: "post",
-        ...options,
-      });
-    },
-
-    delete: (path, options) => {
-      return makeRequest({
-        path,
-        method: "delete",
-        ...options,
-        body: undefined,
-      });
-    },
-
-    put: (path, options) => {
-      return makeRequest({
-        path,
-        method: "put",
-        ...options,
-      });
-    },
-  } as DredgeClient<DredgeApi<T>>;
+  return client;
 }
 
-// const api = buildDredgeApi([userRoute, postRoute, editRoute]);
-// const dredge = buildDirectClient(api, {
-//   initialCtx: {},
-// });
+export type RouteMethod<R> = R extends Route<
+  any,
+  infer Method extends HTTPMethod,
+  any,
+  any,
+  any,
+  any
+>
+  ? Method
+  : never;
 
-// dredge.get("/user/dhrjarun", {
-//   searchParams: {
-//     size: "20",
-//   },
-// });
-// dredge.get("/user/dd", {
-//   searchParams: {
-//     size: "2",
-//   },
-// });
-// const postRes = dredge.post("/posts/dhrjarun", {
-//   searchParams: {
-//     size: "2",
-//   },
-//   body: "here is the body",
-// });
-
-// const putRes = dredge.put("/edit/FirstName", {
-//   body: {
-//     name: "ok",
-//   },
-//   searchParams: {
-//     size: "",
-//     withHistory: false,
-//   },
-// });
-
-// type RouteArrayToPathStr<T, Method extends string = string> = T extends [
-//   infer First extends AnyRoute,
-//   ...infer Tail
-// ]
-//   ? First extends Route<any, infer $Method, infer Path, any, any>
-//     ? $Method extends Method
-//       ? inferPathType<Path> | RouteArrayToPathStr<Tail, Method>
-//       : RouteArrayToPathStr<Tail, Method>
-//     : ""
-//   : "";
+type RouteMethodWhere<R, P extends string[]> = R extends Route<
+  R,
+  infer Method extends string,
+  P,
+  any,
+  any,
+  any
+>
+  ? R
+  : never;
 
 type RoutePath<R> = R extends Route<any, any, infer Path, any, any>
   ? Path

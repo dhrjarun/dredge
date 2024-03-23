@@ -1,7 +1,7 @@
 import { Parser, ParserWithoutInput, inferParserType } from "./parser";
 import { MaybePromise, Overwrite, Simplify } from "./types";
 
-type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
+export type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
 
 interface MiddlewareResult<C> {
   ctx: C;
@@ -408,6 +408,7 @@ export type AnyRoute = Route<
   any
 >;
 
+// TODO: Fix when given other types
 export type inferPathType<
   Paths,
   Params extends Record<string, Parser>
