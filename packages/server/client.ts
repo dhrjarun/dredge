@@ -194,7 +194,7 @@ export function buildDirectClient<T>(
     const parsedParams = {};
     let parsedBody: unknown;
     let currentCtx: any = {
-      ...initialCtx,
+      ...ctx,
     };
     let resolverResult: MaybePromise<ResolverResult<any>>;
 
