@@ -242,15 +242,19 @@ export interface Route<
   method<M extends HTTPMethod, P extends Parser>(
     method: M,
     parser?: P
-  ): Route<Context, M, Paths, Params, SearchParams, P>;
-  get(): Route<Context, "get", Paths, Params, SearchParams, IBody>;
+  ): Route<Context, M, Paths, Params, SearchParams, P, OBody>;
+  get(): Route<Context, "get", Paths, Params, SearchParams, IBody, OBody>;
   post<P extends Parser>(
     parser: P
-  ): Route<Context, "post", Paths, Params, SearchParams, P>;
+  ): Route<Context, "post", Paths, Params, SearchParams, P, OBody>;
   put<P extends Parser>(
     parser: P
-  ): Route<Context, "put", Paths, Params, SearchParams, P>;
-  delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody>;
+  ): Route<Context, "put", Paths, Params, SearchParams, P, OBody>;
+  delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody, OBody>;
+}
+
+export function dredgeRoute<ServerCtx extends object>() {
+  return createRouteBuilder() as Route<ServerCtx, "get", [], {}, {}>;
 }
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
@@ -388,7 +392,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         resolver: fn,
       });
     },
-  } as Route<{}, string, [], {}, {}, unknown>;
+  } as AnyRoute;
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
   for (const item of aliases) {

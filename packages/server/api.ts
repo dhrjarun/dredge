@@ -1,4 +1,7 @@
-import type { AnyRoute } from "./route";
+import type { AnyRoute, ResolverResult } from "./route";
+import { getParseFn } from "./parser";
+import { MaybePromise } from "./types";
+import { ClientOptions } from "./client";
 
 type RouteMap = Record<string, AnyRoute>;
 
@@ -134,6 +137,157 @@ export class DredgePath {
 
     return this.getStaticChild(name);
   }
+}
+
+// from trpc
+const trimSlashes = (path: string): string => {
+  path = path.startsWith("/") ? path.slice(1) : path;
+  path = path.endsWith("/") ? path.slice(0, -1) : path;
+
+  return path;
+};
+
+// ctx mergeDeep
+export async function executeRoute(
+  root: DredgePath,
+  ctx: object,
+  clientOptions: ClientOptions<AnyRoute>
+) {
+  const { path, searchParams, body, method } = clientOptions;
+  const pathArray = trimSlashes(path).split("/");
+
+  let current = root;
+  pathArray.forEach((item, index) => {
+    const child = current.getStaticChild(item) || current.getDynamicChild();
+
+    if (!child) {
+      throw "Invalid path";
+    }
+
+    current = child;
+  });
+
+  const routeDef = current.getRoute(method)!._def;
+  if (!routeDef) {
+    throw "Invalid path, no route exist";
+  }
+
+  const params: Record<string, string> = routeDef.paths.reduce(
+    (acc, item, index) => {
+      if (item.startsWith(":")) {
+        acc[item.replace(":", "")] = pathArray[index];
+      }
+      return acc;
+    },
+    {}
+  );
+  const parsedSearchParams = {};
+  const parsedParams = {};
+  let parsedBody: unknown;
+  let currentCtx: any = {
+    ...ctx,
+  };
+  let resolverResult: MaybePromise<ResolverResult<any>>;
+
+  let step:
+    | "PARAM_VALIDATION"
+    | "SEARCH_PARAM_VALIDATION"
+    | "BODY_VALIDATION"
+    | "MIDDLEWARE_CALLS"
+    | "RESOLVER_CALL"
+    | "DONE" = "PARAM_VALIDATION";
+
+  while (step != "DONE") {
+    try {
+      switch (step) {
+        case "PARAM_VALIDATION":
+          for (const [index, item] of routeDef.paths.entries()) {
+            if (item.startsWith(":")) {
+              const parser = routeDef.params[item.replace(":", "")];
+              parsedParams[item] =
+                (await getParseFn(parser)(pathArray[index])) ||
+                pathArray[index];
+            }
+          }
+
+          step = "SEARCH_PARAM_VALIDATION";
+          break;
+        case "SEARCH_PARAM_VALIDATION":
+          for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+            parsedSearchParams[key] = await getParseFn(parser)(
+              searchParams[key]
+            );
+          }
+
+          step = "BODY_VALIDATION";
+          break;
+        case "BODY_VALIDATION":
+          if (routeDef.iBody) {
+            parsedBody = await getParseFn(routeDef.iBody)(body);
+          }
+
+          step = "MIDDLEWARE_CALLS";
+          break;
+        case "MIDDLEWARE_CALLS":
+          routeDef.middlewares.forEach(async (fn) => {
+            const middlewareResult = await fn({
+              method,
+              ctx: currentCtx,
+              params: parsedParams,
+              searchParams: parsedSearchParams,
+              path: pathArray.join("/"),
+              body: parsedBody,
+              next(nextOptions?: any) {
+                return {
+                  ctx: {
+                    ...currentCtx,
+                    ...nextOptions?.ctx,
+                  },
+                };
+              },
+            });
+
+            currentCtx = middlewareResult.ctx;
+          });
+
+          step = "RESOLVER_CALL";
+          break;
+        case "RESOLVER_CALL":
+          if (!routeDef.resolver) {
+            throw "No resolver exist";
+          }
+          resolverResult = routeDef.resolver({
+            method,
+            ctx: currentCtx,
+            params: parsedParams,
+            searchParams: parsedSearchParams,
+            path: pathArray.join("/"),
+            body: parsedBody,
+            send(resolverOptions?: any) {
+              return resolverOptions;
+            },
+          });
+
+          step = "DONE";
+          break;
+      }
+    } catch (error) {
+      resolverResult = routeDef.errorResolver?.({
+        error,
+        errorOrigin: step,
+        ...clientOptions,
+        params,
+        method,
+        send(resolverOptions?: any) {
+          return resolverOptions;
+        },
+      })!;
+
+      step = "DONE";
+    }
+  }
+
+  return resolverResult!;
 }
 
 // type FilterRouteArrayByMethod<T, Method extends string> = T extends [

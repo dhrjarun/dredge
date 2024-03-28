@@ -1,0 +1,9 @@
+{
+  "name": "@dredge/common",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./source/index.ts",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
