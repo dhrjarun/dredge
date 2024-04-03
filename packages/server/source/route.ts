@@ -1,7 +1,6 @@
 import { Parser, ParserWithoutInput, inferParserType } from "./parser";
 import { MaybePromise, Overwrite, Simplify } from "./types";
-
-export type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
+import { HTTPMethod } from "@dredge/common";
 
 interface MiddlewareResult<C> {
   ctx: C;

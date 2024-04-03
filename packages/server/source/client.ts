@@ -1,11 +1,6 @@
-import {
-  inferPathType,
-  inferSearchParamsType,
-  AnyRoute,
-  Route,
-  HTTPMethod,
-} from "./route";
-import { Parser, getParseFn, inferParserType } from "./parser";
+import { inferPathType, inferSearchParamsType, AnyRoute, Route } from "./route";
+import { HTTPMethod } from "@dredge/common";
+import { Parser, inferParserType } from "./parser";
 import { DredgeApi, DredgePath, executeRoute } from "./api";
 import { MaybePromise, Simplify } from "./types";
 

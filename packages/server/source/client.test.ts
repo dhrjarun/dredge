@@ -1,11 +1,11 @@
-import { expect, test } from "vitest";
-import { buildDirectClient } from "./client";
-import { createRouteBuilder } from "./route";
+import { test, expect } from "vitest";
+import { buildDirectClient, inferRouteUnion, inferRoutes } from "./client";
+import { dredgeRoute } from "./route";
 import { buildDredgeApi } from "./api";
 import z from "zod";
 
 const api = buildDredgeApi([
-  createRouteBuilder()
+  dredgeRoute()
     .path("posts", ":user")
     .params({
       user: z.enum(["dhrjarun", "dd"]),
@@ -20,14 +20,14 @@ const api = buildDredgeApi([
       });
     }),
 
-  createRouteBuilder()
+  dredgeRoute()
     .path("posts", "default")
     .post(z.number())
     .resolve(({ send, body }) => {
       return send({ body });
     }),
 
-  createRouteBuilder()
+  dredgeRoute()
     .path("posts")
     .get()
     .resolve(({ send, body }) => {
