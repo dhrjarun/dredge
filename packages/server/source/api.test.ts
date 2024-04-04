@@ -64,7 +64,7 @@ test("client", async () => {
     data: 20,
   });
 
-  expect(result.body).toBe("ok body");
+  expect(result.data).toBe("ok body");
 
   const bodyResult = await dredge
     .post("/posts/default", {

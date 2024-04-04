@@ -20,7 +20,6 @@ interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
   getCaller: (context: Context) => DredgeClient<Routes>;
 }
 
-// fix test
 export function dredgeApi<
   Context extends object,
   const Routes extends AnyRoute[]
