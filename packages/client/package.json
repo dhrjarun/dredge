@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@dredge/common": "workspace:*"
+    "@dredge/common": "workspace:*",
+    "axios": "^1.6.8",
+    "ky": "^1.2.3",
+    "needle": "^3.3.1"
   },
   "keywords": [],
   "author": "",

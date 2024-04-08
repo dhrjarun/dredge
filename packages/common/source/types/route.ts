@@ -1,4 +1,4 @@
-import { Parser, ParserWithoutInput, inferParserType } from "./parser";
+import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 import { HTTPMethod } from "./http";
 

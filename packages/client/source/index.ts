@@ -40,9 +40,12 @@ export function dredgeHttpClient<Api extends DredgeApi<any>>(options: {
 
   const client = (async (input: string, options) => {
     const { data, ...rest } = options;
+
     // validate input
+    // create URL with searchParams
     const url = new URL(input);
 
+    // serialize based on contentType
     const serializedBody = jsonTransformer.serialize(data);
 
     let fetchResponse: Response;

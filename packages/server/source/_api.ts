@@ -8,6 +8,7 @@ import {
   DredgeResponse,
   ResolverResult,
   AnyDredgeClientOptions,
+  Response,
 } from "@dredge/common";
 
 interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
@@ -62,7 +63,7 @@ export function dredgeApi<
           path,
         });
 
-        const response = result as DredgeResponse<any>;
+        const response = result as any;
 
         response.data = () => {
           return new Promise((resolve, reject) => {

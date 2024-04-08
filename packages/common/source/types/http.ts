@@ -1,13 +1,5 @@
 export type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
-
-export type PlainResponse = {
-  url: string;
-  body: ReadableStream<Uint8Array> | null; // same as fetch
-  headers: Headers;
-  status: number;
-  statusText: string;
-  ok: boolean;
-};
+import * as http from "http";
 
 export interface Response<T> extends Body<T> {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/headers) */
@@ -46,3 +38,17 @@ interface Body<T> {
 }
 
 export type ResponsePromise<T> = Body<T> & Promise<Response<T>>;
+
+export interface ServerRequest extends http.IncomingMessage {
+  data: () => Promise<unknown>;
+  text: () => Promise<string>;
+  buffer: () => Promise<Buffer>;
+  formData: () => Promise<FormData>;
+}
+
+export interface ServerResponse extends http.ServerResponse {
+  writeData: (
+    data: any,
+    callback?: ((error: Error | null | undefined) => void) | undefined
+  ) => boolean;
+}

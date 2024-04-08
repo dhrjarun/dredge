@@ -5,9 +5,9 @@ import {
   ExtractRoute,
   AnyRoute,
 } from "./route";
-import { Parser, inferParserType } from "./parser";
+import { Parser, inferParserType } from "../parser";
 import { Simplify } from "./utils";
-import { HTTPMethod, Response } from "./http";
+import { HTTPMethod, ResponsePromise } from "./http";
 
 export type ClientPath<R> = R extends Route<
   any,
@@ -58,11 +58,7 @@ export type DredgeResponse<R> = R extends Route<
   any,
   infer OBody
 >
-  ? {
-      data(): Promise<inferParserType<OBody>>;
-    } & Promise<
-      Response<OBody extends Parser ? inferParserType<OBody> : unknown>
-    >
+  ? ResponsePromise<OBody extends Parser ? inferParserType<OBody> : unknown>
   : never;
 
 type DredgeClientFunction<
