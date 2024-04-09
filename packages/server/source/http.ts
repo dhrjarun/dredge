@@ -7,12 +7,41 @@ import {
 import * as http from "http";
 import { Socket } from "net";
 import busboy from "busboy";
+import { FormData, File } from "formdata-node";
+import { FormDataEncoder } from "form-data-encoder";
+import { Readable } from "stream";
 
 export class DredgeServerRequest
   extends http.IncomingMessage
   implements ServerRequest
 {
-  transformer: Transformer = defaultTransformer;
+  transformer: Transformer = {
+    json: {
+      serialize: JSON.stringify,
+      deserialize: JSON.parse,
+    },
+    formData: {
+      serialize: (object) => {
+        const formData = new FormData();
+        Object.entries(object).forEach(([key, value]) => {
+          if (typeof value === "string" || value instanceof Blob) {
+            formData.append(key, value);
+          } else {
+            throw "serialization failed";
+          }
+        });
+
+        return formData;
+      },
+      deserialize: (object) => {
+        return Object.fromEntries(object.entries());
+      },
+    },
+    searchParams: {
+      serialize: (object) => new URLSearchParams(object),
+      deserialize: (object) => Object.fromEntries(object.entries()),
+    },
+  };
 
   constructor(
     socket: Socket,
@@ -81,7 +110,7 @@ export class DredgeServerRequest
           .on("close", () => {
             formData.append(
               name,
-              new Blob(chunks, {
+              new File(chunks, info.filename, {
                 type: info.mimeType,
               })
             );
@@ -154,20 +183,22 @@ export class DredgeServerResponse
   ) {
     const contentType = this.getHeader("Content-Type") as string;
 
-    let body: string | FormData | URLSearchParams = "";
-
     if (contentType?.startsWith("application/json")) {
-      body = this.transformer.json.serialize(data);
+      const json = this.transformer.json.serialize(data);
+      return this.write(json, callback);
     }
     if (contentType?.startsWith("multipart/form-data")) {
-      body = this.transformer.formData.serialize(data);
+      const form = this.transformer.formData.serialize(data);
+      const encoder = new FormDataEncoder(form);
+      return this.write(Readable.from(encoder.encode()), callback);
     }
 
     if (contentType?.startsWith("application/x-www-form-urlencoded")) {
       const searchParams = new URLSearchParams(data);
-      body = this.transformer.searchParams.serialize(searchParams);
+      const form = this.transformer.searchParams.serialize(searchParams);
+      return this.write(form.toString(), callback);
     }
 
-    return this.write(body.toString(), callback);
+    return this.write(data, callback);
   }
 }
