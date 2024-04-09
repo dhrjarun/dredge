@@ -8,6 +8,7 @@ import {
 import { Parser, inferParserType } from "../parser";
 import { Simplify } from "./utils";
 import { HTTPMethod, ResponsePromise } from "./http";
+import { Transformer } from "../transformer";
 
 export type ClientPath<R> = R extends Route<
   any,
@@ -47,6 +48,20 @@ export type AnyDredgeClientOptions = {
   path: string;
   data?: any;
   searchParams?: Record<string, any>;
+};
+
+export type ClientOptions = {
+  headers?: Record<string, string>;
+  method: HTTPMethod | string;
+  path: string;
+  data?: any;
+  searchParams?: Record<string, any>;
+  transformer?: Partial<Transformer>;
+  prefixUrl?: URL | string;
+  fetch?: (
+    input: string | URL | globalThis.Request,
+    init?: RequestInit
+  ) => Promise<Response>;
 };
 
 export type DredgeResponse<R> = R extends Route<

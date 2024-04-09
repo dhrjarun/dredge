@@ -1,7 +1,7 @@
 export type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
 import * as http from "http";
 
-export interface Response<T> extends Body<T> {
+export interface Response<T = any> extends Body<T> {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/headers) */
   readonly headers: Headers;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/ok) */
@@ -20,11 +20,7 @@ export interface Response<T> extends Body<T> {
   clone(): Response<T>;
 }
 
-interface Body<T> {
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/body) */
-  readonly body: ReadableStream<Uint8Array> | null;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/bodyUsed) */
-  readonly bodyUsed: boolean;
+interface BodyFn<T> {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/arrayBuffer) */
   arrayBuffer(): Promise<ArrayBuffer>;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/blob) */
@@ -36,8 +32,14 @@ interface Body<T> {
 
   data(): Promise<T>;
 }
+interface Body<T> extends BodyFn<T> {
+  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/body) */
+  readonly body: ReadableStream<Uint8Array> | null;
+  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/bodyUsed) */
+  readonly bodyUsed: boolean;
+}
 
-export type ResponsePromise<T> = Body<T> & Promise<Response<T>>;
+export type ResponsePromise<T = any> = BodyFn<T> & Promise<Response<T>>;
 
 export interface ServerRequest extends http.IncomingMessage {
   data: () => Promise<unknown>;
