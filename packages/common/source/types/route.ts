@@ -44,6 +44,7 @@ export type MiddlewareFunction<
 
 export interface ResolverResult<Data> {
   data: Data;
+  error?: any;
   headers: Record<string, string>;
   status: number;
   statusText: string;
@@ -62,12 +63,12 @@ export type ErrorResolverFunction = {
 
     send: {
       (): ResolverResult<unknown>;
-      <$Data>(opts: {
-        data?: $Data;
+      (opts: {
+        data?: any;
         headers?: Record<string, string>;
         status?: number;
         statusText?: string;
-      }): ResolverResult<$Data>;
+      }): ResolverResult<undefined>;
     };
   }): MaybePromise<ResolverResult<unknown>>;
 };
