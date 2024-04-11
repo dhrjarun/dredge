@@ -8,6 +8,8 @@ import {
   ResolverOptions,
 } from "@dredge/common";
 
+// TODO:
+// remoe getCaller
 export interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
   _def: {
     root: DredgePath;
@@ -321,8 +323,10 @@ export async function resolveRoute(
         params,
         searchParams,
         data,
-        send(resolverOptions?: any) {
-          return resolverOptions;
+        send(options?: any) {
+          return {
+            ...options,
+          };
         },
       })!;
 
@@ -331,4 +335,24 @@ export async function resolveRoute(
   }
 
   return resolverResult!;
+}
+
+function sendFn(
+  options: {
+    data?: any;
+    error?: any;
+    status?: number;
+    statusText?: string;
+    headers?: Record<string, string>;
+  },
+  defaults: {
+    status?: number;
+    statusText?: string;
+    headers?: Record<string, string>;
+  }
+): ResolverResult<any> {
+  const result: ResolverResult<any> = {
+    status: options.status || defaults.status,
+    statusText: options.statusText || defaults.statusText,
+  };
 }

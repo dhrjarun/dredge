@@ -37,8 +37,10 @@ export function createNodeHttpRequestHandler<
       headers,
     });
 
+    // check if status is ok
+    const dataOrError = result.data;
     res.writeHead(result.status, result.statusText, result.headers);
-    writeDataIntoResponse(res, data, {
+    writeDataIntoResponse(res, dataOrError, {
       transformer,
     });
     res.end();

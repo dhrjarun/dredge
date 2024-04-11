@@ -238,6 +238,10 @@ export interface Route<
     parser: P
   ): Route<Context, "put", Paths, Params, SearchParams, P, OBody>;
   delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody, OBody>;
+  patch<P extends Parser>(
+    parser: P
+  ): Route<Context, "patch", Paths, Params, SearchParams, P, OBody>;
+  head(): Route<Context, "head", Paths, Params, SearchParams, IBody, OBody>;
 }
 
 export type AnyRoute = Route<any, any, any, any, any, any, any>;

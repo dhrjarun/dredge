@@ -144,7 +144,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
   for (const item of aliases) {
-    builder[item] = (bodyParser?: Parser) => builder.method(item, bodyParser);
+    const fn = (bodyParser?: Parser) => builder.method(item, bodyParser) as any;
+    builder[item] = fn;
   }
 
   return builder;

@@ -74,8 +74,11 @@ export function createResponseFromResolverResult(
 ) {
   const transformer = populateTransformer(options.transformer);
 
-  const { data, ...rest } = result;
+  const { data, error, ...rest } = result;
   const contentType = result.headers?.["Content-Type"];
+
+  // check if result is ok
+  const dataOrError = data;
 
   if (contentType?.startsWith("application/json")) {
     const json = transformer.json.serialize(data);
