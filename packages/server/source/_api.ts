@@ -1,35 +1,29 @@
 import { getParseFn } from "./parser";
-import { MaybePromise } from "./types";
 import { mergeDeep } from "./utils/merge";
 import {
   DredgeClient,
   Transformer,
   AnyRoute,
-  DredgeResponse,
   ResolverResult,
-  AnyDredgeClientOptions,
-  Response,
+  ResolverOptions,
 } from "@dredge/common";
 
-interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
+export interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
   _def: {
     root: DredgePath;
     context: Context;
     transformer: Transformer;
   };
 
+  resolveRoute(options: ResolverOptions): Promise<ResolverResult<any>>;
   getCaller: (context: Context) => DredgeClient<Routes>;
 }
 
 export function dredgeApi<
   Context extends object,
   const Routes extends AnyRoute[]
->(options: {
-  routes: Routes;
-  prefixUrl?: URL | string;
-  transformer: Transformer;
-}): DredgeApi<Context, Routes> {
-  const { routes, transformer, prefixUrl = "/" } = options;
+>(options: { routes: Routes }): DredgeApi<Context, Routes> {
+  const { routes } = options;
 
   const root = new DredgePath({
     name: "$root",
@@ -53,12 +47,16 @@ export function dredgeApi<
   return {
     _def: {
       root,
-      transformer,
+    },
+
+    resolveRoute: (options) => {
+      return resolveRoute(root, options);
     },
 
     getCaller(ctx: Context) {
       const client = ((path, options) => {
-        const result = executeRoute(root, ctx, {
+        const result = resolveRoute(root, {
+          ctx,
           ...options,
           path,
         });
@@ -118,7 +116,8 @@ export class DredgePath {
     this.isParam = isParam;
 
     routes.forEach((item) => {
-      this.routes[item._def.method || "get"] = item;
+      // this.routes[item._def.method || "get"] = item;
+      this.routes.set(item._def.method || "get", item);
     });
   }
 
@@ -188,12 +187,17 @@ const trimSlashes = (path: string): string => {
   return path;
 };
 
-export async function executeRoute(
+export async function resolveRoute(
   root: DredgePath,
-  ctx: object,
-  clientOptions: AnyDredgeClientOptions
-) {
-  const { path, searchParams = {}, data, method } = clientOptions;
+  clientOptions: ResolverOptions
+): Promise<ResolverResult<any>> {
+  const {
+    ctx = {},
+    path,
+    searchParams = {},
+    data,
+    method = "get",
+  } = clientOptions;
   const pathArray = trimSlashes(path).split("/");
 
   let current = root;
@@ -213,7 +217,7 @@ export async function executeRoute(
   }
 
   const params: Record<string, string> = routeDef.paths.reduce(
-    (acc, item, index) => {
+    (acc: any, item, index) => {
       if (item.startsWith(":")) {
         acc[item.replace(":", "")] = pathArray[index];
       }
@@ -221,13 +225,13 @@ export async function executeRoute(
     },
     {}
   );
-  const parsedSearchParams = {};
-  const parsedParams = {};
+  const parsedSearchParams: Record<string, any> = {};
+  const parsedParams: Record<string, any> = {};
   let parsedBody: unknown;
   let currentCtx: any = {
     ...ctx,
   };
-  let resolverResult: MaybePromise<ResolverResult<any>>;
+  let resolverResult: ResolverResult<any>;
 
   let step:
     | "PARAM_VALIDATION"
@@ -244,9 +248,9 @@ export async function executeRoute(
           for (const [index, item] of routeDef.paths.entries()) {
             if (item.startsWith(":")) {
               const parser = routeDef.params[item.replace(":", "")];
-              parsedParams[item] =
-                (await getParseFn(parser)(pathArray[index])) ||
-                pathArray[index];
+              parsedParams[item] = parser
+                ? await getParseFn(parser)(pathArray[index])
+                : pathArray[index];
             }
           }
 
@@ -293,7 +297,7 @@ export async function executeRoute(
           if (!routeDef.resolver) {
             throw "No resolver exist";
           }
-          resolverResult = routeDef.resolver({
+          resolverResult = await routeDef.resolver({
             method,
             ctx: currentCtx,
             params: parsedParams,
@@ -309,7 +313,7 @@ export async function executeRoute(
           break;
       }
     } catch (error) {
-      resolverResult = routeDef.errorResolver?.({
+      resolverResult = await routeDef.errorResolver?.({
         error,
         errorOrigin: step,
         method,

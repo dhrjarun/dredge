@@ -42,6 +42,15 @@ export type MiddlewareFunction<
   }): MaybePromise<MiddlewareResult<ContextOverride>>;
 };
 
+export interface ResolverOptions {
+  ctx?: object;
+  method?: HTTPMethod | string;
+  data?: any;
+  path: string;
+  headers?: Record<string, string | string[] | undefined>;
+  searchParams?: Record<string, any>;
+}
+
 export interface ResolverResult<Data> {
   data: Data;
   error?: any;
