@@ -4,7 +4,6 @@ import { dredgeApi } from "./_api";
 import z from "zod";
 
 const api = dredgeApi({
-  transformer: {} as any,
   routes: [
     dredgeRoute()
       .path("posts", ":user")
@@ -38,7 +37,9 @@ const api = dredgeApi({
 });
 
 test("client", async () => {
-  const dredge = api.getCaller({});
+  const dredge = api.resolveRoute("/posts", {
+    method: "get",
+  });
 
   dredge.get("/posts", {});
 

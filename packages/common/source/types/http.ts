@@ -1,26 +1,9 @@
 export type HTTPMethod = "get" | "post" | "put" | "delete" | "patch" | "head";
-import * as http from "http";
 
-export interface Response<T = any> extends Body<T> {
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/headers) */
-  readonly headers: Headers;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/ok) */
-  readonly ok: boolean;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/redirected) */
-  readonly redirected: boolean;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/status) */
-  readonly status: number;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/statusText) */
-  readonly statusText: string;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/type) */
-  readonly type: ResponseType;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/url) */
-  readonly url: string;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Response/clone) */
-  clone(): Response<T>;
+export interface DredgeResponse<T> extends globalThis.Response {
+  data(): Promise<T>;
 }
-
-interface BodyFn<T> {
+export type DredgeResponsePromise<T = any> = {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/arrayBuffer) */
   arrayBuffer(): Promise<ArrayBuffer>;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/blob) */
@@ -31,26 +14,4 @@ interface BodyFn<T> {
   text(): Promise<string>;
 
   data(): Promise<T>;
-}
-interface Body<T> extends BodyFn<T> {
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/body) */
-  readonly body: ReadableStream<Uint8Array> | null;
-  /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Request/bodyUsed) */
-  readonly bodyUsed: boolean;
-}
-
-export type ResponsePromise<T = any> = BodyFn<T> & Promise<Response<T>>;
-
-export interface ServerRequest extends http.IncomingMessage {
-  data: () => Promise<unknown>;
-  text: () => Promise<string>;
-  buffer: () => Promise<Buffer>;
-  formData: () => Promise<FormData>;
-}
-
-export interface ServerResponse extends http.ServerResponse {
-  writeData: (
-    data: any,
-    callback?: ((error: Error | null | undefined) => void) | undefined
-  ) => boolean;
-}
+} & Promise<DredgeResponse<T>>;

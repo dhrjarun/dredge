@@ -4,24 +4,15 @@ import {
   Route,
   ExtractRoute,
   AnyRoute,
+  inferRoutePath,
+  inferRouteMethod,
 } from "./route";
 import { Parser, inferParserType } from "../parser";
 import { Simplify } from "./utils";
-import { HTTPMethod, ResponsePromise } from "./http";
+import { HTTPMethod, DredgeResponsePromise } from "./http";
 import { Transformer } from "../transformer";
 
-export type ClientPath<R> = R extends Route<
-  any,
-  any,
-  infer Path,
-  infer Params extends Record<string, Parser>,
-  any,
-  any
->
-  ? inferPathType<Path, Params>
-  : never;
-
-export type DredgeClientOptions<R> = R extends Route<
+export type inferFetchOptions<R> = R extends Route<
   any,
   infer Method,
   infer Path,
@@ -29,28 +20,19 @@ export type DredgeClientOptions<R> = R extends Route<
   infer SearchParams extends Record<string, Parser>,
   infer IBody
 >
-  ? {
-      // headers?: Record<string, string | string[] | undefined>;
-      headers?: Record<string, string>;
+  ? FetchOptions & {
       method: Method;
       path: inferPathType<Path, SearchParams>;
-    } & (Method extends "get" | "delete"
-      ? {}
-      : { data: inferParserType<IBody> }) &
+    } & (Method extends "get" | "delete" | "head"
+        ? {}
+        : { data: inferParserType<IBody> }) &
       (keyof SearchParams extends never
         ? {}
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
 
-export type AnyDredgeClientOptions = {
-  headers?: Record<string, string>;
-  method: HTTPMethod | string;
-  path: string;
-  data?: any;
-  searchParams?: Record<string, any>;
-};
-
-export type ClientOptions = {
+export type FetchOptions = {
+  // headers?: Record<string, string | string[] | undefined>;
   headers?: Record<string, string>;
   method: HTTPMethod | string;
   path: string;
@@ -64,7 +46,7 @@ export type ClientOptions = {
   ) => Promise<Response>;
 };
 
-export type DredgeResponse<R> = R extends Route<
+export type inferResponsePromise<R> = R extends Route<
   any,
   any,
   any,
@@ -73,47 +55,38 @@ export type DredgeResponse<R> = R extends Route<
   any,
   infer OBody
 >
-  ? ResponsePromise<OBody extends Parser ? inferParserType<OBody> : unknown>
+  ? DredgeResponsePromise<
+      OBody extends Parser ? inferParserType<OBody> : unknown
+    >
   : never;
 
-type DredgeClientFunction<
+type FetchShortcutFunction<
   Routes extends AnyRoute[],
   Method extends HTTPMethod
 > = <
-  P extends ClientPath<ExtractRoute<Routes[number], Method>>,
+  P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
   R extends ExtractRoute<Routes[number], Method, P>
 >(
   path: P,
-  options: Simplify<Omit<DredgeClientOptions<R>, "method" | "path">>
-) => DredgeResponse<R>;
+  options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>
+) => inferResponsePromise<R>;
 
 export interface DredgeClient<Routes extends AnyRoute[]> {
   <
-    P extends ClientPath<Routes[number]>,
-    M extends RouteMethod<ExtractRoute<Routes[number], any, P>>,
+    P extends inferRoutePath<Routes[number]>,
+    M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
     R extends ExtractRoute<Routes[number], M, P>
   >(
     path: P,
     options: Simplify<
-      { method: M } & Omit<DredgeClientOptions<R>, "path" | "method">
+      { method: M } & Omit<inferFetchOptions<R>, "path" | "method">
     >
-  ): DredgeResponse<R>;
+  ): inferResponsePromise<R>;
 
-  get: DredgeClientFunction<Routes, "get">;
-  post: DredgeClientFunction<Routes, "post">;
-  put: DredgeClientFunction<Routes, "put">;
-  delete: DredgeClientFunction<Routes, "delete">;
-  patch: DredgeClientFunction<Routes, "patch">;
-  head: DredgeClientFunction<Routes, "head">;
+  get: FetchShortcutFunction<Routes, "get">;
+  post: FetchShortcutFunction<Routes, "post">;
+  put: FetchShortcutFunction<Routes, "put">;
+  delete: FetchShortcutFunction<Routes, "delete">;
+  patch: FetchShortcutFunction<Routes, "patch">;
+  head: FetchShortcutFunction<Routes, "head">;
 }
-
-type RouteMethod<R> = R extends Route<
-  any,
-  infer Method extends HTTPMethod,
-  any,
-  any,
-  any,
-  any
->
-  ? Method
-  : never;

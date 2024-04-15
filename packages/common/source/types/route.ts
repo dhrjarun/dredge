@@ -52,12 +52,46 @@ export interface ResolverOptions {
 }
 
 export interface ResolverResult<Data> {
-  data: Data;
-  error?: any;
+  data: () => Promise<Data>;
+  ok: boolean;
   headers: Record<string, string>;
   status: number;
   statusText: string;
 }
+
+export type inferResolverOption<R> = R extends Route<
+  any,
+  infer Method,
+  infer Path,
+  any,
+  infer SearchParams extends Record<string, Parser>,
+  infer IBody
+>
+  ? {
+      ctx?: object;
+      // headers?: Record<string, string | string[] | undefined>;
+      headers?: Record<string, string>;
+      method: Method;
+      path: inferPathType<Path, SearchParams>;
+    } & (Method extends "get" | "delete" | "head"
+      ? {}
+      : { data: inferParserType<IBody> }) &
+      (keyof SearchParams extends never
+        ? {}
+        : { searchParams: inferSearchParamsType<SearchParams> })
+  : never;
+
+export type inferResolverResult<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer OBody
+>
+  ? ResolverResult<OBody extends Parser ? inferParserType<OBody> : unknown>
+  : never;
 
 export type ErrorResolverFunction = {
   (opts: {
@@ -73,7 +107,7 @@ export type ErrorResolverFunction = {
     send: {
       (): ResolverResult<unknown>;
       (opts: {
-        data?: any;
+        error?: any;
         headers?: Record<string, string>;
         status?: number;
         statusText?: string;
@@ -134,7 +168,6 @@ export type RouteBuilderDef = {
 };
 
 // TODO
-// patch and head methods
 // IBody and OBody default type
 // OBody Schema implementation
 // after middleware
@@ -262,6 +295,17 @@ export type inferPathType<
   Params extends Record<string, Parser>
 > = Paths extends string[] ? _inferPathType<Paths, Params> : string;
 
+export type inferRoutePath<R> = R extends Route<
+  any,
+  any,
+  infer Path,
+  infer Params extends Record<string, Parser>,
+  any,
+  any
+>
+  ? inferPathType<Path, Params>
+  : never;
+
 export type ExtractRoute<
   R,
   Method extends HTTPMethod,
@@ -278,4 +322,15 @@ export type ExtractRoute<
   ? [Method, Path] extends [M, inferPathType<PathArray, Params>]
     ? R
     : never
+  : never;
+
+export type inferRouteMethod<R> = R extends Route<
+  any,
+  infer Method extends HTTPMethod,
+  any,
+  any,
+  any,
+  any
+>
+  ? Method
   : never;

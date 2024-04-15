@@ -1,124 +1,55 @@
-import {
-  DredgeApi,
-  DredgeClient,
-  Transformer,
-  inferRouteUnion,
-  ResponsePromise,
-  defaultTransformer,
-} from "@dredge/common";
+import { DredgeClient, FetchOptions, inferRoutes } from "@dredge/common";
+import { dredgeFetch } from "./dredge-fetch";
 
-export const isResponseOk = (response: any): boolean => {
-  const { statusCode } = response;
-  const { followRedirect } = response.request.options;
-  const shouldFollow =
-    typeof followRedirect === "function"
-      ? followRedirect(response)
-      : followRedirect;
-  const limitStatusCode = shouldFollow ? 299 : 399;
+export function create<DredgeApi>(defaultOptions: FetchDefaultOptions) {
+  const fetch = ((path, options) => {
+    return dredgeFetch(path, populateFetchOptions(options, defaultOptions));
+  }) as DredgeClient<inferRoutes<DredgeApi>>;
 
-  return (
-    (statusCode >= 200 && statusCode <= limitStatusCode) || statusCode === 304
-  );
-};
+  const alias = ["get", "post", "put", "patch", "delete", "head"] as const;
 
-export function dredgeHttpClient<Api extends DredgeApi<any>>(options: {
-  prefixUrl: URL | string;
-  transformer: Partial<Transformer>;
-  fetch: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit
-  ) => Promise<Response>;
-}): DredgeClient<inferRouteUnion<Api>> {
-  const { prefixUrl, transformer, fetch } = options;
-
-  // refactor this
-  const jsonTransformer = transformer.json || defaultTransformer.json;
-  const formDataTransformer =
-    transformer.formData || defaultTransformer.formData;
-  const searchParamsTransformer =
-    transformer.searchParams || defaultTransformer.searchParams;
-
-  const client = (async (input: string, options) => {
-    const { data, ...rest } = options;
-
-    // validate input
-    // create URL with searchParams
-    const url = new URL(input);
-
-    // serialize based on contentType
-    const serializedBody = jsonTransformer.serialize(data);
-
-    let fetchResponse: Response;
-
-    const response = new Promise((resolve, reject) => {
-      fetch(url, {
-        ...rest,
-        body: serializedBody,
-      })
-        .then(async (res) => {
-          fetchResponse = res;
-          const { json, clone, ...rest } = res;
-
-          resolve({
-            ...rest,
-            data: createResponseDataFunction(res, transformer),
-            clone() {
-              return this;
-            },
-          });
-        })
-        .catch((err) => {
-          reject(err);
-        });
-    }) as ResponsePromise<any>;
-
-    response.data = createResponseDataFunction(fetchResponse!, transformer);
-
-    return response;
-  }) as DredgeClient<inferRouteUnion<Api>>;
-
-  const aliases = ["get", "post", "put", "patch", "head", "delete"] as const;
-
-  for (const method of aliases) {
-    client[method] = (path: string, options) =>
-      client(path as any, { ...options, method }) as any;
-  }
-
-  return client;
+  alias.forEach((method) => {
+    fetch[method] = (path: any, options: any) => {
+      return dredgeFetch(
+        path,
+        populateFetchOptions(options, defaultOptions)
+      ) as any;
+    };
+  });
 }
 
-function createResponseDataFunction(
-  fetchResponse: Response,
-  transformer: Partial<Transformer>
-) {
-  const jsonTransformer = transformer.json || defaultTransformer.json;
-  const formDataTransformer =
-    transformer.formData || defaultTransformer.formData;
-  const searchParamsTransformer =
-    transformer.searchParams || defaultTransformer.searchParams;
+type FetchDefaultOptions = Pick<
+  FetchOptions,
+  "fetch" | "headers" | "transformer"
+> & {
+  prefixUrl: string | URL;
+};
 
-  const fn = async () => {
-    const contentType = fetchResponse.headers.get("Content-Type");
-    let data: any;
+function populateFetchOptions(
+  options: any,
+  defaultOptions: FetchDefaultOptions
+): FetchOptions {
+  const transformer = defaultOptions.transformer || {};
+  Object.entries(options.transformer || {}).forEach(([key, value]) => {
+    if (value) {
+      (transformer as any)[key] = value;
+    }
+  });
 
-    if (contentType?.startsWith("application/json")) {
-      data = jsonTransformer.deserialize(await fetchResponse.text());
-    }
-    if (contentType?.startsWith("multipart/form-data")) {
-      data = formDataTransformer.deserialize(await fetchResponse.formData());
-    }
-
-    if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-      const searchParams = new URLSearchParams(await fetchResponse.text());
-      data = searchParamsTransformer.deserialize(searchParams);
-    }
-
-    if (fetchResponse.ok) {
-      return Promise.resolve(data);
-    } else {
-      return Promise.reject(data);
-    }
+  const headers = {
+    ...defaultOptions.headers,
+    ...options.headers,
   };
 
-  return fn;
+  const { data, method, path, searchParams } = options;
+  return {
+    headers,
+    transformer,
+    method,
+    path,
+    data,
+    searchParams,
+    fetch: options.fetch || defaultOptions.fetch,
+    prefixUrl: options.prefixUrl || defaultOptions.prefixUrl,
+  };
 }

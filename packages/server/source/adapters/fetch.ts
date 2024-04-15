@@ -26,14 +26,14 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   });
 
   const headers = Object.fromEntries(req.headers);
+  const searchParams = Object.fromEntries(url.searchParams);
 
-  const result = await api.resolveRoute({
-    path,
+  const result = await api.resolveRoute(path, {
     method: req.method,
     ctx,
     data,
     headers,
-    searchParams: url.searchParams,
+    searchParams,
   });
 
   return createResponseFromResolverResult(result, { transformer });
@@ -74,34 +74,37 @@ export function createResponseFromResolverResult(
 ) {
   const transformer = populateTransformer(options.transformer);
 
-  const { data, error, ...rest } = result;
+  const { data, ...rest } = result;
   const contentType = result.headers?.["Content-Type"];
 
-  // check if result is ok
-  const dataOrError = data;
+  let dataOrError: any;
+  try {
+    dataOrError = data();
+  } catch (err) {
+    dataOrError = err;
+  }
 
   if (contentType?.startsWith("application/json")) {
-    const json = transformer.json.serialize(data);
+    const json = transformer.json.serialize(dataOrError);
     return new Response(json, {
       ...rest,
     });
   }
   if (contentType?.startsWith("multipart/form-data")) {
-    const form = transformer.formData.serialize(data);
+    const form = transformer.formData.serialize(dataOrError);
     return new Response(form, {
       ...rest,
     });
   }
-
   if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-    const searchParams = new URLSearchParams(data);
+    const searchParams = new URLSearchParams(dataOrError);
     const form = transformer.searchParams.serialize(searchParams);
     return new Response(form, {
       ...rest,
     });
   }
 
-  return new Response(data, {
+  return new Response(dataOrError, {
     ...rest,
   });
 }

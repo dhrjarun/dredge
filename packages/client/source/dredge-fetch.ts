@@ -1,43 +1,19 @@
 import {
-  ClientOptions,
-  ResponsePromise,
+  FetchOptions,
+  DredgeResponsePromise,
   Transformer,
   trimSlashes,
-  Response as DredgeResponse,
+  DredgeResponse,
 } from "@dredge/common";
 
-const defaultTransformer: Transformer = {
-  json: {
-    serialize: JSON.stringify,
-    deserialize: JSON.parse,
-  },
-  formData: {
-    serialize: (object) => {
-      const formData = new FormData();
-      Object.entries(object).forEach(([key, value]) => {
-        if (typeof value === "string" || value instanceof Blob) {
-          formData.append(key, value);
-        } else {
-          throw "serialization failed";
-        }
-      });
-
-      return formData;
-    },
-    deserialize: (object) => {
-      return Object.fromEntries(object.entries());
-    },
-  },
-  searchParams: {
-    serialize: (object) => new URLSearchParams(object),
-    deserialize: (object) => Object.fromEntries(object.entries()),
-  },
-};
-
-export async function dredgeFetch(path: string, options: ClientOptions) {
+export function dredgeFetch(
+  path: string,
+  options: Omit<FetchOptions, "path">
+): DredgeResponsePromise<any> {
   const { method, headers, searchParams, data } = options;
 
-  const transformer = defaultTransformer;
+  const transformer = populateTransformer(options.transformer);
+
   function serializeData(data: any, contentType: string = "") {
     if (contentType.startsWith("application/json")) {
       return transformer.json.serialize(data);
@@ -53,12 +29,6 @@ export async function dredgeFetch(path: string, options: ClientOptions) {
 
     return data;
   }
-
-  Object.entries(options?.transformer || {}).forEach(([key, value]) => {
-    if (value) {
-      (transformer as any)[key] = value;
-    }
-  });
 
   const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
 
@@ -82,45 +52,43 @@ export async function dredgeFetch(path: string, options: ClientOptions) {
     body: serializeData(data, headers?.["Content-Type"]),
   });
 
-  const response = await fetch(request);
+  async function _function() {
+    const response: any = await fetch(request);
 
-  const { json, ...restResponseFields } = response;
-  const promiseResponse = Promise.resolve({
-    ...restResponseFields,
-    data: dataFn,
-    clone() {
-      return { ...this };
-    },
-  }) as unknown as ResponsePromise;
+    response.data = async () => {
+      const contentType = response.headers.get("Content-Type");
+      let data: any;
 
-  promiseResponse.data = dataFn;
-  promiseResponse.formData = response.formData;
-  promiseResponse.text = response.text;
-  promiseResponse.arrayBuffer = response.arrayBuffer;
+      if (contentType?.startsWith("application/json")) {
+        data = transformer.json.deserialize(await response.text());
+      }
+      if (contentType?.startsWith("multipart/form-data")) {
+        data = transformer.formData.deserialize(await response.formData());
+      }
 
-  return promiseResponse;
-  async function dataFn() {
-    const contentType = response.headers.get("Content-Type");
-    let data: any;
+      if (contentType?.startsWith("application/x-www-form-urlencoded")) {
+        const searchParams = new URLSearchParams(await response.text());
+        data = transformer.searchParams.deserialize(searchParams);
+      }
 
-    if (contentType?.startsWith("application/json")) {
-      data = transformer.json.deserialize(await response.text());
-    }
-    if (contentType?.startsWith("multipart/form-data")) {
-      data = transformer.formData.deserialize(await response.formData());
-    }
+      if (response.ok) {
+        return Promise.resolve(data);
+      } else {
+        return Promise.reject(data);
+      }
+    };
 
-    if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-      const searchParams = new URLSearchParams(await response.text());
-      data = transformer.searchParams.deserialize(searchParams);
-    }
+    response.json = async () => {
+      return transformer.json.deserialize(await response.text());
+    };
 
-    if (response.ok) {
-      return Promise.resolve(data);
-    } else {
-      return Promise.reject(data);
-    }
+    return response as DredgeResponse<any>;
   }
+
+  const responsePromise = _function() as DredgeResponsePromise;
+  decorateResponsePromise(responsePromise);
+
+  return responsePromise;
 }
 
 export class DredgeFetch {
@@ -159,14 +127,10 @@ export class DredgeFetch {
 
   request: globalThis.Request;
 
-  constructor(path: string, options: Omit<ClientOptions, "path">) {
+  constructor(path: string, options: Omit<FetchOptions, "path">) {
     const { transformer = {}, method, headers, searchParams, data } = options;
 
-    Object.entries(transformer).forEach(([key, value]) => {
-      if (value) {
-        (this._transformer as any)[key] = value;
-      }
-    });
+    this._transformer = populateTransformer(transformer);
 
     this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
 
@@ -191,44 +155,27 @@ export class DredgeFetch {
     });
   }
 
-  static make(path: string, options: ClientOptions): ResponsePromise {
+  static make(path: string, options: FetchOptions): DredgeResponsePromise {
     const dredgeFetch = new DredgeFetch(path, options);
 
     async function _function() {
-      const response = await dredgeFetch._getResponse();
-      const { json, ...rest } = response;
+      const response: any = await dredgeFetch._getResponse();
 
-      const dredgeResponse: DredgeResponse = {
-        ...rest,
-        data: () => {
-          return dredgeFetch._getData(response);
-        },
-        clone: () => {
-          return { ...dredgeResponse };
-        },
+      response.data = () => {
+        return dredgeFetch._getData(response);
       };
-      return dredgeResponse;
+
+      response.json = async () => {
+        return dredgeFetch._transformer.json.deserialize(await response.text());
+      };
+
+      return response as DredgeResponse<any>;
     }
 
-    const responsePromise = _function() as ResponsePromise;
-    dredgeFetch._decorateResponse(responsePromise);
+    const responsePromise = _function() as DredgeResponsePromise;
+    decorateResponsePromise(responsePromise);
 
     return responsePromise;
-  }
-
-  protected _decorateResponse(responsePromise: any) {
-    responsePromise.data = async () => {
-      return (await responsePromise).data();
-    };
-    responsePromise.formData = async () => {
-      return (await responsePromise).formData();
-    };
-    responsePromise.arrayBuffer = async () => {
-      return (await responsePromise).arrayBuffer();
-    };
-    responsePromise.blob = async () => {
-      return (await responsePromise).blob();
-    };
   }
 
   protected _getResponse() {
@@ -273,4 +220,107 @@ export class DredgeFetch {
 
     return data;
   }
+}
+
+function decorateResponsePromise(responsePromise: any) {
+  responsePromise.data = async () => {
+    return (await responsePromise).data();
+  };
+  responsePromise.formData = async () => {
+    return (await responsePromise).formData();
+  };
+  responsePromise.arrayBuffer = async () => {
+    return (await responsePromise).arrayBuffer();
+  };
+  responsePromise.blob = async () => {
+    return (await responsePromise).blob();
+  };
+}
+
+function serializeData(
+  data: any,
+  options: { contentType?: string; transformer: Transformer }
+) {
+  const { contentType = "", transformer } = options;
+
+  if (contentType.startsWith("application/json")) {
+    return transformer.json.serialize(data);
+  }
+
+  if (contentType.startsWith("multipart/form-data")) {
+    return transformer.json.serialize(data);
+  }
+
+  if (contentType?.startsWith("application/x-www-form-urlencoded")) {
+    return transformer.json.serialize(data);
+  }
+
+  return data;
+}
+
+async function deserializeData(
+  response: Response,
+  options: { transformer: Transformer }
+) {
+  const { transformer } = options;
+
+  const contentType = response.headers.get("Content-Type");
+  let data: any;
+
+  if (contentType?.startsWith("application/json")) {
+    data = transformer.json.deserialize(await response.text());
+  }
+  if (contentType?.startsWith("multipart/form-data")) {
+    data = transformer.formData.deserialize(await response.formData());
+  }
+
+  if (contentType?.startsWith("application/x-www-form-urlencoded")) {
+    const searchParams = new URLSearchParams(await response.text());
+    data = transformer.searchParams.deserialize(searchParams);
+  }
+
+  if (response.ok) {
+    return Promise.resolve(data);
+  } else {
+    return Promise.reject(data);
+  }
+}
+
+function populateTransformer(
+  transformer: Partial<Transformer> = {}
+): Transformer {
+  const _transformer: Transformer = {
+    json: {
+      serialize: JSON.stringify,
+      deserialize: JSON.parse,
+    },
+    formData: {
+      serialize: (object) => {
+        const formData = new FormData();
+        Object.entries(object).forEach(([key, value]) => {
+          if (typeof value === "string" || value instanceof Blob) {
+            formData.append(key, value);
+          } else {
+            throw "serialization failed";
+          }
+        });
+
+        return formData;
+      },
+      deserialize: (object) => {
+        return Object.fromEntries(object.entries());
+      },
+    },
+    searchParams: {
+      serialize: (object) => new URLSearchParams(object),
+      deserialize: (object) => Object.fromEntries(object.entries()),
+    },
+  };
+  Object.entries(transformer).forEach(([key, value]) => {
+    if (value) {
+      (_transformer as any)[key] = value;
+    }
+  });
+
+  return _transformer;
 }

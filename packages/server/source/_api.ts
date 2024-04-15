@@ -1,25 +1,52 @@
 import { getParseFn } from "./parser";
 import { mergeDeep } from "./utils/merge";
 import {
-  DredgeClient,
-  Transformer,
   AnyRoute,
   ResolverResult,
   ResolverOptions,
+  HTTPMethod,
+  inferResolverResult,
+  inferResolverOption,
+  ExtractRoute,
+  Simplify,
+  inferRoutePath,
+  inferRouteMethod,
 } from "@dredge/common";
 
-// TODO:
-// remoe getCaller
+export interface ResolveRoute<
+  Context extends object,
+  Routes extends AnyRoute[]
+> {
+  <
+    P extends inferRoutePath<Routes[number]>,
+    M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
+    R extends ExtractRoute<Routes[number], M, P>
+  >(
+    path: P,
+    options: Simplify<
+      { method: M; ctx: Context } & Omit<
+        inferResolverOption<R>,
+        "path" | "method" | "ctx"
+      >
+    >
+  ): Promise<inferResolverResult<R>>;
+}
+
 export interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
   _def: {
     root: DredgePath;
-    context: Context;
-    transformer: Transformer;
   };
 
-  resolveRoute(options: ResolverOptions): Promise<ResolverResult<any>>;
-  getCaller: (context: Context) => DredgeClient<Routes>;
+  resolveRoute: ResolveRoute<Context, Routes>;
 }
+export type DredgeResolverOptions<Context> = {
+  ctx?: Context;
+  method?: HTTPMethod | string;
+  data?: any;
+  path: string;
+  headers?: Record<string, string | string[] | undefined>;
+  searchParams?: Record<string, any>;
+};
 
 export function dredgeApi<
   Context extends object,
@@ -51,50 +78,11 @@ export function dredgeApi<
       root,
     },
 
-    resolveRoute: (options) => {
-      return resolveRoute(root, options);
-    },
-
-    getCaller(ctx: Context) {
-      const client = ((path, options) => {
-        const result = resolveRoute(root, {
-          ctx,
-          ...options,
-          path,
-        });
-
-        const response = result as any;
-
-        response.data = () => {
-          return new Promise((resolve, reject) => {
-            result
-              .then((re) => {
-                resolve(re.data);
-              })
-              .catch((err) => {
-                reject(err);
-              });
-          });
-        };
-
-        return response;
-      }) as DredgeClient<Routes>;
-
-      const aliases = [
-        "get",
-        "post",
-        "put",
-        "patch",
-        "head",
-        "delete",
-      ] as const;
-
-      for (const method of aliases) {
-        client[method] = (path: string, options) =>
-          client(path as any, { ...options, method }) as any;
-      }
-
-      return client;
+    resolveRoute: (path, options) => {
+      return resolveRoute(root, {
+        path,
+        ...options,
+      });
     },
   } as DredgeApi<Context, Routes>;
 }
@@ -118,7 +106,6 @@ export class DredgePath {
     this.isParam = isParam;
 
     routes.forEach((item) => {
-      // this.routes[item._def.method || "get"] = item;
       this.routes.set(item._def.method || "get", item);
     });
   }
@@ -203,7 +190,7 @@ export async function resolveRoute(
   const pathArray = trimSlashes(path).split("/");
 
   let current = root;
-  pathArray.forEach((item, index) => {
+  pathArray.forEach((item) => {
     const child = current.getStaticChild(item) || current.getDynamicChild();
 
     if (!child) {
@@ -306,8 +293,11 @@ export async function resolveRoute(
             searchParams: parsedSearchParams,
             path: pathArray.join("/"),
             data: parsedBody,
-            send(resolverOptions?: any) {
-              return resolverOptions;
+            send(options?: any) {
+              return sendFn(options, {
+                status: 200,
+                statusText: "ok",
+              });
             },
           });
 
@@ -324,9 +314,10 @@ export async function resolveRoute(
         searchParams,
         data,
         send(options?: any) {
-          return {
-            ...options,
-          };
+          return sendFn(options, {
+            status: 400,
+            statusText: "Something wen't wrong",
+          });
         },
       })!;
 
@@ -349,10 +340,28 @@ function sendFn(
     status?: number;
     statusText?: string;
     headers?: Record<string, string>;
-  }
+  } = {}
 ): ResolverResult<any> {
-  const result: ResolverResult<any> = {
+  const result = {
     status: options.status || defaults.status,
     statusText: options.statusText || defaults.statusText,
+    headers: {
+      ...defaults.headers,
+      ...options.headers,
+    },
+  } as ResolverResult<any>;
+
+  result.ok = result.status > 199 && result.status < 300;
+
+  result.data = () => {
+    return new Promise((resolve, reject) => {
+      if (result.ok) {
+        resolve(options.data);
+      } else {
+        reject(options.error);
+      }
+    });
   };
+
+  return result;
 }
