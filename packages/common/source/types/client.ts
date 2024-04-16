@@ -23,11 +23,11 @@ export type inferFetchOptions<R> = R extends Route<
   ? FetchOptions & {
       method: Method;
       path: inferPathType<Path, SearchParams>;
-    } & (Method extends "get" | "delete" | "head"
-        ? {}
-        : { data: inferParserType<IBody> }) &
+    } & (Method extends "post" | "put" | "patch"
+        ? { data: inferParserType<IBody> }
+        : never) &
       (keyof SearchParams extends never
-        ? {}
+        ? never
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
 

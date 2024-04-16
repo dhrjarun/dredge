@@ -13,7 +13,7 @@ export type inferSearchParamsType<SearchParams> = Simplify<{
 export type MiddlewareFunction<
   Context,
   ContextOverride,
-  Paths extends Array<string>,
+  _Paths,
   Params,
   SearchParams,
   Method,
@@ -47,7 +47,8 @@ export interface ResolverOptions {
   method?: HTTPMethod | string;
   data?: any;
   path: string;
-  headers?: Record<string, string | string[] | undefined>;
+  // headers?: Record<string, string | string[] | undefined>;
+  headers?: Record<string, string>;
   searchParams?: Record<string, any>;
 }
 
@@ -59,7 +60,7 @@ export interface ResolverResult<Data> {
   statusText: string;
 }
 
-export type inferResolverOption<R> = R extends Route<
+type _inferResolverOption<R> = R extends Route<
   any,
   infer Method,
   infer Path,
@@ -68,18 +69,41 @@ export type inferResolverOption<R> = R extends Route<
   infer IBody
 >
   ? {
-      ctx?: object;
-      // headers?: Record<string, string | string[] | undefined>;
       headers?: Record<string, string>;
       method: Method;
       path: inferPathType<Path, SearchParams>;
-    } & (Method extends "get" | "delete" | "head"
-      ? {}
-      : { data: inferParserType<IBody> }) &
+    } & ([Method] extends ["post" | "put" | "patch"]
+      ? { data: inferParserType<IBody> }
+      : {}) &
       (keyof SearchParams extends never
         ? {}
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
+
+export type inferResolverOption<R> = isAnyRoute<R> extends true
+  ? ResolverOptions
+  : _inferResolverOption<R>;
+
+export type isAnyRoute<R> = R extends Route<
+  any,
+  infer _Method extends number,
+  infer _Path extends number,
+  any,
+  infer _SearParams extends number,
+  infer _IBody extends number
+>
+  ? true
+  : false;
+
+// type xx = Simplify<inferResolverOption<AnyRoute>>;
+type xx = isAnyRoute<
+  Route<{}, "get", ["posts"], {}, {}, null, ParserWithoutInput<string>>
+>;
+type ay = isAnyRoute<AnyRoute>;
+// type y<T> = [keyof T] extends [never] ? "ok" : "not-ok";
+// type y<T> = keyof T extends never ? "ok" : "not-ok";
+// type xy<T> = T extends number ? any : T extends "ok" ? "ok" : "not-ok";
+// type x = xy<string>;
 
 export type inferResolverResult<R> = R extends Route<
   any,
@@ -119,7 +143,7 @@ export type ErrorResolverFunction = {
 export type ResolverFunction<
   Context,
   Method,
-  Paths extends Array<string>,
+  _Paths,
   Params,
   SearchParams,
   IBody,
@@ -174,7 +198,8 @@ export type RouteBuilderDef = {
 export interface Route<
   Context,
   Method,
-  Paths extends Array<string> = [],
+  // Paths extends Array<string> = [],
+  Paths = [],
   Params = {},
   SearchParams = {},
   IBody = null,
@@ -191,7 +216,7 @@ export interface Route<
   ): Route<
     Context,
     Method,
-    [...Paths, ...T],
+    Paths extends Array<string> ? [...Paths, ...T] : T,
     Params & {
       [key in T[number] as key extends `:${infer N}` ? N : never]: null;
     },

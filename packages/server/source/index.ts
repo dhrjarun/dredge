@@ -5,12 +5,14 @@
 // create dredgeFetch instance creator
 // delete outdated codes
 
+// fix ctx in api when it is optional, also generic ctx problem by creating initDredge
+// add data method on resolverResultPromise
 // test resolveRoute
+// fix adapter type problems
 // test adapters
 // test dredge-fetch client
 // better error objects
 // add more options for dredgeFetch
-// fix adapter type problems
 
 // setup tsup
 // setup eslint, prettier

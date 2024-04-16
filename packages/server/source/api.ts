@@ -1,4 +1,4 @@
-import { getParseFn } from "@dredge/common";
+import { getParseFn, isAnyRoute } from "@dredge/common";
 import { mergeDeep } from "./utils/merge";
 import {
   AnyRoute,
@@ -23,12 +23,15 @@ export interface ResolveRoute<
     R extends ExtractRoute<Routes[number], M, P>
   >(
     path: P,
-    options: Simplify<
-      { method: M; ctx: Context } & Omit<
-        inferResolverOption<R>,
-        "path" | "method" | "ctx"
-      >
-    >
+    options: isAnyRoute<R> extends true
+      ? Omit<ResolverOptions, "path">
+      : Simplify<
+          { method: M } & Omit<
+            inferResolverOption<R>,
+            "path" | "method" | "ctx"
+          > &
+            (keyof Context extends never ? {} : { ctx: Context })
+        >
   ): Promise<inferResolverResult<R>>;
 }
 
@@ -48,12 +51,20 @@ export type DredgeResolverOptions<Context> = {
   searchParams?: Record<string, any>;
 };
 
-export function dredgeApi<
+export function dredgeApi<Context extends object = {}>() {
+  const fn = <const Routes extends AnyRoute[]>(
+    routes: Routes
+  ): DredgeApi<Context, Routes> => {
+    return buildDredgeApi(routes);
+  };
+
+  return fn;
+}
+
+export function buildDredgeApi<
   Context extends object,
   const Routes extends AnyRoute[]
->(options: { routes: Routes }): DredgeApi<Context, Routes> {
-  const { routes } = options;
-
+>(routes: Routes): DredgeApi<Context, Routes> {
   const root = new DredgePath({
     name: "$root",
   });

@@ -21,7 +21,7 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
     throw "Invalid url";
   }
   const path = trimSlashes(url.pathname).slice(initialPathname.length);
-  const data = getDataFromRequestOrResponse(req, {
+  const data = await getDataFromRequestOrResponse(req, {
     transformer,
   });
 

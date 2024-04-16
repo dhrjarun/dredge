@@ -1,54 +1,55 @@
 import { test, expect } from "vitest";
-import { dredgeRoute } from "./route";
-import { dredgeApi } from "./api";
+import { dredge } from "./dredge";
 import z from "zod";
 
-const api = dredgeApi({
-  routes: [
-    dredgeRoute()
-      .path("posts", ":user")
-      .params({
-        user: z.enum(["dhrjarun", "dd"]),
-      })
-      .searchParam({
-        size: z.string(),
-      })
-      .post(z.string())
-      .resolve(({ send, data }) => {
-        return send({
-          data,
-        });
-      }),
+const { route, api } = dredge();
 
-    dredgeRoute()
-      .path("posts", "default")
-      .post(z.number())
-      .resolve(({ send, data }) => {
-        return send({ data });
-      }),
+const testApi = api([
+  route
+    .path("posts", ":user")
+    .params({
+      user: z.enum(["dhrjarun", "dd"]),
+    })
+    .searchParam({
+      size: z.string(),
+    })
+    .post(z.string())
+    .resolve(({ send, data }) => {
+      return send({
+        data,
+      });
+    }),
 
-    dredgeRoute()
-      .path("posts")
-      .get()
-      .resolve(({ send, data }) => {
-        return send({ data });
-      }),
-  ],
-});
+  route
+    .path("posts", "default")
+    .post(z.number())
+    .resolve(({ send, data }) => {
+      return send({ data });
+    }),
+
+  route
+    .path("posts")
+    .get()
+    .resolve(({ send }) => {
+      return send({ data: "I am post" });
+    }),
+]);
 
 test("client", async () => {
-  const dredge = api.resolveRoute("/posts", {
+  testApi.resolveRoute("/posts", {
     method: "get",
-    ctx: {},
   });
 
-  dredge.get("/posts", {});
+  testApi.resolveRoute("/posts", {
+    method: "get",
+  });
 
-  dredge.post("/posts/default", {
+  testApi.resolveRoute("/posts/default", {
+    method: "post",
     data: 20,
   });
 
-  dredge("/posts/dd", {
+  testApi.resolveRoute("/posts/dd", {
     method: "post",
     data: "dd",
     searchParams: {
@@ -56,22 +57,25 @@ test("client", async () => {
     },
   });
 
-  const result = await dredge.post("/posts/dhrjarun", {
+  const result = await testApi.resolveRoute("/posts/dhrjarun", {
+    method: "post",
     searchParams: {
       size: "20",
     },
     data: "ok body",
   });
-  dredge.post("/posts/default", {
+  await testApi.resolveRoute("/posts/default", {
+    method: "post",
     data: 20,
   });
 
   expect(result.data).toBe("ok body");
 
-  const bodyResult = await dredge
-    .post("/posts/default", {
+  const bodyResult = (
+    await testApi.resolveRoute("/posts/default", {
+      method: "post",
       data: 20,
     })
-    .data();
+  ).data();
   expect(bodyResult).toBe(20);
 });
