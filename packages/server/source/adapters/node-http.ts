@@ -1,5 +1,5 @@
 import type * as http from "http";
-import { DredgeApi } from "../_api";
+import { DredgeApi } from "../api";
 import { Transformer, AnyRoute, trimSlashes } from "@dredge/common";
 import busboy from "busboy";
 import { FormData, File } from "formdata-node";

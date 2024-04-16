@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
-import { dredgeRoute } from "./_route";
-import { dredgeApi } from "./_api";
+import { dredgeRoute } from "./route";
+import { dredgeApi } from "./api";
 import z from "zod";
 
 const api = dredgeApi({
@@ -39,6 +39,7 @@ const api = dredgeApi({
 test("client", async () => {
   const dredge = api.resolveRoute("/posts", {
     method: "get",
+    ctx: {},
   });
 
   dredge.get("/posts", {});

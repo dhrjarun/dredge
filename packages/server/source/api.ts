@@ -1,51 +1,60 @@
-import type { AnyRoute, ResolverResult } from "./route";
-import { getParseFn } from "./parser";
-import { MaybePromise } from "./types";
-import { ClientOptions } from "./client";
+import { getParseFn } from "@dredge/common";
 import { mergeDeep } from "./utils/merge";
+import {
+  AnyRoute,
+  ResolverResult,
+  ResolverOptions,
+  HTTPMethod,
+  inferResolverResult,
+  inferResolverOption,
+  ExtractRoute,
+  Simplify,
+  inferRoutePath,
+  inferRouteMethod,
+} from "@dredge/common";
 
-export interface DredgeApi<T> {
-  _root: DredgePath;
+export interface ResolveRoute<
+  Context extends object,
+  Routes extends AnyRoute[]
+> {
+  <
+    P extends inferRoutePath<Routes[number]>,
+    M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
+    R extends ExtractRoute<Routes[number], M, P>
+  >(
+    path: P,
+    options: Simplify<
+      { method: M; ctx: Context } & Omit<
+        inferResolverOption<R>,
+        "path" | "method" | "ctx"
+      >
+    >
+  ): Promise<inferResolverResult<R>>;
 }
 
-export function buildDredgeApi<const R extends AnyRoute[]>(
-  routes: R
-): DredgeApi<R> {
-  const _root = new DredgePath({
-    name: "$root",
-  });
+export interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
+  _def: {
+    root: DredgePath;
+  };
 
-  routes.forEach((route) => {
-    const def = route._def;
-    const paths = def.paths as string[];
-
-    let current = _root;
-    paths.forEach((name, index) => {
-      if (!current.hasChild(name)) {
-        current.addChild(name);
-      }
-      current = current.getChild(name)!;
-    });
-
-    current.setRoute(route);
-  });
-
-  return {
-    _root,
-  } as DredgeApi<[]>;
+  resolveRoute: ResolveRoute<Context, Routes>;
 }
+export type DredgeResolverOptions<Context> = {
+  ctx?: Context;
+  method?: HTTPMethod | string;
+  data?: any;
+  path: string;
+  headers?: Record<string, string | string[] | undefined>;
+  searchParams?: Record<string, any>;
+};
 
 export function dredgeApi<
   Context extends object,
-  const R extends AnyRoute[]
->(options: {
-  routes: R;
-  context: Context;
-  transformer: Transformer;
-}): DredgeApi<R> {
+  const Routes extends AnyRoute[]
+>(options: { routes: Routes }): DredgeApi<Context, Routes> {
   const { routes } = options;
 
-  const _root = new DredgePath({
+  const root = new DredgePath({
     name: "$root",
   });
 
@@ -53,8 +62,8 @@ export function dredgeApi<
     const def = route._def;
     const paths = def.paths as string[];
 
-    let current = _root;
-    paths.forEach((name, index) => {
+    let current = root;
+    paths.forEach((name) => {
       if (!current.hasChild(name)) {
         current.addChild(name);
       }
@@ -65,8 +74,17 @@ export function dredgeApi<
   });
 
   return {
-    _root,
-  } as DredgeApi<[]>;
+    _def: {
+      root,
+    },
+
+    resolveRoute: (path, options) => {
+      return resolveRoute(root, {
+        path,
+        ...options,
+      });
+    },
+  } as DredgeApi<Context, Routes>;
 }
 
 export class DredgePath {
@@ -88,7 +106,7 @@ export class DredgePath {
     this.isParam = isParam;
 
     routes.forEach((item) => {
-      this.routes[item._def.method || "get"] = item;
+      this.routes.set(item._def.method || "get", item);
     });
   }
 
@@ -158,16 +176,21 @@ const trimSlashes = (path: string): string => {
   return path;
 };
 
-export async function executeRoute(
+export async function resolveRoute(
   root: DredgePath,
-  ctx: object,
-  clientOptions: ClientOptions<AnyRoute>
-) {
-  const { path, searchParams, body, method } = clientOptions;
+  clientOptions: ResolverOptions
+): Promise<ResolverResult<any>> {
+  const {
+    ctx = {},
+    path,
+    searchParams = {},
+    data,
+    method = "get",
+  } = clientOptions;
   const pathArray = trimSlashes(path).split("/");
 
   let current = root;
-  pathArray.forEach((item, index) => {
+  pathArray.forEach((item) => {
     const child = current.getStaticChild(item) || current.getDynamicChild();
 
     if (!child) {
@@ -183,7 +206,7 @@ export async function executeRoute(
   }
 
   const params: Record<string, string> = routeDef.paths.reduce(
-    (acc, item, index) => {
+    (acc: any, item, index) => {
       if (item.startsWith(":")) {
         acc[item.replace(":", "")] = pathArray[index];
       }
@@ -191,13 +214,13 @@ export async function executeRoute(
     },
     {}
   );
-  const parsedSearchParams = {};
-  const parsedParams = {};
+  const parsedSearchParams: Record<string, any> = {};
+  const parsedParams: Record<string, any> = {};
   let parsedBody: unknown;
   let currentCtx: any = {
     ...ctx,
   };
-  let resolverResult: MaybePromise<ResolverResult<any>>;
+  let resolverResult: ResolverResult<any>;
 
   let step:
     | "PARAM_VALIDATION"
@@ -214,9 +237,9 @@ export async function executeRoute(
           for (const [index, item] of routeDef.paths.entries()) {
             if (item.startsWith(":")) {
               const parser = routeDef.params[item.replace(":", "")];
-              parsedParams[item] =
-                (await getParseFn(parser)(pathArray[index])) ||
-                pathArray[index];
+              parsedParams[item] = parser
+                ? await getParseFn(parser)(pathArray[index])
+                : pathArray[index];
             }
           }
 
@@ -233,7 +256,7 @@ export async function executeRoute(
           break;
         case "BODY_VALIDATION":
           if (routeDef.iBody) {
-            parsedBody = await getParseFn(routeDef.iBody)(body);
+            parsedBody = await getParseFn(routeDef.iBody)(data);
           }
 
           step = "MIDDLEWARE_CALLS";
@@ -246,7 +269,7 @@ export async function executeRoute(
               params: parsedParams,
               searchParams: parsedSearchParams,
               path: pathArray.join("/"),
-              body: parsedBody,
+              data: parsedBody,
               next(nextOptions?: any) {
                 return {
                   ctx: mergeDeep(currentCtx, ...nextOptions?.ctx),
@@ -263,15 +286,18 @@ export async function executeRoute(
           if (!routeDef.resolver) {
             throw "No resolver exist";
           }
-          resolverResult = routeDef.resolver({
+          resolverResult = await routeDef.resolver({
             method,
             ctx: currentCtx,
             params: parsedParams,
             searchParams: parsedSearchParams,
             path: pathArray.join("/"),
-            body: parsedBody,
-            send(resolverOptions?: any) {
-              return resolverOptions;
+            data: parsedBody,
+            send(options?: any) {
+              return sendFn(options, {
+                status: 200,
+                statusText: "ok",
+              });
             },
           });
 
@@ -279,14 +305,19 @@ export async function executeRoute(
           break;
       }
     } catch (error) {
-      resolverResult = routeDef.errorResolver?.({
+      resolverResult = await routeDef.errorResolver?.({
         error,
         errorOrigin: step,
-        ...clientOptions,
-        params,
         method,
-        send(resolverOptions?: any) {
-          return resolverOptions;
+        path: pathArray.join("/"),
+        params,
+        searchParams,
+        data,
+        send(options?: any) {
+          return sendFn(options, {
+            status: 400,
+            statusText: "Something wen't wrong",
+          });
         },
       })!;
 
@@ -295,4 +326,42 @@ export async function executeRoute(
   }
 
   return resolverResult!;
+}
+
+function sendFn(
+  options: {
+    data?: any;
+    error?: any;
+    status?: number;
+    statusText?: string;
+    headers?: Record<string, string>;
+  },
+  defaults: {
+    status?: number;
+    statusText?: string;
+    headers?: Record<string, string>;
+  } = {}
+): ResolverResult<any> {
+  const result = {
+    status: options.status || defaults.status,
+    statusText: options.statusText || defaults.statusText,
+    headers: {
+      ...defaults.headers,
+      ...options.headers,
+    },
+  } as ResolverResult<any>;
+
+  result.ok = result.status > 199 && result.status < 300;
+
+  result.data = () => {
+    return new Promise((resolve, reject) => {
+      if (result.ok) {
+        resolve(options.data);
+      } else {
+        reject(options.error);
+      }
+    });
+  };
+
+  return result;
 }

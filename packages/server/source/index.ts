@@ -3,11 +3,11 @@
 // make data() in ResolverResult return Promise
 // refactor fetchClient option type
 // create dredgeFetch instance creator
+// delete outdated codes
 
 // test resolveRoute
 // test adapters
 // test dredge-fetch client
-// delete outdated codes
 // better error objects
 // add more options for dredgeFetch
 // fix adapter type problems

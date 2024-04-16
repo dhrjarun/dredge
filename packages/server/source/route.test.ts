@@ -18,7 +18,7 @@ test("route", () => {
     .post(z.string())
     .resolve(({ send }) => {
       return send({
-        body: [{ id: "p1", title: "Post1" }],
+        data: [{ id: "p1", title: "Post1" }],
       });
     });
 

@@ -1,4 +1,4 @@
-import { DredgeApi } from "../_api";
+import { DredgeApi } from "../api";
 import {
   Transformer,
   AnyRoute,
