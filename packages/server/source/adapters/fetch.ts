@@ -1,9 +1,9 @@
-import { DredgeApi } from "../api";
 import {
   Transformer,
   AnyRoute,
   trimSlashes,
   ResolverResult,
+  DredgeApi,
 } from "@dredge/common";
 
 export async function handleFetchRequest<Context extends object = {}>(options: {

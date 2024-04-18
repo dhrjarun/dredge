@@ -69,13 +69,13 @@ test("client", async () => {
     data: 20,
   });
 
-  expect(result.data).toBe("ok body");
+  expect(await result.data()).toBe("ok body");
 
-  const bodyResult = (
-    await testApi.resolveRoute("/posts/default", {
+  const bodyResult = await testApi
+    .resolveRoute("/posts/default", {
       method: "post",
       data: 20,
     })
-  ).data();
+    .data();
   expect(bodyResult).toBe(20);
 });

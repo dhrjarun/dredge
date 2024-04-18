@@ -1,55 +1,11 @@
-import { getParseFn, isAnyRoute } from "@dredge/common";
+import { getParseFn, ResolverResultPromise } from "@dredge/common";
 import { mergeDeep } from "./utils/merge";
 import {
   AnyRoute,
   ResolverResult,
   ResolverOptions,
-  HTTPMethod,
-  inferResolverResult,
-  inferResolverOption,
-  ExtractRoute,
-  Simplify,
-  inferRoutePath,
-  inferRouteMethod,
+  DredgeApi,
 } from "@dredge/common";
-
-export interface ResolveRoute<
-  Context extends object,
-  Routes extends AnyRoute[]
-> {
-  <
-    P extends inferRoutePath<Routes[number]>,
-    M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
-    R extends ExtractRoute<Routes[number], M, P>
-  >(
-    path: P,
-    options: isAnyRoute<R> extends true
-      ? Omit<ResolverOptions, "path">
-      : Simplify<
-          { method: M } & Omit<
-            inferResolverOption<R>,
-            "path" | "method" | "ctx"
-          > &
-            (keyof Context extends never ? {} : { ctx: Context })
-        >
-  ): Promise<inferResolverResult<R>>;
-}
-
-export interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
-  _def: {
-    root: DredgePath;
-  };
-
-  resolveRoute: ResolveRoute<Context, Routes>;
-}
-export type DredgeResolverOptions<Context> = {
-  ctx?: Context;
-  method?: HTTPMethod | string;
-  data?: any;
-  path: string;
-  headers?: Record<string, string | string[] | undefined>;
-  searchParams?: Record<string, any>;
-};
 
 export function dredgeApi<Context extends object = {}>() {
   const fn = <const Routes extends AnyRoute[]>(
@@ -126,7 +82,7 @@ export class DredgePath {
   }
 
   getRoute(method: string) {
-    return this.routes.get(method);
+    return this.routes.get(method.toLowerCase());
   }
   setRoute(route: AnyRoute) {
     this.routes.set(route._def.method || "get", route);
@@ -187,10 +143,10 @@ const trimSlashes = (path: string): string => {
   return path;
 };
 
-export async function resolveRoute(
+export function resolveRoute(
   root: DredgePath,
   clientOptions: ResolverOptions
-): Promise<ResolverResult<any>> {
+): ResolverResultPromise<any> {
   const {
     ctx = {},
     path,
@@ -231,7 +187,7 @@ export async function resolveRoute(
   let currentCtx: any = {
     ...ctx,
   };
-  let resolverResult: ResolverResult<any>;
+  // let resolverResult: ResolverResult<any>;
 
   let step:
     | "PARAM_VALIDATION"
@@ -241,102 +197,111 @@ export async function resolveRoute(
     | "RESOLVER_CALL"
     | "DONE" = "PARAM_VALIDATION";
 
-  while (step != "DONE") {
-    try {
-      switch (step) {
-        case "PARAM_VALIDATION":
-          for (const [index, item] of routeDef.paths.entries()) {
-            if (item.startsWith(":")) {
-              const parser = routeDef.params[item.replace(":", "")];
-              parsedParams[item] = parser
-                ? await getParseFn(parser)(pathArray[index])
-                : pathArray[index];
+  async function fn() {
+    while (step != "DONE") {
+      try {
+        switch (step) {
+          case "PARAM_VALIDATION":
+            for (const [index, item] of routeDef.paths.entries()) {
+              if (item.startsWith(":")) {
+                const parser = routeDef.params[item.replace(":", "")];
+                parsedParams[item] = parser
+                  ? await getParseFn(parser)(pathArray[index])
+                  : pathArray[index];
+              }
             }
-          }
 
-          step = "SEARCH_PARAM_VALIDATION";
-          break;
-        case "SEARCH_PARAM_VALIDATION":
-          for (const [key, parser] of Object.entries(routeDef.searchParams)) {
-            parsedSearchParams[key] = await getParseFn(parser)(
-              searchParams[key]
-            );
-          }
+            step = "SEARCH_PARAM_VALIDATION";
+            break;
+          case "SEARCH_PARAM_VALIDATION":
+            for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+              parsedSearchParams[key] = await getParseFn(parser)(
+                searchParams[key]
+              );
+            }
 
-          step = "BODY_VALIDATION";
-          break;
-        case "BODY_VALIDATION":
-          if (routeDef.iBody) {
-            parsedBody = await getParseFn(routeDef.iBody)(data);
-          }
+            step = "BODY_VALIDATION";
+            break;
+          case "BODY_VALIDATION":
+            if (routeDef.iBody) {
+              parsedBody = await getParseFn(routeDef.iBody)(data);
+            }
 
-          step = "MIDDLEWARE_CALLS";
-          break;
-        case "MIDDLEWARE_CALLS":
-          routeDef.middlewares.forEach(async (fn) => {
-            const middlewareResult = await fn({
+            step = "MIDDLEWARE_CALLS";
+            break;
+          case "MIDDLEWARE_CALLS":
+            routeDef.middlewares.forEach(async (fn) => {
+              const middlewareResult = await fn({
+                method,
+                ctx: currentCtx,
+                params: parsedParams,
+                searchParams: parsedSearchParams,
+                path: pathArray.join("/"),
+                data: parsedBody,
+                next(nextOptions?: any) {
+                  return {
+                    ctx: mergeDeep(currentCtx, ...nextOptions?.ctx),
+                  };
+                },
+              });
+
+              currentCtx = middlewareResult.ctx;
+            });
+
+            step = "RESOLVER_CALL";
+            break;
+          case "RESOLVER_CALL":
+            if (!routeDef.resolver) {
+              throw "No resolver exist";
+            }
+
+            const result = await routeDef.resolver({
               method,
               ctx: currentCtx,
               params: parsedParams,
               searchParams: parsedSearchParams,
               path: pathArray.join("/"),
               data: parsedBody,
-              next(nextOptions?: any) {
-                return {
-                  ctx: mergeDeep(currentCtx, ...nextOptions?.ctx),
-                };
+              send(options?: any) {
+                return sendFn(options, {
+                  status: 200,
+                  statusText: "ok",
+                });
               },
             });
+            step = "DONE";
+            return result;
+        }
+      } catch (error) {
+        const result = await routeDef.errorResolver({
+          error,
+          errorOrigin: step,
+          method,
+          path: pathArray.join("/"),
+          params,
+          searchParams,
+          data,
+          send(options?: any) {
+            return sendFn(options, {
+              status: 400,
+              statusText: "Something wen't wrong",
+            });
+          },
+        })!;
 
-            currentCtx = middlewareResult.ctx;
-          });
-
-          step = "RESOLVER_CALL";
-          break;
-        case "RESOLVER_CALL":
-          if (!routeDef.resolver) {
-            throw "No resolver exist";
-          }
-          resolverResult = await routeDef.resolver({
-            method,
-            ctx: currentCtx,
-            params: parsedParams,
-            searchParams: parsedSearchParams,
-            path: pathArray.join("/"),
-            data: parsedBody,
-            send(options?: any) {
-              return sendFn(options, {
-                status: 200,
-                statusText: "ok",
-              });
-            },
-          });
-
-          step = "DONE";
-          break;
+        step = "DONE";
+        return result;
       }
-    } catch (error) {
-      resolverResult = await routeDef.errorResolver?.({
-        error,
-        errorOrigin: step,
-        method,
-        path: pathArray.join("/"),
-        params,
-        searchParams,
-        data,
-        send(options?: any) {
-          return sendFn(options, {
-            status: 400,
-            statusText: "Something wen't wrong",
-          });
-        },
-      })!;
-
-      step = "DONE";
     }
   }
+  const resultPromise = fn() as ResolverResultPromise;
+  console.log("resultPromise", resultPromise);
+  resultPromise.data = async () => {
+    const result = await resultPromise;
+    return result.data();
+  };
 
-  return resolverResult!;
+  return resultPromise;
 }
 
 function sendFn(

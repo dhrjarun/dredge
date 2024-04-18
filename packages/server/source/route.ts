@@ -20,6 +20,12 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     params,
     searchParams,
     method,
+    errorResolver: ({ send }) => {
+      return send({
+        status: 500,
+        statusText: "Something wen't wrong",
+      });
+    },
     ...rest,
   };
 

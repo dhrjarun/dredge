@@ -47,8 +47,7 @@ export interface ResolverOptions {
   method?: HTTPMethod | string;
   data?: any;
   path: string;
-  // headers?: Record<string, string | string[] | undefined>;
-  headers?: Record<string, string>;
+  headers?: Record<string, string | string[] | undefined>;
   searchParams?: Record<string, any>;
 }
 
@@ -60,7 +59,11 @@ export interface ResolverResult<Data> {
   statusText: string;
 }
 
-type _inferResolverOption<R> = R extends Route<
+export type ResolverResultPromise<T = any> = {
+  data(): Promise<T>;
+} & Promise<ResolverResult<T>>;
+
+export type inferResolverOption<R> = R extends Route<
   any,
   infer Method,
   infer Path,
@@ -69,7 +72,7 @@ type _inferResolverOption<R> = R extends Route<
   infer IBody
 >
   ? {
-      headers?: Record<string, string>;
+      headers?: Record<string, string | string[] | undefined>;
       method: Method;
       path: inferPathType<Path, SearchParams>;
     } & ([Method] extends ["post" | "put" | "patch"]
@@ -79,10 +82,6 @@ type _inferResolverOption<R> = R extends Route<
         ? {}
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
-
-export type inferResolverOption<R> = isAnyRoute<R> extends true
-  ? ResolverOptions
-  : _inferResolverOption<R>;
 
 export type isAnyRoute<R> = R extends Route<
   any,
@@ -95,16 +94,6 @@ export type isAnyRoute<R> = R extends Route<
   ? true
   : false;
 
-// type xx = Simplify<inferResolverOption<AnyRoute>>;
-type xx = isAnyRoute<
-  Route<{}, "get", ["posts"], {}, {}, null, ParserWithoutInput<string>>
->;
-type ay = isAnyRoute<AnyRoute>;
-// type y<T> = [keyof T] extends [never] ? "ok" : "not-ok";
-// type y<T> = keyof T extends never ? "ok" : "not-ok";
-// type xy<T> = T extends number ? any : T extends "ok" ? "ok" : "not-ok";
-// type x = xy<string>;
-
 export type inferResolverResult<R> = R extends Route<
   any,
   any,
@@ -115,6 +104,20 @@ export type inferResolverResult<R> = R extends Route<
   infer OBody
 >
   ? ResolverResult<OBody extends Parser ? inferParserType<OBody> : unknown>
+  : never;
+
+export type inferResolverResultPromise<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer OBody
+>
+  ? ResolverResultPromise<
+      OBody extends Parser ? inferParserType<OBody> : unknown
+    >
   : never;
 
 export type ErrorResolverFunction = {
@@ -187,7 +190,7 @@ export type RouteBuilderDef = {
   oBody?: Parser;
 
   middlewares: MiddlewareFunction<any, any, any, any, any, any, any>[];
-  errorResolver?: ErrorResolverFunction;
+  errorResolver: ErrorResolverFunction;
   resolver?: ResolverFunction<any, any, any, any, any, any, any>;
 };
 

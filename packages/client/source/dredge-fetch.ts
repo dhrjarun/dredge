@@ -40,12 +40,12 @@ export function dredgeFetch(
       ? options.prefixUrl
       : new URL(options.prefixUrl);
 
-  const url = new URL({
-    ...prefixUrl,
-    pathname: prefixUrl.pathname + "/" + trimSlashes(path),
-    searchParams: transformer.searchParams.serialize(searchParams),
-  });
+  const url = new URL(prefixUrl);
+  url.pathname = trimSlashes(prefixUrl.pathname) + "/" + trimSlashes(path);
+  url.search = transformer.searchParams.serialize(searchParams).toString();
 
+  // console.log("req", globalThis.Request);
+  console.log("method", method);
   const request = new globalThis.Request(url, {
     method,
     headers,

@@ -1,87 +1,71 @@
 import type * as http from "http";
-import { DredgeApi } from "../api";
-import { Transformer, AnyRoute, trimSlashes } from "@dredge/common";
+import { Transformer, AnyRoute, trimSlashes, DredgeApi } from "@dredge/common";
 import busboy from "busboy";
 import { FormData, File } from "formdata-node";
 import { FormDataEncoder } from "form-data-encoder";
 import { Readable } from "stream";
+import parseUrl from "parseurl";
 
-export function createNodeHttpRequestHandler<
-  Context extends object = {}
->(options: {
+export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
   api: DredgeApi<Context, AnyRoute[]>;
-  transformer: Partial<Transformer>;
+  transformer?: Partial<Transformer>;
   ctx: Context;
-  prefixUrl: URL;
-}) {
-  const { transformer, api, ctx, prefixUrl } = options;
+  prefixUrl: URL | string;
+}
+
+export function createNodeHttpRequestHandler<Context extends object = {}>(
+  options: CreateNodeHttpRequestHandlerOptions<Context>
+) {
+  const { api, ctx } = options;
+  const transformer = populateTransformer(options.transformer);
 
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const url = new URL(req.url!);
+    const url = parseUrl(req);
+    const prefixUrl =
+      options.prefixUrl instanceof URL
+        ? options.prefixUrl
+        : new URL(options.prefixUrl);
     const initialPathname = trimSlashes(prefixUrl.pathname);
-    if (url.pathname.startsWith(initialPathname)) {
+    if (!url) {
+      throw "invalid url";
+    }
+    const urlPathname = url.pathname ?? "/";
+    if (!urlPathname.startsWith(initialPathname)) {
       throw "Invalid url";
     }
-    const path = trimSlashes(url.pathname).slice(initialPathname.length);
+    const path = trimSlashes(urlPathname).slice(initialPathname.length);
     const body = getRequestBody(req, { transformer });
-    const data = body.data();
-
+    const data = await body.data();
+    const searchParams = transformer.searchParams.deserialize(
+      new URLSearchParams(url.search ?? "")
+    );
     const headers = req.headers;
 
-    const result = await api.resolveRoute({
+    const result = await api.resolveRoute(path, {
       ctx,
       method: req.method,
-      searchParams: url.searchParams,
-      path,
-      data,
       headers,
+      data,
+      searchParams,
     });
 
     let dataOrError: any;
     try {
-      dataOrError = result.data();
+      dataOrError = await result.data();
     } catch (err) {
       dataOrError = err;
     }
 
-    res.writeHead(result.status, result.statusText, result.headers);
+    res.statusCode = result.status;
+    res.statusMessage = result.statusText;
+    Object.entries(result.headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
     writeDataIntoResponse(res, dataOrError, {
       transformer,
     });
     res.end();
   };
-}
-
-export function writeDataIntoResponse(
-  res: http.ServerResponse,
-  data: any,
-  options: {
-    callback?: ((error: Error | null | undefined) => void) | undefined;
-    transformer?: Partial<Transformer>;
-  }
-) {
-  const { transformer: _transformer = {}, callback } = options;
-  const transformer = populateTransformer(options.transformer);
-
-  const contentType = res.getHeader("Content-Type") as string;
-
-  if (contentType?.startsWith("application/json")) {
-    const json = transformer.json.serialize(data);
-    return res.write(json, callback);
-  }
-  if (contentType?.startsWith("multipart/form-data")) {
-    const form = transformer.formData.serialize(data);
-    const encoder = new FormDataEncoder(form);
-    return res.write(Readable.from(encoder.encode()), callback);
-  }
-
-  if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-    const searchParams = new URLSearchParams(data);
-    const form = transformer.searchParams.serialize(searchParams);
-    return res.write(form.toString(), callback);
-  }
-
-  return res.write(data, callback);
 }
 
 export function getRequestBody(
@@ -191,6 +175,38 @@ export function getRequestBody(
     formData,
     data,
   };
+}
+
+export function writeDataIntoResponse(
+  res: http.ServerResponse,
+  data: any,
+  options: {
+    callback?: ((error: Error | null | undefined) => void) | undefined;
+    transformer?: Partial<Transformer>;
+  }
+) {
+  const { transformer: _transformer = {}, callback } = options;
+  const transformer = populateTransformer(options.transformer);
+
+  const contentType = res.getHeader("Content-Type") as string;
+
+  if (contentType?.startsWith("application/json")) {
+    const json = transformer.json.serialize(data);
+    return res.write(json, callback);
+  }
+  if (contentType?.startsWith("multipart/form-data")) {
+    const form = transformer.formData.serialize(data);
+    const encoder = new FormDataEncoder(form);
+    return res.write(Readable.from(encoder.encode()), callback);
+  }
+
+  if (contentType?.startsWith("application/x-www-form-urlencoded")) {
+    const searchParams = new URLSearchParams(data);
+    const form = transformer.searchParams.serialize(searchParams);
+    return res.write(form.toString(), callback);
+  }
+
+  return res.write(data, callback);
 }
 
 function populateTransformer(
