@@ -9,12 +9,17 @@ import {
 export async function handleFetchRequest<Context extends object = {}>(options: {
   req: Request;
   api: DredgeApi<Context, AnyRoute[]>;
-  transformer: Partial<Transformer>;
+  transformer?: Partial<Transformer>;
   ctx: Context;
-  prefixUrl: URL;
+  prefixUrl: string | URL;
 }): Promise<Response> {
-  const { req, api, transformer, ctx, prefixUrl } = options;
+  const { req, api, ctx } = options;
 
+  const transformer = populateTransformer(options.transformer);
+  const prefixUrl =
+    options.prefixUrl instanceof URL
+      ? options.prefixUrl
+      : new URL(options.prefixUrl);
   const url = new URL(req.url!);
   const initialPathname = trimSlashes(prefixUrl.pathname);
   if (!url.pathname.startsWith(initialPathname)) {
@@ -26,7 +31,7 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   });
 
   const headers = Object.fromEntries(req.headers);
-  const searchParams = Object.fromEntries(url.searchParams);
+  const searchParams = transformer.searchParams.deserialize(url.searchParams);
 
   const result = await api.resolveRoute(path, {
     method: req.method,
@@ -66,7 +71,7 @@ async function getDataFromRequestOrResponse(
   return Promise.resolve(data);
 }
 
-export function createResponseFromResolverResult(
+export async function createResponseFromResolverResult(
   result: ResolverResult<any>,
   options: {
     transformer?: Partial<Transformer>;
@@ -79,7 +84,7 @@ export function createResponseFromResolverResult(
 
   let dataOrError: any;
   try {
-    dataOrError = data();
+    dataOrError = await data();
   } catch (err) {
     dataOrError = err;
   }
@@ -104,9 +109,18 @@ export function createResponseFromResolverResult(
     });
   }
 
-  return new Response(dataOrError, {
-    ...rest,
-  });
+  if (
+    typeof dataOrError === "string"
+    // ||
+    // dataOrError instanceof Buffer ||
+    // dataOrError instanceof Uint8Array
+  ) {
+    return new Response(dataOrError, {
+      ...rest,
+    });
+  }
+
+  throw "Invalid data or no ContentType provided";
 }
 
 function populateTransformer(

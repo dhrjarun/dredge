@@ -206,7 +206,15 @@ export function writeDataIntoResponse(
     return res.write(form.toString(), callback);
   }
 
-  return res.write(data, callback);
+  if (
+    typeof data === "string" ||
+    data instanceof Buffer ||
+    data instanceof Uint8Array
+  ) {
+    return res.write(data, callback);
+  }
+
+  throw "Invalid data or no ContentType provided";
 }
 
 function populateTransformer(

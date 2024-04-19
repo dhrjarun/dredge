@@ -295,7 +295,6 @@ export function resolveRoute(
     }
   }
   const resultPromise = fn() as ResolverResultPromise;
-  console.log("resultPromise", resultPromise);
   resultPromise.data = async () => {
     const result = await resultPromise;
     return result.data();

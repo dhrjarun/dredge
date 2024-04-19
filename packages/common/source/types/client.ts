@@ -42,7 +42,7 @@ export type FetchOptions = {
   transformer?: Partial<Transformer>;
   prefixUrl?: URL | string;
   fetch?: (
-    input: string | URL | globalThis.Request,
+    input: string | URL | Request,
     init?: RequestInit
   ) => Promise<Response>;
 };

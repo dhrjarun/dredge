@@ -67,29 +67,17 @@ async function startServer(
 
 test("standalone server", async () => {
   const prefixUrl = new URL("http://localhost:4040");
-  const { port, address } = await startServer({
+  await startServer({
     api: testApi,
     ctx: {},
     prefixUrl,
     hostname: prefixUrl.hostname,
     port: Number(prefixUrl.port),
   });
-  console.log("port and address", port, address);
-
-  const {
-    default: fetch,
-    Headers,
-    Request,
-    Response,
-  } = await import("node-fetch");
-  globalThis.fetch = fetch;
-  globalThis.Request = Request;
-  globalThis.Headers = Headers;
-  globalThis.Response = Response;
 
   const client = createFetchClient<typeof testApi>({
     prefixUrl,
-    fetch,
+    fetch: globalThis.fetch,
     headers: {
       "Content-Type": "application/json",
     },

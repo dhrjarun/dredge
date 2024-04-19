@@ -9,14 +9,14 @@
 // test resolveRoute
 // fix adapter type problems
 // add defaultErrorResolver
-
 // test fetch adapter
+// fix fetch option in client
+// test dredge-fetch client
+
 // fix without body error
+// test defaultTransformers
 // support for accept req header and automatically adding contentType in res
 // support for setting response headers with middleware
-// fix fetch option in client
-// test defaultTransformers
-// test dredge-fetch client
 // better error objects
 // add more options for dredgeFetch
 // refactor inferResolverOption
