@@ -10,7 +10,8 @@ export function dredgeFetch(
   path: string,
   options: Omit<FetchOptions, "path">
 ): DredgeResponsePromise<any> {
-  const { method, headers, searchParams, data } = options;
+  const { method, searchParams, data } = options;
+  const headers = new Headers(options.headers);
 
   const transformer = populateTransformer(options.transformer);
 
@@ -20,11 +21,11 @@ export function dredgeFetch(
     }
 
     if (contentType.startsWith("multipart/form-data")) {
-      return transformer.json.serialize(data);
+      return transformer.formData.serialize(data);
     }
 
     if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-      return transformer.json.serialize(data);
+      return transformer.searchParams.serialize(data);
     }
 
     return data;
@@ -44,12 +45,15 @@ export function dredgeFetch(
   url.pathname = trimSlashes(prefixUrl.pathname) + "/" + trimSlashes(path);
   url.search = transformer.searchParams.serialize(searchParams).toString();
 
-  // console.log("req", globalThis.Request);
-  console.log("method", method);
+  const body = serializeData(data, headers.get("Content-Type") || "");
+  if (body instanceof FormData) {
+    headers.delete("Content-Type");
+  }
+
   const request = new globalThis.Request(url, {
     method,
     headers,
-    body: serializeData(data, headers?.["Content-Type"]),
+    body,
   });
 
   async function _function() {

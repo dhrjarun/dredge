@@ -283,7 +283,7 @@ export function resolveRoute(
           data,
           send(options?: any) {
             return sendFn(options, {
-              status: 400,
+              status: 500,
               statusText: "Something wen't wrong",
             });
           },

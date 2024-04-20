@@ -57,7 +57,11 @@ async function getDataFromRequestOrResponse(
   let data: any;
 
   if (contentType?.startsWith("application/json")) {
-    data = transformer.json.deserialize(await reqOrRes.text());
+    const text = await reqOrRes.text();
+    if (!text) {
+      data = null;
+    }
+    data = transformer.json.deserialize(text);
   }
   if (contentType?.startsWith("multipart/form-data")) {
     data = transformer.formData.deserialize(await reqOrRes.formData());
@@ -111,7 +115,7 @@ export async function createResponseFromResolverResult(
 
   if (
     typeof dataOrError === "string"
-    // ||
+    // typeof dataOrError === "string" ||
     // dataOrError instanceof Buffer ||
     // dataOrError instanceof Uint8Array
   ) {

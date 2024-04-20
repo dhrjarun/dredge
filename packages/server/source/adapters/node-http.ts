@@ -1,9 +1,7 @@
 import type * as http from "http";
 import { Transformer, AnyRoute, trimSlashes, DredgeApi } from "@dredge/common";
 import busboy from "busboy";
-import { FormData, File } from "formdata-node";
 import { FormDataEncoder } from "form-data-encoder";
-import { Readable } from "stream";
 import parseUrl from "parseurl";
 
 export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
@@ -61,9 +59,12 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     Object.entries(result.headers).forEach(([key, value]) => {
       res.setHeader(key, value);
     });
-    writeDataIntoResponse(res, dataOrError, {
-      transformer,
-    });
+
+    if (dataOrError) {
+      await writeDataIntoResponse(res, dataOrError, {
+        transformer,
+      });
+    }
     res.end();
   };
 }
@@ -73,11 +74,13 @@ export function getRequestBody(
   options: { transformer?: Partial<Transformer> }
 ) {
   const transformer = populateTransformer(options.transformer);
+  let buf: Buffer | null = null;
 
   function buffer() {
+    if (buf) return Promise.resolve(buf);
+
     return new Promise<Buffer>((resolve, reject) => {
       const bodyChunks: any[] = [];
-      let body: Buffer;
       req
         .on("error", (err) => {
           reject(err);
@@ -86,8 +89,8 @@ export function getRequestBody(
           bodyChunks.push(chunk);
         })
         .on("end", () => {
-          body = Buffer.concat(bodyChunks);
-          resolve(body);
+          buf = Buffer.concat(bodyChunks);
+          resolve(buf);
         });
     });
   }
@@ -107,8 +110,15 @@ export function getRequestBody(
   function formData() {
     const bb = busboy({ headers: req.headers });
 
-    return new Promise<FormData>((resolve, reject) => {
+    return new Promise<FormData>(async (resolve, reject) => {
       const formData = new FormData();
+
+      bb.once("close", () => {
+        resolve(formData);
+      });
+
+      bb.once("error", (err) => reject(err));
+
       bb.on("field", (name, value) => {
         formData.append(name, value);
       });
@@ -125,26 +135,28 @@ export function getRequestBody(
           .on("close", () => {
             formData.append(
               name,
-              new File(chunks, info.filename, {
-                type: info.mimeType,
-              })
+              info.filename !== "blob"
+                ? new File(chunks, info.filename, {
+                    type: info.mimeType,
+                  })
+                : new Blob(chunks, {
+                    type: info.mimeType,
+                  })
             );
           });
       });
 
-      bb.on("close", () => {
-        resolve(formData);
-      });
-
-      bb.on("error", (err) => reject(err));
-
-      req.pipe(bb);
+      bb.end(await buffer());
     });
   }
 
   function data() {
     return new Promise<unknown>(async (resolve, reject) => {
       const contentType = req.headers["content-type"];
+
+      if ((await buffer()).length === 0) {
+        resolve(null);
+      }
 
       try {
         let data: unknown;
@@ -154,7 +166,8 @@ export function getRequestBody(
         }
 
         if (contentType?.startsWith("multipart/form-data")) {
-          data = transformer.formData.deserialize(await formData());
+          const fm = await formData();
+          data = transformer.formData.deserialize(fm);
         }
 
         if (contentType?.startsWith("application/x-www-form-urlencoded")) {
@@ -177,7 +190,7 @@ export function getRequestBody(
   };
 }
 
-export function writeDataIntoResponse(
+export async function writeDataIntoResponse(
   res: http.ServerResponse,
   data: any,
   options: {
@@ -197,7 +210,16 @@ export function writeDataIntoResponse(
   if (contentType?.startsWith("multipart/form-data")) {
     const form = transformer.formData.serialize(data);
     const encoder = new FormDataEncoder(form);
-    return res.write(Readable.from(encoder.encode()), callback);
+    const encoderHeaders = encoder.headers as any;
+
+    for (const h in encoder.headers) {
+      res.setHeader(h, encoderHeaders[h]);
+    }
+
+    for await (const chunk of encoder.encode()) {
+      res.write(chunk, callback);
+    }
+    return true;
   }
 
   if (contentType?.startsWith("application/x-www-form-urlencoded")) {
@@ -207,9 +229,10 @@ export function writeDataIntoResponse(
   }
 
   if (
-    typeof data === "string" ||
-    data instanceof Buffer ||
-    data instanceof Uint8Array
+    typeof data === "string"
+    // typeof data === "string" ||
+    // data instanceof Buffer ||
+    // data instanceof Uint8Array
   ) {
     return res.write(data, callback);
   }
@@ -239,7 +262,9 @@ function populateTransformer(
         return formData;
       },
       deserialize: (object) => {
-        return Object.fromEntries(object.entries());
+        const data = Object.fromEntries(object.entries());
+
+        return data;
       },
     },
     searchParams: {

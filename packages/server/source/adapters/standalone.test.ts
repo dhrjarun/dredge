@@ -1,5 +1,5 @@
 import type { AddressInfo } from "net";
-import { test, expect } from "vitest";
+import { test, expect, afterEach } from "vitest";
 import { dredge } from "../dredge";
 import z from "zod";
 import { createHTTPServer, CreateHTTPServerOptions } from "./standalone";
@@ -34,7 +34,31 @@ const testApi = api([
     .path("posts")
     .get()
     .resolve(({ send }) => {
-      return send({ data: "I am post" });
+      return send({
+        data: {
+          say: "I am Post",
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }),
+
+  route
+    .path("form")
+    .post(
+      z.object({
+        name: z.string(),
+        file: z.instanceof(Blob),
+      })
+    )
+    .resolve(({ send, data }) => {
+      return send({
+        data,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
     }),
 ]);
 
@@ -65,8 +89,20 @@ async function startServer(
   });
 }
 
+afterEach(() => {
+  server.close();
+});
+const prefixUrl = new URL("http://localhost:4040");
+
+const client = createFetchClient<typeof testApi>({
+  prefixUrl,
+  fetch: globalThis.fetch,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 test("standalone server", async () => {
-  const prefixUrl = new URL("http://localhost:4040");
   await startServer({
     api: testApi,
     ctx: {},
@@ -75,17 +111,9 @@ test("standalone server", async () => {
     port: Number(prefixUrl.port),
   });
 
-  const client = createFetchClient<typeof testApi>({
-    prefixUrl,
-    fetch: globalThis.fetch,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const data = await client.get("/posts", {}).data();
+  expect(data).toMatchObject({ say: "I am Post" });
 
-  // expect(await client.get("/posts", {}).data()).toMatchObject({
-  //   data: "I am post",
-  // });
   const response = await client.post("/posts/dhrjarun", {
     data: {
       age: 20,
@@ -97,4 +125,28 @@ test("standalone server", async () => {
   expect(await response.data()).toMatchObject({
     age: 20,
   });
+});
+
+test("formdata", async () => {
+  await startServer({
+    api: testApi,
+    ctx: {},
+    prefixUrl,
+    hostname: prefixUrl.hostname,
+    port: Number(prefixUrl.port),
+  });
+
+  const data = await client
+    .post("/form", {
+      data: {
+        name: "fileName",
+        file: new Blob(["good file"], {}),
+      },
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+    .data();
+
+  expect(await data.file.text()).toBe("good file");
 });
