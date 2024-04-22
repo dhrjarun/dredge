@@ -15,6 +15,7 @@
 // fix without body error
 // test formData body in req and res
 
+// change sendFn so that (data, options) like this
 // find better way to provide contentType in client and sendFn
 // resolver method in route must return different type -- the final type which will be taken by api builder
 // support for accept req header and automatically adding contentType in res

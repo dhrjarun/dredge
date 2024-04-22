@@ -1,5 +1,11 @@
 import type * as http from "http";
-import { Transformer, AnyRoute, trimSlashes, DredgeApi } from "@dredge/common";
+import {
+  Transformer,
+  AnyRoute,
+  trimSlashes,
+  DredgeApi,
+  populateTransformer,
+} from "@dredge/common";
 import busboy from "busboy";
 import { FormDataEncoder } from "form-data-encoder";
 import parseUrl from "parseurl";
@@ -238,46 +244,4 @@ export async function writeDataIntoResponse(
   }
 
   throw "Invalid data or no ContentType provided";
-}
-
-function populateTransformer(
-  transformer: Partial<Transformer> = {}
-): Transformer {
-  const _transformer: Transformer = {
-    json: {
-      serialize: JSON.stringify,
-      deserialize: JSON.parse,
-    },
-    formData: {
-      serialize: (object) => {
-        const formData = new FormData();
-        Object.entries(object).forEach(([key, value]) => {
-          if (typeof value === "string" || value instanceof Blob) {
-            formData.append(key, value);
-          } else {
-            throw "serialization failed";
-          }
-        });
-
-        return formData;
-      },
-      deserialize: (object) => {
-        const data = Object.fromEntries(object.entries());
-
-        return data;
-      },
-    },
-    searchParams: {
-      serialize: (object) => new URLSearchParams(object),
-      deserialize: (object) => Object.fromEntries(object.entries()),
-    },
-  };
-
-  Object.entries(transformer).forEach(([key, value]) => {
-    if (value) {
-      (_transformer as any)[key] = value;
-    }
-  });
-
-  return _transformer;
 }

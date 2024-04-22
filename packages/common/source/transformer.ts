@@ -22,7 +22,11 @@ export const defaultTransformer: Transformer = {
     serialize: (object) => {
       const formData = new FormData();
       Object.entries(object).forEach(([key, value]) => {
-        if (typeof value === "string" || value instanceof Blob) {
+        if (
+          typeof value === "string" ||
+          value instanceof Blob ||
+          value instanceof File
+        ) {
           formData.append(key, value);
         } else {
           throw "serialization failed";
@@ -32,7 +36,9 @@ export const defaultTransformer: Transformer = {
       return formData;
     },
     deserialize: (object) => {
-      return Object.fromEntries(object.entries());
+      const data = Object.fromEntries(object.entries());
+
+      return data;
     },
   },
   searchParams: {
@@ -40,3 +46,17 @@ export const defaultTransformer: Transformer = {
     deserialize: (object) => Object.fromEntries(object.entries()),
   },
 };
+
+export function populateTransformer(
+  transformer: Partial<Transformer> = {}
+): Transformer {
+  const _transformer = defaultTransformer;
+
+  Object.entries(transformer).forEach(([key, value]) => {
+    if (value) {
+      (_transformer as any)[key] = value;
+    }
+  });
+
+  return _transformer;
+}
