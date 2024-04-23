@@ -48,7 +48,7 @@ export const defaultTransformer: Transformer = {
 };
 
 export function populateTransformer(
-  transformer: Partial<Transformer> = {}
+  transformer: Partial<Transformer> = {},
 ): Transformer {
   const _transformer = defaultTransformer;
 

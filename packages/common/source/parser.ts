@@ -13,7 +13,7 @@ export type ParserSuperstructEsque<TInput> = {
 };
 
 export type ParserCustomValidatorEsque<TInput> = (
-  input: unknown
+  input: unknown,
 ) => Promise<TInput> | TInput;
 
 export type ParserYupEsque<TInput> = {
@@ -41,8 +41,8 @@ export type Parser = ParserWithInputOutput<any, any> | ParserWithoutInput<any>;
 export type inferParserType<P> = P extends ParserWithoutInput<infer T>
   ? T
   : P extends ParserWithInputOutput<infer TI, infer TO>
-  ? TO
-  : never;
+    ? TO
+    : never;
 
 export type inferParser<TParser extends Parser> =
   TParser extends ParserWithInputOutput<infer $TIn, infer $TOut>
@@ -51,11 +51,11 @@ export type inferParser<TParser extends Parser> =
         out: $TOut;
       }
     : TParser extends ParserWithoutInput<infer $InOut>
-    ? {
-        in: $InOut;
-        out: $InOut;
-      }
-    : never;
+      ? {
+          in: $InOut;
+          out: $InOut;
+        }
+      : never;
 
 export type ParseFn<TType> = (value: unknown) => Promise<TType> | TType;
 

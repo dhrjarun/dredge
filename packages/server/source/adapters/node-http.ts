@@ -18,7 +18,7 @@ export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
 }
 
 export function createNodeHttpRequestHandler<Context extends object = {}>(
-  options: CreateNodeHttpRequestHandlerOptions<Context>
+  options: CreateNodeHttpRequestHandlerOptions<Context>,
 ) {
   const { api, ctx } = options;
   const transformer = populateTransformer(options.transformer);
@@ -41,7 +41,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     const body = getRequestBody(req, { transformer });
     const data = await body.data();
     const searchParams = transformer.searchParams.deserialize(
-      new URLSearchParams(url.search ?? "")
+      new URLSearchParams(url.search ?? ""),
     );
     const headers = req.headers;
 
@@ -77,7 +77,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
 export function getRequestBody(
   req: http.IncomingMessage,
-  options: { transformer?: Partial<Transformer> }
+  options: { transformer?: Partial<Transformer> },
 ) {
   const transformer = populateTransformer(options.transformer);
   let buf: Buffer | null = null;
@@ -147,7 +147,7 @@ export function getRequestBody(
                   })
                 : new Blob(chunks, {
                     type: info.mimeType,
-                  })
+                  }),
             );
           });
       });
@@ -202,7 +202,7 @@ export async function writeDataIntoResponse(
   options: {
     callback?: ((error: Error | null | undefined) => void) | undefined;
     transformer?: Partial<Transformer>;
-  }
+  },
 ) {
   const { transformer: _transformer = {}, callback } = options;
   const transformer = populateTransformer(options.transformer);

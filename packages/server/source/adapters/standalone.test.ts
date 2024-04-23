@@ -19,7 +19,7 @@ const testApi = api([
     .post(
       z.object({
         age: z.number(),
-      })
+      }),
     )
     .resolve(({ send, data }) => {
       return send({
@@ -50,7 +50,7 @@ const testApi = api([
       z.object({
         name: z.string(),
         file: z.instanceof(Blob),
-      })
+      }),
     )
     .resolve(({ send, data }) => {
       return send({
@@ -67,7 +67,7 @@ async function startServer(
   opts: CreateHTTPServerOptions<any> & {
     port?: number;
     hostname?: string;
-  }
+  },
 ): Promise<{
   port: number;
   address: string;

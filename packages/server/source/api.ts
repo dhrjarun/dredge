@@ -9,7 +9,7 @@ import {
 
 export function dredgeApi<Context extends object = {}>() {
   const fn = <const Routes extends AnyRoute[]>(
-    routes: Routes
+    routes: Routes,
   ): DredgeApi<Context, Routes> => {
     return buildDredgeApi(routes);
   };
@@ -19,7 +19,7 @@ export function dredgeApi<Context extends object = {}>() {
 
 export function buildDredgeApi<
   Context extends object,
-  const Routes extends AnyRoute[]
+  const Routes extends AnyRoute[],
 >(routes: Routes): DredgeApi<Context, Routes> {
   const root = new DredgePath({
     name: "$root",
@@ -115,7 +115,7 @@ export class DredgePath {
       new DredgePath({
         name,
         routes,
-      })
+      }),
     );
   }
 
@@ -145,7 +145,7 @@ const trimSlashes = (path: string): string => {
 
 export function resolveRoute(
   root: DredgePath,
-  clientOptions: ResolverOptions
+  clientOptions: ResolverOptions,
 ): ResolverResultPromise<any> {
   const {
     ctx = {},
@@ -179,7 +179,7 @@ export function resolveRoute(
       }
       return acc;
     },
-    {}
+    {},
   );
   const parsedSearchParams: Record<string, any> = {};
   const parsedParams: Record<string, any> = {};
@@ -216,7 +216,7 @@ export function resolveRoute(
           case "SEARCH_PARAM_VALIDATION":
             for (const [key, parser] of Object.entries(routeDef.searchParams)) {
               parsedSearchParams[key] = await getParseFn(parser)(
-                searchParams[key]
+                searchParams[key],
               );
             }
 
@@ -315,7 +315,7 @@ function sendFn(
     status?: number;
     statusText?: string;
     headers?: Record<string, string>;
-  } = {}
+  } = {},
 ): ResolverResult<any> {
   const result = {
     status: options.status || defaults.status,

@@ -26,12 +26,12 @@ export type inferRouteUnion<Api> = inferRoutes<Api>[number];
 
 export interface ResolveRoute<
   Context extends object,
-  Routes extends AnyRoute[]
+  Routes extends AnyRoute[],
 > {
   <
     P extends inferRoutePath<Routes[number]>,
     M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
-    R extends ExtractRoute<Routes[number], M, P>
+    R extends ExtractRoute<Routes[number], M, P>,
   >(
     path: P,
     options: isAnyRoute<R> extends true
@@ -42,7 +42,7 @@ export interface ResolveRoute<
             "path" | "method" | "ctx"
           > &
             (keyof Context extends never ? {} : { ctx: Context })
-        >
+        >,
   ): inferResolverResultPromise<R>;
 }
 

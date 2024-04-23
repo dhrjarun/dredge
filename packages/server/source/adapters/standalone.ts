@@ -10,7 +10,7 @@ export interface CreateHTTPServerOptions<Context extends object> {
 }
 
 export function createHTTPServer<Context extends object = {}>(
-  options: CreateHTTPServerOptions<Context>
+  options: CreateHTTPServerOptions<Context>,
 ) {
   const handler = createNodeHttpRequestHandler(options);
   return http.createServer(handler);

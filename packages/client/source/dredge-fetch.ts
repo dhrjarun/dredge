@@ -9,7 +9,7 @@ import {
 
 export function dredgeFetch(
   path: string,
-  options: Omit<FetchOptions, "path">
+  options: Omit<FetchOptions, "path">,
 ): DredgeResponsePromise<any> {
   const { method, searchParams, data } = options;
   const headers = new Headers(options.headers);
@@ -127,7 +127,7 @@ export class DredgeFetch {
 
   protected _fetch: (
     input: string | URL | globalThis.Request,
-    init?: RequestInit
+    init?: RequestInit,
   ) => Promise<Response>;
 
   request: globalThis.Request;
@@ -244,7 +244,7 @@ function decorateResponsePromise(responsePromise: any) {
 
 function serializeData(
   data: any,
-  options: { contentType?: string; transformer: Transformer }
+  options: { contentType?: string; transformer: Transformer },
 ) {
   const { contentType = "", transformer } = options;
 
@@ -265,7 +265,7 @@ function serializeData(
 
 async function deserializeData(
   response: Response,
-  options: { transformer: Transformer }
+  options: { transformer: Transformer },
 ) {
   const { transformer } = options;
 

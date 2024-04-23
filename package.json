@@ -4,12 +4,12 @@
   "private": true,
   "description": "A rest api builder in typescript",
   "scripts": {
-    "lint": "tubo lint",
+    "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
     "dev": "turbo dev",
     "build": "turbo build",
-    "format": "pnpm biome format './packages/**'",
-    "format:write": "pnpm format --write"
+    "format": "pnpm biome format .",
+    "format:fix": "pnpm format --write"
   },
   "keywords": [],
   "author": "Dhiraj Arun",

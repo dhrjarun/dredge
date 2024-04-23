@@ -2,7 +2,7 @@ import { DredgeClient, FetchOptions, inferRoutes } from "@dredge/common";
 import { dredgeFetch } from "./dredge-fetch";
 
 export function createFetchClient<DredgeApi>(
-  defaultOptions: FetchDefaultOptions
+  defaultOptions: FetchDefaultOptions,
 ): DredgeClient<inferRoutes<DredgeApi>> {
   const fetch = ((path, options) => {
     return dredgeFetch(path, mergeFetchOptions(options, defaultOptions));
@@ -19,8 +19,8 @@ export function createFetchClient<DredgeApi>(
             ...options,
             method,
           },
-          defaultOptions
-        )
+          defaultOptions,
+        ),
       ) as any;
     };
   });
@@ -37,7 +37,7 @@ type FetchDefaultOptions = Pick<
 
 function mergeFetchOptions(
   options: any,
-  defaultOptions: FetchDefaultOptions
+  defaultOptions: FetchDefaultOptions,
 ): FetchOptions {
   const transformer = defaultOptions.transformer || {};
   Object.entries(options.transformer || {}).forEach(([key, value]) => {

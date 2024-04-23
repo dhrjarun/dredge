@@ -43,7 +43,7 @@ export type FetchOptions = {
   prefixUrl?: URL | string;
   fetch?: (
     input: string | URL | Request,
-    init?: RequestInit
+    init?: RequestInit,
   ) => Promise<Response>;
 };
 
@@ -63,25 +63,25 @@ export type inferResponsePromise<R> = R extends Route<
 
 type FetchShortcutFunction<
   Routes extends AnyRoute[],
-  Method extends HTTPMethod
+  Method extends HTTPMethod,
 > = <
   P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
-  R extends ExtractRoute<Routes[number], Method, P>
+  R extends ExtractRoute<Routes[number], Method, P>,
 >(
   path: P,
-  options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>
+  options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
 ) => inferResponsePromise<R>;
 
 export interface DredgeClient<Routes extends AnyRoute[]> {
   <
     P extends inferRoutePath<Routes[number]>,
     M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
-    R extends ExtractRoute<Routes[number], M, P>
+    R extends ExtractRoute<Routes[number], M, P>,
   >(
     path: P,
     options: Simplify<
       { method: M } & Omit<inferFetchOptions<R>, "path" | "method">
-    >
+    >,
   ): inferResponsePromise<R>;
 
   get: FetchShortcutFunction<Routes, "get">;

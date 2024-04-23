@@ -17,7 +17,7 @@ const testApi = api([
     .post(
       z.object({
         age: z.number(),
-      })
+      }),
     )
     .resolve(({ send, data }) => {
       return send({

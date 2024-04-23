@@ -17,7 +17,7 @@ export type MiddlewareFunction<
   Params,
   SearchParams,
   Method,
-  IBody
+  IBody,
 > = {
   (opts: {
     ctx: Context;
@@ -150,7 +150,7 @@ export type ResolverFunction<
   Params,
   SearchParams,
   IBody,
-  OBody
+  OBody,
 > = {
   (opts: {
     ctx: Context;
@@ -206,12 +206,12 @@ export interface Route<
   Params = {},
   SearchParams = {},
   IBody = null,
-  OBody = null
+  OBody = null,
 > {
   _def: RouteBuilderDef;
 
   error(
-    fn: ErrorResolverFunction
+    fn: ErrorResolverFunction,
   ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
 
   path<const T extends string[]>(
@@ -231,9 +231,9 @@ export interface Route<
   params<
     const T extends {
       [key in keyof Params as Params[key] extends null ? key : never]?: Parser;
-    }
+    },
   >(
-    arg: T
+    arg: T,
   ): Route<
     Context,
     Method,
@@ -245,7 +245,7 @@ export interface Route<
   >;
 
   searchParam<const T extends { [key: string]: Parser }>(
-    queries: T
+    queries: T,
   ): Route<Context, Method, Paths, Params, T, IBody>;
 
   use<ContextOverride>(
@@ -257,7 +257,7 @@ export interface Route<
       SearchParams,
       Method,
       IBody
-    >
+    >,
   ): Route<
     Overwrite<Context, ContextOverride>,
     Method,
@@ -276,7 +276,7 @@ export interface Route<
       SearchParams,
       IBody,
       OBody
-    >
+    >,
   ): Route<
     Context,
     Method,
@@ -289,18 +289,18 @@ export interface Route<
 
   method<M extends HTTPMethod, P extends Parser>(
     method: M,
-    parser?: P
+    parser?: P,
   ): Route<Context, M, Paths, Params, SearchParams, P, OBody>;
   get(): Route<Context, "get", Paths, Params, SearchParams, IBody, OBody>;
   post<P extends Parser>(
-    parser: P
+    parser: P,
   ): Route<Context, "post", Paths, Params, SearchParams, P, OBody>;
   put<P extends Parser>(
-    parser: P
+    parser: P,
   ): Route<Context, "put", Paths, Params, SearchParams, P, OBody>;
   delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody, OBody>;
   patch<P extends Parser>(
-    parser: P
+    parser: P,
   ): Route<Context, "patch", Paths, Params, SearchParams, P, OBody>;
   head(): Route<Context, "head", Paths, Params, SearchParams, IBody, OBody>;
 }
@@ -310,7 +310,7 @@ export type AnyRoute = Route<any, any, any, any, any, any, any>;
 // TODO: Fix when given other types
 type _inferPathType<
   Paths,
-  Params extends Record<string, Parser>
+  Params extends Record<string, Parser>,
 > = Paths extends [infer First extends string, ...infer Tail extends string[]]
   ? `/${First extends `:${infer N}`
       ? Params[N] extends Parser
@@ -320,7 +320,7 @@ type _inferPathType<
   : "";
 export type inferPathType<
   Paths,
-  Params extends Record<string, Parser>
+  Params extends Record<string, Parser>,
 > = Paths extends string[] ? _inferPathType<Paths, Params> : string;
 
 export type inferRoutePath<R> = R extends Route<
@@ -337,7 +337,7 @@ export type inferRoutePath<R> = R extends Route<
 export type ExtractRoute<
   R,
   Method extends HTTPMethod,
-  Path extends string = any
+  Path extends string = any,
 > = R extends Route<
   any,
   infer M,

@@ -51,7 +51,7 @@ async function getDataFromRequestOrResponse(
     text: () => Promise<string>;
     formData: () => Promise<FormData>;
   },
-  options: { transformer: Partial<Transformer> }
+  options: { transformer: Partial<Transformer> },
 ) {
   const transformer = populateTransformer(options.transformer);
   const contentType = reqOrRes.headers.get("Content-Type");
@@ -80,7 +80,7 @@ export async function createResponseFromResolverResult(
   result: ResolverResult<any>,
   options: {
     transformer?: Partial<Transformer>;
-  }
+  },
 ) {
   const transformer = populateTransformer(options.transformer);
 
