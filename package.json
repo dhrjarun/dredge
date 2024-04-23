@@ -3,11 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "description": "A rest api builder in typescript",
-  "scripts": {},
+  "scripts": {
+    "lint": "tubo lint",
+    "lint:fix": "turbo lint:fix",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "format": "pnpm biome format './packages/**'",
+    "format:write": "pnpm format --write"
+  },
   "keywords": [],
   "author": "Dhiraj Arun",
   "license": "MIT",
   "devDependencies": {
+    "@biomejs/biome": "1.7.1",
+    "tsup": "^8.0.2",
     "typescript": "^5.3.3",
     "vitest": "^1.3.1"
   },

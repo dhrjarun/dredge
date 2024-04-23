@@ -1,3 +1,5 @@
+export * from "./dredge";
+
 // TODO
 // add types to resolveRoute
 // make data() in ResolverResult return Promise
@@ -15,21 +17,26 @@
 // fix without body error
 // test formData body in req and res
 
+// add more options for dredgeFetch
 // change sendFn so that (data, options) like this
 // find better way to provide contentType in client and sendFn
 // resolver method in route must return different type -- the final type which will be taken by api builder
 // support for accept req header and automatically adding contentType in res
-// make fetch option in fetchClient and resolveRoute optional if every option is optional specifically if data or searchParams are not required
 // support for setting response headers with middleware
-// add more options for dredgeFetch
+// make fetch option in fetchClient and resolveRoute optional if every option is optional specifically if data or searchParams are not required
 // better error objects and handling of it
 // better names
 // docs on public functions
 // refactor inferResolverOption
 
 // setup tsup
-// setup eslint, prettier
-// add Readme.MD, CONTRIBUTION.md
+// setup eslint, prettier or rome
+// add Readme.MD, CONTRIBUTION.md, licence
 // publish to npm
 
 // setup the docs site with astro
+
+// fix external package dts bug
+// https://stackoverflow.com/questions/70631388/bundling-of-d-ts-declarations-of-external-modules
+// https://dev.to/egoist/rollup-dts-file-using-tsup-2579
+// https://github.com/egoist/tsup/issues/1007

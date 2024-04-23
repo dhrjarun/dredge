@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "pnpm biome format ./source",
+    "lint:fix": "pnpm biome format --write ./source"
   },
   "keywords": [],
   "author": "",

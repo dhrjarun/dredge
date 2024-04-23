@@ -2,7 +2,16 @@
   "name": "@dredge/common",
   "version": "1.0.0",
   "description": "",
-  "main": "./source/index.ts",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "vitest",
+    "build": "tsup --dts-resolve",
+    "dev": "tsup --dts-resolve --watch",
+    "lint": "pnpm biome format ./source",
+    "lint:fix": "pnpm biome format --write ./source"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC"

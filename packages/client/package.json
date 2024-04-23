@@ -4,7 +4,11 @@
   "description": "",
   "main": "./source/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "pnpm biome format ./source",
+    "lint:fix": "pnpm biome format --write ./source"
   },
   "dependencies": {
     "@dredge/common": "workspace:*",
