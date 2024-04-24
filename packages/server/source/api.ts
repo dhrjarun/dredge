@@ -1,11 +1,11 @@
-import { getParseFn, ResolverResultPromise } from "@dredge/common";
-import { mergeDeep } from "./utils/merge";
-import {
+import { type ResolverResultPromise, getParseFn } from "@dredge/common";
+import type {
   AnyRoute,
-  ResolverResult,
-  ResolverOptions,
   DredgeApi,
+  ResolverOptions,
+  ResolverResult,
 } from "@dredge/common";
+import { mergeDeep } from "./utils/merge";
 
 export function dredgeApi<Context extends object = {}>() {
   const fn = <const Routes extends AnyRoute[]>(

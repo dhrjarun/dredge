@@ -2,7 +2,22 @@
   "name": "@dredge/server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "default": "./dist/index.cjs.js",
+        "types": "./dist/index.d.ts"
+      },
+      "import": {
+        "default": "./dist/index.esm.js",
+        "types": "./dist/index.d.mts"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "test": "vitest",
     "build": "tsup",
@@ -14,7 +29,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dredge/client": "workspace:*",
     "@dredge/common": "workspace:*",
     "busboy": "^1.6.0",
     "form-data-encoder": "^4.0.2",

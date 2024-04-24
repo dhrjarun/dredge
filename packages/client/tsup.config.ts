@@ -8,7 +8,6 @@ export default defineConfig({
   clean: true,
   outDir: "dist",
   format: ["esm", "cjs"],
-  noExternal: ["@dredge/common"],
   outExtension({ format }) {
     return {
       js: `.${format}.js`,

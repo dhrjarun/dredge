@@ -16,6 +16,8 @@ export * from "./dredge";
 // test dredge-fetch client
 // fix without body error
 // test formData body in req and res
+// setup tsup
+// setup eslint, prettier or rome
 
 // add more options for dredgeFetch
 // change sendFn so that (data, options) like this
@@ -29,14 +31,7 @@ export * from "./dredge";
 // docs on public functions
 // refactor inferResolverOption
 
-// setup tsup
-// setup eslint, prettier or rome
-// add Readme.MD, CONTRIBUTION.md, licence
+// setup versioning and changelog
+// add Readme.MD, CONTRIBUTING.md, licence
 // publish to npm
-
 // setup the docs site with astro
-
-// fix external package dts bug
-// https://stackoverflow.com/questions/70631388/bundling-of-d-ts-declarations-of-external-modules
-// https://dev.to/egoist/rollup-dts-file-using-tsup-2579
-// https://github.com/egoist/tsup/issues/1007

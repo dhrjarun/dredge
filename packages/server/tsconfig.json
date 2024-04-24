@@ -10,11 +10,7 @@
 
     "noEmit": true,
     "lib": ["es2022"],
-    "module": "preserve",
-
-    "paths": {
-      "@dredge/*": ["../*"]
-    }
+    "module": "preserve"
   },
   "include": ["source"]
 }

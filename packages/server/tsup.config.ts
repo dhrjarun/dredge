@@ -2,12 +2,9 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["source/index.ts"],
-  noExternal: ["@dredge/common"],
   splitting: false,
   sourcemap: true,
-  dts: {
-    resolve: true,
-  },
+  dts: true,
   clean: true,
   outDir: "dist",
   format: ["esm", "cjs"],

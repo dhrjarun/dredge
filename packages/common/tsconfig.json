@@ -8,6 +8,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
 
+    "declaration": true,
     "noEmit": true,
     "lib": ["es2022", "dom", "dom.iterable"]
   },
