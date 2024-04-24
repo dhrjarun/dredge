@@ -14,12 +14,13 @@ export function dredgeFetch(
   const {
     transformer: _transformer,
     fetch: _fetch,
+    headers: _headers,
     method,
     searchParams,
     data,
     ...rest
   } = options;
-  const headers = new Headers(options.headers);
+  const headers = new Headers(_headers);
 
   const transformer = populateTransformer(_transformer);
 
@@ -145,7 +146,7 @@ export class DredgeFetch {
       fetch,
       transformer = {},
       method,
-      headers,
+      headers: _headers,
       searchParams,
       data,
       ...rest
@@ -169,10 +170,16 @@ export class DredgeFetch {
       searchParams: this._transformer.searchParams.serialize(searchParams),
     });
 
+    const headers = new Headers(_headers);
+    const body = this._serializeData(data, headers.get("Content-Type") || "");
+    if (body instanceof FormData) {
+      headers.delete("Content-Type");
+    }
+
     this.request = new globalThis.Request(url, {
       method,
       headers,
-      body: this._serializeData(data, headers?.["Content-Type"]),
+      body,
       ...rest,
     });
   }
