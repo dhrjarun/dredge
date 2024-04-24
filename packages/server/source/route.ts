@@ -1,7 +1,12 @@
-import { Route, RouteBuilderDef, AnyRoute, Parser } from "@dredge/common";
+import {
+  AnyUnresolvedRoute,
+  Parser,
+  RouteBuilderDef,
+  UnresolvedRoute,
+} from "@dredge/common";
 
 export function dredgeRoute<ServerCtx extends object>() {
-  return createRouteBuilder() as Route<ServerCtx, "get", [], {}, {}>;
+  return createRouteBuilder() as UnresolvedRoute<ServerCtx, "get", [], {}, {}>;
 }
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
@@ -15,6 +20,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   } = initDef;
 
   const _def: RouteBuilderDef = {
+    isResolved: false,
     middlewares,
     paths,
     params,
@@ -141,12 +147,19 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     resolve: (fn) => {
       if (_def.resolver) throw "Resolver already exist";
 
-      return createRouteBuilder({
+      const route = createRouteBuilder({
         ..._def,
         resolver: fn,
       });
+
+      return {
+        _def: {
+          ...route._def,
+          isResolved: true,
+        },
+      };
     },
-  } as AnyRoute;
+  } as AnyUnresolvedRoute;
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
   for (const item of aliases) {

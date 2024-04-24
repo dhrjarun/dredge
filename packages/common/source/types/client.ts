@@ -19,7 +19,8 @@ export type inferFetchOptions<R> = R extends Route<
   infer Path,
   any,
   infer SearchParams extends Record<string, Parser>,
-  infer IBody
+  infer IBody,
+  any
 >
   ? Omit<RequestInit, "body" | "headers" | "method"> & {
       headers?: Record<string, string>;

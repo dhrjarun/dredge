@@ -1,6 +1,7 @@
+import { IsAny } from "ts-essentials";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
-import { MaybePromise, Overwrite, Simplify } from "./utils";
 import { HTTPMethod } from "./http";
+import { MaybePromise, Overwrite, Simplify } from "./utils";
 
 export interface MiddlewareResult<C> {
   ctx: C;
@@ -69,7 +70,8 @@ export type inferResolverOption<R> = R extends Route<
   infer Path,
   any,
   infer SearchParams extends Record<string, Parser>,
-  infer IBody
+  infer IBody,
+  any
 >
   ? {
       headers?: Record<string, string | string[] | undefined>;
@@ -83,15 +85,37 @@ export type inferResolverOption<R> = R extends Route<
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
 
+// export type isAnyRoute<R> = R extends Route<
+//   any,
+//   infer _Method extends number,
+//   infer _Path extends number,
+//   any,
+//   infer _SearParams extends number,
+//   infer _IBody extends number,
+//   any
+// >
+//   ? true
+//   : false;
+
 export type isAnyRoute<R> = R extends Route<
-  any,
-  infer _Method extends number,
-  infer _Path extends number,
-  any,
-  infer _SearParams extends number,
-  infer _IBody extends number
+  infer Context,
+  infer Method,
+  infer Paths,
+  infer Params,
+  infer SearchParams,
+  infer IBody,
+  infer OBody
 >
-  ? true
+  ?
+      | IsAny<Context>
+      | IsAny<Method>
+      | IsAny<Paths>
+      | IsAny<Params>
+      | IsAny<SearchParams>
+      | IsAny<IBody>
+      | IsAny<OBody> extends true
+    ? true
+    : false
   : false;
 
 export type inferResolverResult<R> = R extends Route<
@@ -180,7 +204,8 @@ export type ResolverFunction<
   _type?: string | undefined;
 };
 
-export type RouteBuilderDef = {
+export type RouteBuilderDef<isResolved extends boolean = boolean> = {
+  isResolved: isResolved;
   method: HTTPMethod;
   paths: string[];
   params: Record<string, Parser>;
@@ -194,11 +219,23 @@ export type RouteBuilderDef = {
   resolver?: ResolverFunction<any, any, any, any, any, any, any>;
 };
 
+export interface Route<
+  Context,
+  Method,
+  Paths,
+  Params,
+  SearchParams,
+  IBody,
+  OBody,
+> {
+  _def: RouteBuilderDef<true>;
+}
+
 // TODO
 // IBody and OBody default type
 // OBody Schema implementation
 // after middleware
-export interface Route<
+export interface UnresolvedRoute<
   Context,
   Method,
   // Paths extends Array<string> = [],
@@ -208,15 +245,15 @@ export interface Route<
   IBody = null,
   OBody = null,
 > {
-  _def: RouteBuilderDef;
+  _def: RouteBuilderDef<false>;
 
   error(
     fn: ErrorResolverFunction,
-  ): Route<Context, Method, Paths, SearchParams, IBody, OBody>;
+  ): UnresolvedRoute<Context, Method, Paths, SearchParams, IBody, OBody>;
 
   path<const T extends string[]>(
     ...paths: T
-  ): Route<
+  ): UnresolvedRoute<
     Context,
     Method,
     Paths extends Array<string> ? [...Paths, ...T] : T,
@@ -234,7 +271,7 @@ export interface Route<
     },
   >(
     arg: T,
-  ): Route<
+  ): UnresolvedRoute<
     Context,
     Method,
     Paths,
@@ -246,7 +283,7 @@ export interface Route<
 
   searchParam<const T extends { [key: string]: Parser }>(
     queries: T,
-  ): Route<Context, Method, Paths, Params, T, IBody>;
+  ): UnresolvedRoute<Context, Method, Paths, Params, T, IBody>;
 
   use<ContextOverride>(
     fn: MiddlewareFunction<
@@ -258,7 +295,7 @@ export interface Route<
       Method,
       IBody
     >,
-  ): Route<
+  ): UnresolvedRoute<
     Overwrite<Context, ContextOverride>,
     Method,
     Paths,
@@ -290,22 +327,55 @@ export interface Route<
   method<M extends HTTPMethod, P extends Parser>(
     method: M,
     parser?: P,
-  ): Route<Context, M, Paths, Params, SearchParams, P, OBody>;
-  get(): Route<Context, "get", Paths, Params, SearchParams, IBody, OBody>;
+  ): UnresolvedRoute<Context, M, Paths, Params, SearchParams, P, OBody>;
+  get(): UnresolvedRoute<
+    Context,
+    "get",
+    Paths,
+    Params,
+    SearchParams,
+    IBody,
+    OBody
+  >;
   post<P extends Parser>(
     parser: P,
-  ): Route<Context, "post", Paths, Params, SearchParams, P, OBody>;
+  ): UnresolvedRoute<Context, "post", Paths, Params, SearchParams, P, OBody>;
   put<P extends Parser>(
     parser: P,
-  ): Route<Context, "put", Paths, Params, SearchParams, P, OBody>;
-  delete(): Route<Context, "delete", Paths, Params, SearchParams, IBody, OBody>;
+  ): UnresolvedRoute<Context, "put", Paths, Params, SearchParams, P, OBody>;
+  delete(): UnresolvedRoute<
+    Context,
+    "delete",
+    Paths,
+    Params,
+    SearchParams,
+    IBody,
+    OBody
+  >;
   patch<P extends Parser>(
     parser: P,
-  ): Route<Context, "patch", Paths, Params, SearchParams, P, OBody>;
-  head(): Route<Context, "head", Paths, Params, SearchParams, IBody, OBody>;
+  ): UnresolvedRoute<Context, "patch", Paths, Params, SearchParams, P, OBody>;
+  head(): UnresolvedRoute<
+    Context,
+    "head",
+    Paths,
+    Params,
+    SearchParams,
+    IBody,
+    OBody
+  >;
 }
 
 export type AnyRoute = Route<any, any, any, any, any, any, any>;
+export type AnyUnresolvedRoute = UnresolvedRoute<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
 
 // TODO: Fix when given other types
 type _inferPathType<
@@ -328,6 +398,7 @@ export type inferRoutePath<R> = R extends Route<
   any,
   infer Path,
   infer Params extends Record<string, Parser>,
+  any,
   any,
   any
 >
@@ -355,6 +426,7 @@ export type ExtractRoute<
 export type inferRouteMethod<R> = R extends Route<
   any,
   infer Method extends HTTPMethod,
+  any,
   any,
   any,
   any,

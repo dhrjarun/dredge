@@ -1,6 +1,9 @@
 export * from "./dredge";
 
-// TODO
+// ----------------
+// TODO: DONE
+// ----------------
+
 // add types to resolveRoute
 // make data() in ResolverResult return Promise
 // refactor fetchClient option type
@@ -20,13 +23,19 @@ export * from "./dredge";
 // setup eslint, prettier or rome
 // add more options for dredgeFetch
 // make fetch option in fetchClient and resolveRoute optional if every option is optional specifically if data or searchParams are not required
-
-// resolver method in route must return different type -- the final type which will be taken by api builder
 // improve isAnyRoute type https://github.com/ts-essentials/ts-essentials/blob/9935d80a3c338b05577d7d012db81425ed770c14/lib/is-any/index.ts
+// resolver method in route must return different type -- the final type which will be taken by api builder
+
+// ----------------
+// TODO
+// ----------------
+
 // change sendFn so that (data, options) like this
+
 // find better way to provide contentType in client and sendFn
 // support for accept req header and automatically adding contentType in res
 // support for setting response headers with middleware
+
 // better error objects and handling of it
 // better names
 // docs on public functions
