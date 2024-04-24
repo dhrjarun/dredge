@@ -1,9 +1,9 @@
 import type { AddressInfo } from "net";
-import { test, expect, afterEach } from "vitest";
-import { dredge } from "../dredge";
-import z from "zod";
-import { createHTTPServer, CreateHTTPServerOptions } from "./standalone";
 import { createFetchClient } from "@dredge/client";
+import { afterEach, expect, test } from "vitest";
+import z from "zod";
+import { dredge } from "../dredge";
+import { CreateHTTPServerOptions, createHTTPServer } from "./standalone";
 
 const { route, api } = dredge();
 

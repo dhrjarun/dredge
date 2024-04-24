@@ -1,20 +1,27 @@
 import {
-  FetchOptions,
-  DredgeResponsePromise,
-  Transformer,
-  trimSlashes,
   DredgeResponse,
+  DredgeResponsePromise,
+  FetchOptions,
+  Transformer,
   populateTransformer,
+  trimSlashes,
 } from "@dredge/common";
 
 export function dredgeFetch(
   path: string,
   options: Omit<FetchOptions, "path">,
 ): DredgeResponsePromise<any> {
-  const { method, searchParams, data } = options;
+  const {
+    transformer: _transformer,
+    fetch: _fetch,
+    method,
+    searchParams,
+    data,
+    ...rest
+  } = options;
   const headers = new Headers(options.headers);
 
-  const transformer = populateTransformer(options.transformer);
+  const transformer = populateTransformer(_transformer);
 
   function serializeData(data: any, contentType: string = "") {
     if (contentType.startsWith("application/json")) {
@@ -32,7 +39,7 @@ export function dredgeFetch(
     return data;
   }
 
-  const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  const fetch = _fetch ?? globalThis.fetch.bind(globalThis);
 
   if (!options.prefixUrl) {
     throw "No prefix URL provided";
@@ -55,6 +62,7 @@ export function dredgeFetch(
     method,
     headers,
     body,
+    ...rest,
   });
 
   async function _function() {
@@ -133,11 +141,19 @@ export class DredgeFetch {
   request: globalThis.Request;
 
   constructor(path: string, options: Omit<FetchOptions, "path">) {
-    const { transformer = {}, method, headers, searchParams, data } = options;
+    const {
+      fetch,
+      transformer = {},
+      method,
+      headers,
+      searchParams,
+      data,
+      ...rest
+    } = options;
 
     this._transformer = populateTransformer(transformer);
 
-    this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this._fetch = fetch ?? globalThis.fetch.bind(globalThis);
 
     if (!options.prefixUrl) {
       throw "No prefix URL provided";
@@ -157,6 +173,7 @@ export class DredgeFetch {
       method,
       headers,
       body: this._serializeData(data, headers?.["Content-Type"]),
+      ...rest,
     });
   }
 

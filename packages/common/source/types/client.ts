@@ -1,16 +1,16 @@
-import {
-  inferPathType,
-  inferSearchParamsType,
-  Route,
-  ExtractRoute,
-  AnyRoute,
-  inferRoutePath,
-  inferRouteMethod,
-} from "./route";
 import { Parser, inferParserType } from "../parser";
-import { Simplify } from "./utils";
-import { HTTPMethod, DredgeResponsePromise } from "./http";
 import { Transformer } from "../transformer";
+import { DredgeResponsePromise, HTTPMethod } from "./http";
+import {
+  AnyRoute,
+  ExtractRoute,
+  Route,
+  inferPathType,
+  inferRouteMethod,
+  inferRoutePath,
+  inferSearchParamsType,
+} from "./route";
+import { Simplify } from "./utils";
 
 export type inferFetchOptions<R> = R extends Route<
   any,
@@ -20,13 +20,13 @@ export type inferFetchOptions<R> = R extends Route<
   infer SearchParams extends Record<string, Parser>,
   infer IBody
 >
-  ? {
+  ? Omit<RequestInit, "body" | "headers" | "method"> & {
       headers?: Record<string, string>;
       method: Method;
       path: inferPathType<Path, SearchParams>;
     } & ([Method] extends ["post" | "put" | "patch"]
-      ? { data: inferParserType<IBody> }
-      : {}) &
+        ? { data: inferParserType<IBody> }
+        : {}) &
       (keyof SearchParams extends never
         ? {}
         : { searchParams: inferSearchParamsType<SearchParams> })
@@ -45,7 +45,7 @@ export type FetchOptions = {
     input: string | URL | Request,
     init?: RequestInit,
   ) => Promise<Response>;
-};
+} & Omit<RequestInit, "body" | "headers" | "method">;
 
 export type inferResponsePromise<R> = R extends Route<
   any,
