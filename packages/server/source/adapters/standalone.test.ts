@@ -111,7 +111,7 @@ test("standalone server", async () => {
     port: Number(prefixUrl.port),
   });
 
-  const data = await client.get("/posts", {}).data();
+  const data = await client.get("/posts").data();
   expect(data).toMatchObject({ say: "I am Post" });
 
   const response = await client.post("/posts/dhrjarun", {

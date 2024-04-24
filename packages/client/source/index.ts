@@ -11,7 +11,7 @@ export function createFetchClient<DredgeApi>(
   const alias = ["get", "post", "put", "patch", "delete", "head"] as const;
 
   alias.forEach((method) => {
-    fetch[method] = (path: any, options: any) => {
+    fetch[method] = (path: any, options?: any) => {
       return dredgeFetch(
         path,
         mergeFetchOptions(

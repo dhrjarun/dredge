@@ -27,5 +27,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "ts-essentials": "^9.4.2"
+  }
 }

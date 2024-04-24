@@ -1,3 +1,4 @@
+import { RequiredKeys } from "ts-essentials";
 import { Parser, inferParserType } from "../parser";
 import { Transformer } from "../transformer";
 import { DredgeResponsePromise, HTTPMethod } from "./http";
@@ -61,7 +62,7 @@ export type inferResponsePromise<R> = R extends Route<
     >
   : never;
 
-type FetchShortcutFunction<
+type _FetchShortcutFunction<
   Routes extends AnyRoute[],
   Method extends HTTPMethod,
 > = <
@@ -70,6 +71,26 @@ type FetchShortcutFunction<
 >(
   path: P,
   options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
+) => inferResponsePromise<R>;
+
+type FetchShortcutFunction<
+  Routes extends AnyRoute[],
+  Method extends HTTPMethod,
+> = <
+  P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
+  R extends ExtractRoute<Routes[number], Method, P>,
+>(
+  ...args: RequiredKeys<
+    Omit<inferFetchOptions<R>, "method" | "path">
+  > extends never
+    ? [
+        path: P,
+        options?: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
+      ]
+    : [
+        path: P,
+        options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
+      ]
 ) => inferResponsePromise<R>;
 
 export interface DredgeClient<Routes extends AnyRoute[]> {

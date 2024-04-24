@@ -9,7 +9,9 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "format": "pnpm biome format .",
-    "format:fix": "pnpm format --write"
+    "format:fix": "pnpm format --write",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch"
   },
   "keywords": [],
   "author": "Dhiraj Arun",
