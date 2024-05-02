@@ -21,9 +21,9 @@ const testApi = api([
         age: z.number(),
       }),
     )
-    .resolve(({ send, data }) => {
-      return send({
-        data,
+    .resolve((req, res) => {
+      return res.send({
+        data: req.data,
         headers: {
           "Content-Type": "application/json",
         },
@@ -33,8 +33,8 @@ const testApi = api([
   route
     .path("posts")
     .get()
-    .resolve(({ send }) => {
-      return send({
+    .resolve((req, res) => {
+      return res.send({
         data: {
           say: "I am Post",
         },
@@ -52,9 +52,9 @@ const testApi = api([
         file: z.instanceof(Blob),
       }),
     )
-    .resolve(({ send, data }) => {
-      return send({
-        data,
+    .resolve((req, res) => {
+      return res.send({
+        data: req.data,
         headers: {
           "Content-Type": "multipart/form-data",
         },

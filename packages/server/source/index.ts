@@ -30,12 +30,25 @@ export * from "./dredge";
 // TODO
 // ----------------
 
-// change sendFn so that (data, options) like this
+// support for setting response headers with middleware []
+// req, res
+// req.path, req.params, req.searchParams, req.headers, req.data, [readonly]
+// res.status, res.statusText, res.headers, res.data, [readonly]
+// ctx, next() send() [should these be in request or response]?
+// fix unknown data type bug
 
-// find better way to provide contentType in client and sendFn
-// support for accept req header and automatically adding contentType in res
-// support for setting response headers with middleware
+// path function in root getting single string argument
+// header types
 
+// change sendFn so that (data, options) like this [no need to do this]
+// support for accept req header and automatically adding contentType in res [can be implemented by middleware so no need to do so]
+
+// find better way to provide contentType in client and sendFn | either using fields like { data, dataAsJson, datAsFormData, dataAsUrlEncoded } [should it has `as` or simple, json, urlEncoded, formData]
+// or using header { contentType }
+// or using header { '$contentType': "application/json" | "multipart/form-data" | 'text/plain' | "application/x-www-form-urlencoded" } [since contentType no just has content part, it can have charset, for formData it has boundary]
+// text/javascript; charset=UTF-8
+
+// hooks and instance creation
 // better error objects and handling of it
 // better names
 // docs on public functions
@@ -46,3 +59,20 @@ export * from "./dredge";
 // add Readme.MD, CONTRIBUTING.md, licence
 // publish to npm
 // setup the docs site with astro
+
+type inferP<T> = T extends `${infer P}/${infer Rest}`
+  ? [P, ...inferP<Rest>]
+  : T extends `/${infer P}`
+    ? [P]
+    : [T];
+type RE<T extends Array<string>> = T extends [
+  infer P,
+  ...infer Rest extends string[],
+]
+  ? P extends ""
+    ? RE<Rest>
+    : [P, ...RE<Rest>]
+  : [];
+
+type x = inferP<"/good/bad/no/go/">;
+type xx = RE<x>;

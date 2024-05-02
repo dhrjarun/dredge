@@ -1,6 +1,6 @@
-import { test, expect } from "vitest";
-import { dredge } from "./dredge";
+import { expect, test } from "vitest";
 import z from "zod";
+import { dredge } from "./dredge";
 
 const { route, api } = dredge();
 
@@ -14,24 +14,24 @@ const testApi = api([
       size: z.string(),
     })
     .post(z.string())
-    .resolve(({ send, data }) => {
-      return send({
-        data,
+    .resolve((req, res) => {
+      return res.send({
+        data: req.data,
       });
     }),
 
   route
     .path("posts", "default")
     .post(z.number())
-    .resolve(({ send, data }) => {
-      return send({ data });
+    .resolve((req, res) => {
+      return res.send({ data: req.data });
     }),
 
   route
     .path("posts")
     .get()
-    .resolve(({ send }) => {
-      return send({ data: "I am post" });
+    .resolve((req, res) => {
+      return res.send({ data: "I am post" });
     }),
 ]);
 

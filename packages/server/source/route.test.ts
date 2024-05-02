@@ -1,6 +1,6 @@
-import { test, expect } from "vitest";
-import { createRouteBuilder } from "./route";
+import { expect, test } from "vitest";
 import z from "zod";
+import { createRouteBuilder } from "./route";
 
 test("route", () => {
   let postRoute = createRouteBuilder()
@@ -16,8 +16,8 @@ test("route", () => {
       size: z.string(),
     })
     .post(z.string())
-    .resolve(({ send }) => {
-      return send({
+    .resolve((req, res) => {
+      return res.send({
         data: [{ id: "p1", title: "Post1" }],
       });
     });

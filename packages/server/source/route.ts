@@ -26,8 +26,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     params,
     searchParams,
     method,
-    errorResolver: ({ send, error, errorOrigin }) => {
-      return send({
+    errorResolver: ({ error, errorOrigin }, req, res) => {
+      return res.send({
         status: 500,
         error: error,
         statusText: `Something wen't wrong at origin: ${errorOrigin}`,

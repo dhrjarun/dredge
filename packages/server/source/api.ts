@@ -153,6 +153,7 @@ export function resolveRoute(
     searchParams = {},
     data,
     method = "get",
+    headers = {},
   } = clientOptions;
   const pathArray = trimSlashes(path).split("/");
 
@@ -184,9 +185,16 @@ export function resolveRoute(
   const parsedSearchParams: Record<string, any> = {};
   const parsedParams: Record<string, any> = {};
   let parsedBody: unknown;
+
   let currentCtx: any = {
     ...ctx,
   };
+
+  let resHeaders: any = {};
+  let resStatus: number;
+  let resStatusText: string = "";
+  let resData: any = null;
+
   // let resolverResult: ResolverResult<any>;
 
   let step:
@@ -231,19 +239,28 @@ export function resolveRoute(
             break;
           case "MIDDLEWARE_CALLS":
             routeDef.middlewares.forEach(async (fn) => {
-              const middlewareResult = await fn({
-                method,
-                ctx: currentCtx,
-                params: parsedParams,
-                searchParams: parsedSearchParams,
-                path: pathArray.join("/"),
-                data: parsedBody,
-                next(nextOptions?: any) {
-                  return {
-                    ctx: mergeDeep(currentCtx, ...nextOptions?.ctx),
-                  };
+              const middlewareResult = await fn(
+                {
+                  method,
+                  headers,
+                  params: parsedParams,
+                  searchParams: parsedSearchParams,
+                  path: pathArray.join("/"),
+                  data: parsedBody,
                 },
-              });
+                {
+                  headers: resHeaders,
+                  ctx: currentCtx,
+                  status: resStatus,
+                  statusText: resStatusText,
+                  data: resData,
+                  next(nextOptions?: any) {
+                    return {
+                      ctx: mergeDeep(currentCtx, ...nextOptions?.ctx),
+                    };
+                  },
+                },
+              );
 
               currentCtx = middlewareResult.ctx;
             });
@@ -255,39 +272,61 @@ export function resolveRoute(
               throw "No resolver exist";
             }
 
-            const result = await routeDef.resolver({
-              method,
-              ctx: currentCtx,
-              params: parsedParams,
-              searchParams: parsedSearchParams,
-              path: pathArray.join("/"),
-              data: parsedBody,
-              send(options?: any) {
-                return sendFn(options, {
-                  status: 200,
-                  statusText: "ok",
-                });
+            const result = await routeDef.resolver(
+              {
+                method,
+                headers,
+                params: parsedParams,
+                searchParams: parsedSearchParams,
+                path: pathArray.join("/"),
+                data: parsedBody,
               },
-            });
+              {
+                headers: resHeaders,
+                ctx: currentCtx,
+                status: resStatus,
+                statusText: resStatusText,
+                data: resData,
+                send(options?: any) {
+                  return sendFn(options, {
+                    headers: resHeaders,
+                    status: resStatus || 200,
+                    statusText: resStatusText || "ok",
+                  });
+                },
+              },
+            );
             step = "DONE";
             return result;
         }
       } catch (error) {
-        const result = await routeDef.errorResolver({
-          error,
-          errorOrigin: step,
-          method,
-          path: pathArray.join("/"),
-          params,
-          searchParams,
-          data,
-          send(options?: any) {
-            return sendFn(options, {
-              status: 500,
-              statusText: "Something wen't wrong",
-            });
+        const result = await routeDef.errorResolver(
+          {
+            error,
+            errorOrigin: step,
           },
-        })!;
+          {
+            method,
+            headers,
+            path: pathArray.join("/"),
+            params,
+            searchParams,
+            data,
+          },
+          {
+            headers: resHeaders,
+            ctx: currentCtx,
+            status: resStatus,
+            statusText: resStatusText,
+            data: resData,
+            send(options?: any) {
+              return sendFn(options, {
+                status: 500,
+                statusText: "Something wen't wrong",
+              });
+            },
+          },
+        )!;
 
         step = "DONE";
         return result;

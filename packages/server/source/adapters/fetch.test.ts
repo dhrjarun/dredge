@@ -1,7 +1,7 @@
-import { handleFetchRequest } from "./fetch";
-import { test, expect } from "vitest";
-import { dredge } from "../dredge";
+import { expect, test } from "vitest";
 import z from "zod";
+import { dredge } from "../dredge";
+import { handleFetchRequest } from "./fetch";
 
 const { route, api } = dredge();
 
@@ -19,9 +19,9 @@ const testApi = api([
         age: z.number(),
       }),
     )
-    .resolve(({ send, data }) => {
-      return send({
-        data,
+    .resolve((req, res) => {
+      return res.send({
+        data: req.data,
         headers: {
           "Content-Type": "application/json",
         },
@@ -31,8 +31,8 @@ const testApi = api([
   route
     .path("posts")
     .get()
-    .resolve(({ send }) => {
-      return send({ data: "I am post" });
+    .resolve((req, res) => {
+      return res.send({ data: "I am post" });
     }),
 ]);
 
