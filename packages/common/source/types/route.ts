@@ -5,6 +5,9 @@ import { MaybePromise, Overwrite, Simplify } from "./utils";
 
 export interface MiddlewareResult<C> {
   ctx: C;
+  headers: Record<string, string>; // Header names are lower-case
+  status?: number;
+  statusText?: string;
 }
 
 export type inferSearchParamsType<SearchParams> = Simplify<{

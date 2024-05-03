@@ -1,10 +1,10 @@
 import {
-  Transformer,
   AnyRoute,
-  trimSlashes,
-  ResolverResult,
   DredgeApi,
+  ResolverResult,
+  Transformer,
   populateTransformer,
+  trimSlashes,
 } from "@dredge/common";
 
 export async function handleFetchRequest<Context extends object = {}>(options: {
@@ -54,7 +54,7 @@ async function getDataFromRequestOrResponse(
   options: { transformer: Partial<Transformer> },
 ) {
   const transformer = populateTransformer(options.transformer);
-  const contentType = reqOrRes.headers.get("Content-Type");
+  const contentType = reqOrRes.headers.get("content-type");
   let data: any;
 
   if (contentType?.startsWith("application/json")) {
@@ -85,7 +85,7 @@ export async function createResponseFromResolverResult(
   const transformer = populateTransformer(options.transformer);
 
   const { data, ...rest } = result;
-  const contentType = result.headers?.["Content-Type"];
+  const contentType = result.headers?.["content-type"];
 
   let dataOrError: any;
   try {

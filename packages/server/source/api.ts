@@ -5,7 +5,7 @@ import type {
   ResolverOptions,
   ResolverResult,
 } from "@dredge/common";
-import { mergeDeep } from "./utils/merge";
+import { mergeDeep, mergeHeaders } from "./utils/merge";
 
 export function dredgeApi<Context extends object = {}>() {
   const fn = <const Routes extends AnyRoute[]>(
@@ -149,13 +149,14 @@ export function resolveRoute(
 ): ResolverResultPromise<any> {
   const {
     ctx = {},
-    path,
+    path: _path,
     searchParams = {},
     data,
     method = "get",
     headers = {},
   } = clientOptions;
-  const pathArray = trimSlashes(path).split("/");
+  const pathArray = trimSlashes(_path).split("/");
+  const path = pathArray.join("/");
 
   let current = root;
   pathArray.forEach((item) => {
@@ -186,14 +187,18 @@ export function resolveRoute(
   const parsedParams: Record<string, any> = {};
   let parsedBody: unknown;
 
-  let currentCtx: any = {
-    ...ctx,
+  let req: any = {
+    method,
+    headers,
+    path,
   };
-
-  let resHeaders: any = {};
-  let resStatus: number;
-  let resStatusText: string = "";
-  let resData: any = null;
+  let res: any = {
+    ctx: {
+      ...ctx,
+    },
+    headers: {},
+    data: null,
+  };
 
   // let resolverResult: ResolverResult<any>;
 
@@ -218,6 +223,7 @@ export function resolveRoute(
                   : pathArray[index];
               }
             }
+            req.params = parsedParams;
 
             step = "SEARCH_PARAM_VALIDATION";
             break;
@@ -227,42 +233,34 @@ export function resolveRoute(
                 searchParams[key],
               );
             }
+            req.searchParams = parsedSearchParams;
 
             step = "BODY_VALIDATION";
             break;
           case "BODY_VALIDATION":
             if (routeDef.iBody) {
               parsedBody = await getParseFn(routeDef.iBody)(data);
+              req.data = parsedBody;
             }
 
             step = "MIDDLEWARE_CALLS";
             break;
           case "MIDDLEWARE_CALLS":
             routeDef.middlewares.forEach(async (fn) => {
-              const middlewareResult = await fn(
-                {
-                  method,
-                  headers,
-                  params: parsedParams,
-                  searchParams: parsedSearchParams,
-                  path: pathArray.join("/"),
-                  data: parsedBody,
+              const middlewareResult = await fn(req, {
+                ...res,
+                next(nextOptions?: any) {
+                  return {
+                    ctx: mergeDeep(res.ctx, nextOptions?.ctx),
+                    headers: mergeHeaders(res.headers, nextOptions?.headers),
+                    status: nextOptions?.status,
+                    statusText: nextOptions?.statusText,
+                    data: null,
+                  };
                 },
-                {
-                  headers: resHeaders,
-                  ctx: currentCtx,
-                  status: resStatus,
-                  statusText: resStatusText,
-                  data: resData,
-                  next(nextOptions?: any) {
-                    return {
-                      ctx: mergeDeep(currentCtx, ...nextOptions?.ctx),
-                    };
-                  },
-                },
-              );
+              });
 
-              currentCtx = middlewareResult.ctx;
+              res = middlewareResult;
             });
 
             step = "RESOLVER_CALL";
@@ -272,30 +270,16 @@ export function resolveRoute(
               throw "No resolver exist";
             }
 
-            const result = await routeDef.resolver(
-              {
-                method,
-                headers,
-                params: parsedParams,
-                searchParams: parsedSearchParams,
-                path: pathArray.join("/"),
-                data: parsedBody,
+            const result = await routeDef.resolver(req, {
+              ...res,
+              send(options?: any) {
+                return sendFn(options, {
+                  headers: res.headers,
+                  status: res.status || 200,
+                  statusText: res.statusText || "ok",
+                });
               },
-              {
-                headers: resHeaders,
-                ctx: currentCtx,
-                status: resStatus,
-                statusText: resStatusText,
-                data: resData,
-                send(options?: any) {
-                  return sendFn(options, {
-                    headers: resHeaders,
-                    status: resStatus || 200,
-                    statusText: resStatusText || "ok",
-                  });
-                },
-              },
-            );
+            });
             step = "DONE";
             return result;
         }
@@ -308,17 +292,13 @@ export function resolveRoute(
           {
             method,
             headers,
-            path: pathArray.join("/"),
+            path,
             params,
             searchParams,
             data,
           },
           {
-            headers: resHeaders,
-            ctx: currentCtx,
-            status: resStatus,
-            statusText: resStatusText,
-            data: resData,
+            ...res,
             send(options?: any) {
               return sendFn(options, {
                 status: 500,
@@ -359,10 +339,7 @@ function sendFn(
   const result = {
     status: options.status || defaults.status,
     statusText: options.statusText || defaults.statusText,
-    headers: {
-      ...defaults.headers,
-      ...options.headers,
-    },
+    headers: mergeHeaders(defaults.headers || {}, options.headers || {}),
   } as ResolverResult<any>;
 
   result.ok = result.status > 199 && result.status < 300;

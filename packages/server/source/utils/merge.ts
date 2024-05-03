@@ -3,8 +3,8 @@
  * @param item
  * @returns {boolean}
  */
-function isObject(item) {
-  return item && typeof item === "object" && !Array.isArray(item);
+function isObject(item: unknown): item is object {
+  return !!(item && typeof item === "object" && !Array.isArray(item));
 }
 
 // https://stackoverflow.com/a/34749873
@@ -29,4 +29,16 @@ export function mergeDeep(target: object, ...sources: object[]) {
   }
 
   return mergeDeep(target, ...sources);
+}
+
+export function mergeHeaders(
+  target: Record<string, string>,
+  source: Record<string, string>,
+) {
+  const headers = { ...target };
+  for (const header in source) {
+    // https://nodejs.org/api/http.html#messageheaders
+    headers[header.toLowerCase()] = source[header]!;
+  }
+  return headers;
 }

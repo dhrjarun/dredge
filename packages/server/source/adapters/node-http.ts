@@ -1,10 +1,10 @@
 import type * as http from "http";
 import {
-  Transformer,
   AnyRoute,
-  trimSlashes,
   DredgeApi,
+  Transformer,
   populateTransformer,
+  trimSlashes,
 } from "@dredge/common";
 import busboy from "busboy";
 import { FormDataEncoder } from "form-data-encoder";
@@ -207,7 +207,7 @@ export async function writeDataIntoResponse(
   const { transformer: _transformer = {}, callback } = options;
   const transformer = populateTransformer(options.transformer);
 
-  const contentType = res.getHeader("Content-Type") as string;
+  const contentType = res.getHeader("content-Type") as string;
 
   if (contentType?.startsWith("application/json")) {
     const json = transformer.json.serialize(data);
