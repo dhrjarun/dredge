@@ -4,8 +4,8 @@ import { createRouteBuilder } from "./route";
 
 test("route", () => {
   let postRoute = createRouteBuilder()
-    .path("posts", ":user")
-    .path("top-of-the-world", ":t")
+    .path("posts/:user")
+    .path("top-of-the-world/:t")
     .params({
       user: z.enum(["dhrjarun", "dd"]),
     })

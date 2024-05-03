@@ -34,12 +34,13 @@ export * from "./dredge";
 // ctx, next() send() [should these be in request or response]?
 // fix unknown data type bug
 // refactor api execute function
+// path function in root getting single string argument
 
 // ----------------
 // TODO
 // ----------------
 
-// path function in root getting single string argument
+// fix types issue in deepMerge function
 // header types
 
 // find better way to provide contentType in client and sendFn | either using fields like { data, dataAsJson, datAsFormData, dataAsUrlEncoded } [should it has `as` or simple, json, urlEncoded, formData]
@@ -64,23 +65,6 @@ export * from "./dredge";
 // ----------------
 // change sendFn so that (data, options) like this [no need to do this]
 // support for accept req header and automatically adding contentType in res [can be implemented by middleware so no need to do so]
-
-type inferP<T> = T extends `${infer P}/${infer Rest}`
-  ? [P, ...inferP<Rest>]
-  : T extends `/${infer P}`
-    ? [P]
-    : [T];
-type RE<T extends Array<string>> = T extends [
-  infer P,
-  ...infer Rest extends string[],
-]
-  ? P extends ""
-    ? RE<Rest>
-    : [P, ...RE<Rest>]
-  : [];
-
-type x = inferP<"/good/bad/no/go/">;
-type xx = RE<x>;
 
 // type _Transformer = {
 //   checkType: Function; // check which transformer will be used based on headers, ctx or req header or anything

@@ -3,6 +3,7 @@ import {
   Parser,
   RouteBuilderDef,
   UnresolvedRoute,
+  trimSlashes,
 } from "@dredge/common";
 
 export function dredgeRoute<ServerCtx extends object>() {
@@ -46,8 +47,10 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    path: (...paths) => {
+    path: (path) => {
       const _paths = _def.paths;
+      const paths = trimSlashes(path).split("/");
+      console.log("paths", paths);
 
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
       paths.forEach((item) => {

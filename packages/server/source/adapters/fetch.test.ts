@@ -7,7 +7,7 @@ const { route, api } = dredge();
 
 const testApi = api([
   route
-    .path("posts", ":user")
+    .path("posts/:user")
     .params({
       user: z.enum(["dhrjarun", "dd"]),
     })

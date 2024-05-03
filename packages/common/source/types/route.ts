@@ -240,6 +240,22 @@ export interface Route<
   _def: RouteBuilderDef<true>;
 }
 
+type _inferPathArray<T> = T extends `${infer P}/${infer Rest}`
+  ? [P, ..._inferPathArray<Rest>]
+  : T extends `/${infer P}`
+    ? [P]
+    : [T];
+
+type TrimSlashes<T> = T extends `/${infer U}/`
+  ? U
+  : T extends `/${infer U}`
+    ? U
+    : T extends `${infer U}/`
+      ? U
+      : T;
+
+type inferPathArray<T> = _inferPathArray<TrimSlashes<T>>;
+
 // TODO
 // IBody and OBody default type
 // OBody Schema implementation
@@ -260,7 +276,7 @@ export interface UnresolvedRoute<
     fn: ErrorResolverFunction,
   ): UnresolvedRoute<Context, Method, Paths, SearchParams, IBody, OBody>;
 
-  path<const T extends string[]>(
+  _path<const T extends string[]>(
     ...paths: T
   ): UnresolvedRoute<
     Context,
@@ -268,6 +284,24 @@ export interface UnresolvedRoute<
     Paths extends Array<string> ? [...Paths, ...T] : T,
     Params & {
       [key in T[number] as key extends `:${infer N}` ? N : never]: null;
+    },
+    SearchParams,
+    IBody,
+    OBody
+  >;
+
+  path<const T extends string>(
+    path: T,
+  ): UnresolvedRoute<
+    Context,
+    Method,
+    Paths extends Array<string>
+      ? [...Paths, ...inferPathArray<T>]
+      : inferPathArray<T>,
+    Params & {
+      [key in inferPathArray<T>[number] as key extends `:${infer N}`
+        ? N
+        : never]: null;
     },
     SearchParams,
     IBody,
