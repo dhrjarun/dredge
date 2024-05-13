@@ -1,57 +1,237 @@
-import { type ResolverResultPromise, getParseFn } from "@dredge/common";
+import { getParseFn } from "@dredge/common";
 import type {
+  AnyDredgeApi,
   AnyRoute,
-  DredgeApi,
-  ResolverOptions,
-  ResolverResult,
+  ApiBuilderDef,
+  ParsedRequest,
+  ParsedResponse,
+  _DredgeApi,
 } from "@dredge/common";
 import { mergeDeep, mergeHeaders } from "./utils/merge";
 
 export function dredgeApi<Context extends object = {}>() {
-  const fn = <const Routes extends AnyRoute[]>(
-    routes: Routes,
-  ): DredgeApi<Context, Routes> => {
-    return buildDredgeApi(routes);
-  };
-
-  return fn;
+  return createApiBuilder({}) as _DredgeApi<
+    Context,
+    [],
+    Context,
+    Context,
+    Context
+  >;
 }
 
-export function buildDredgeApi<
-  Context extends object,
-  const Routes extends AnyRoute[],
->(routes: Routes): DredgeApi<Context, Routes> {
-  const root = new DredgePath({
-    name: "$root",
-  });
+function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
+  const {
+    routes = [],
+    inputTransformers = [],
+    outputTransformers = [],
+    errorMiddlewares = [],
+  } = initDef;
 
-  routes.forEach((route) => {
-    const def = route._def;
-    const paths = def.paths as string[];
+  const def: ApiBuilderDef = {
+    routes,
+    inputTransformers,
+    outputTransformers,
+    errorMiddlewares,
+  };
 
-    let current = root;
-    paths.forEach((name) => {
-      if (!current.hasChild(name)) {
-        current.addChild(name);
-      }
-      current = current.getChild(name)!;
-    });
+  const rootPath: DredgePath | null = null;
 
-    current.setRoute(route);
-  });
+  const builder = {
+    _def: def,
 
-  return {
-    _def: {
-      root,
-    },
-
-    resolveRoute: (path, options) => {
-      return resolveRoute(root, {
-        path,
-        ...options,
+    routes: (routes) => {
+      return createApiBuilder({
+        ...def,
+        routes: [...def.routes, ...routes],
       });
     },
-  } as DredgeApi<Context, Routes>;
+
+    transformIn: (fn) => {
+      return createApiBuilder({
+        ...def,
+        inputTransformers: [...def.inputTransformers, fn],
+      });
+    },
+    transformOut: (fn) => {
+      return createApiBuilder({
+        ...def,
+        outputTransformers: [...def.outputTransformers, fn],
+      });
+    },
+
+    error: (fn) => {
+      return createApiBuilder({
+        ...def,
+        errorMiddlewares: [...def.errorMiddlewares, fn],
+      });
+    },
+
+    resolveRoute: (request) => {
+      return "" as any;
+    },
+    resolveRouteWithoutTransforms: (request) => {
+      return "" as any;
+    },
+  } as AnyDredgeApi;
+
+  return builder;
+}
+
+export async function resolveRouteWithoutTransforms(
+  root: DredgePath,
+  request: Omit<ParsedRequest, "params"> & {
+    ctx: any;
+  },
+): Promise<ParsedResponse> {
+  const {
+    ctx = {},
+    path: _path,
+    searchParams = {},
+    data,
+    method = "get",
+    headers = {},
+  } = request;
+
+  const path = trimSlashes(_path);
+  const pathArray = path.split("/");
+
+  let current = root;
+  pathArray.forEach((item) => {
+    const child = current.getStaticChild(item) || current.getDynamicChild();
+
+    if (!child) {
+      throw "Invalid path";
+    }
+
+    current = child;
+  });
+
+  const routeDef = current.getRoute(method)!._def;
+  if (!routeDef) {
+    throw "Invalid path, no route exist";
+  }
+
+  const params: Record<string, string> = routeDef.paths.reduce(
+    (acc: any, item, index) => {
+      if (item.startsWith(":")) {
+        acc[item.replace(":", "")] = pathArray[index];
+      }
+      return acc;
+    },
+    {},
+  );
+
+  let validatedRequest: any = {
+    method,
+    headers,
+    path,
+  };
+
+  let currentCtx = {
+    ...ctx,
+  };
+
+  let response: ParsedResponse = {
+    headers: {},
+    data: null,
+  };
+
+  let step:
+    | "PARAM_VALIDATION"
+    | "SEARCH_PARAM_VALIDATION"
+    | "BODY_VALIDATION"
+    | "MIDDLEWARE_CALLS"
+    | "RESOLVER_CALL"
+    | "DONE" = "PARAM_VALIDATION";
+
+  while (step != "DONE") {
+    try {
+      switch (step) {
+        case "PARAM_VALIDATION":
+          const validatedParams: Record<string, any> = {};
+          for (const [index, item] of routeDef.paths.entries()) {
+            if (item.startsWith(":")) {
+              const parser = routeDef.params[item.replace(":", "")];
+              validatedParams[item] = parser
+                ? await getParseFn(parser)(pathArray[index])
+                : pathArray[index];
+            }
+          }
+          validatedRequest.params = validatedParams;
+
+          step = "SEARCH_PARAM_VALIDATION";
+          break;
+        case "SEARCH_PARAM_VALIDATION":
+          const validatedSearchParams: Record<string, any> = {};
+          for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+            validatedSearchParams[key] = await getParseFn(parser)(
+              searchParams[key],
+            );
+          }
+          validatedRequest.searchParams = validatedSearchParams;
+
+          step = "BODY_VALIDATION";
+          break;
+        case "BODY_VALIDATION":
+          let validatedData: unknown;
+
+          if (routeDef.iBody) {
+            validatedData = await getParseFn(routeDef.iBody)(data);
+            validatedRequest.data = validatedData;
+          }
+
+          step = "MIDDLEWARE_CALLS";
+          break;
+        case "MIDDLEWARE_CALLS":
+          routeDef.middlewares.forEach(async (fn) => {
+            const middlewareResult = await fn(validatedRequest, {
+              ...response,
+              ctx: currentCtx,
+              next(nextOptions?: any) {
+                return {
+                  ctx: mergeDeep(currentCtx, nextOptions?.ctx),
+                  headers: mergeHeaders(response.headers, nextOptions?.headers),
+                  status: nextOptions?.status,
+                  statusText: nextOptions?.statusText,
+                  data: null,
+                };
+              },
+            });
+
+            const { ctx, ...res } = middlewareResult;
+            currentCtx = ctx;
+            response = res;
+          });
+
+          step = "RESOLVER_CALL";
+          break;
+        case "RESOLVER_CALL":
+          if (!routeDef.resolver) {
+            throw "No resolver exist";
+          }
+
+          const result = await routeDef.resolver(validatedRequest, {
+            ...response,
+            ctx: currentCtx,
+            send(options?: any) {
+              return {
+                headers: mergeHeaders(response.headers, options?.headers),
+                data: options.data,
+                status: response.status || 200,
+                statusText: response.statusText || "ok",
+              };
+            },
+          });
+
+          response = result;
+          step = "DONE";
+      }
+    } catch (error) {
+      return Promise.reject({});
+    }
+  }
+
+  return response;
 }
 
 export class DredgePath {
@@ -142,217 +322,3 @@ const trimSlashes = (path: string): string => {
 
   return path;
 };
-
-export function resolveRoute(
-  root: DredgePath,
-  clientOptions: ResolverOptions,
-): ResolverResultPromise<any> {
-  const {
-    ctx = {},
-    path: _path,
-    searchParams = {},
-    data,
-    method = "get",
-    headers = {},
-  } = clientOptions;
-  const pathArray = trimSlashes(_path).split("/");
-  const path = pathArray.join("/");
-
-  let current = root;
-  pathArray.forEach((item) => {
-    const child = current.getStaticChild(item) || current.getDynamicChild();
-
-    if (!child) {
-      throw "Invalid path";
-    }
-
-    current = child;
-  });
-
-  const routeDef = current.getRoute(method)!._def;
-  if (!routeDef) {
-    throw "Invalid path, no route exist";
-  }
-
-  const params: Record<string, string> = routeDef.paths.reduce(
-    (acc: any, item, index) => {
-      if (item.startsWith(":")) {
-        acc[item.replace(":", "")] = pathArray[index];
-      }
-      return acc;
-    },
-    {},
-  );
-  const parsedSearchParams: Record<string, any> = {};
-  const parsedParams: Record<string, any> = {};
-  let parsedBody: unknown;
-
-  let req: any = {
-    method,
-    headers,
-    path,
-  };
-  let res: any = {
-    ctx: {
-      ...ctx,
-    },
-    headers: {},
-    data: null,
-  };
-
-  // let resolverResult: ResolverResult<any>;
-
-  let step:
-    | "PARAM_VALIDATION"
-    | "SEARCH_PARAM_VALIDATION"
-    | "BODY_VALIDATION"
-    | "MIDDLEWARE_CALLS"
-    | "RESOLVER_CALL"
-    | "DONE" = "PARAM_VALIDATION";
-
-  async function fn() {
-    while (step != "DONE") {
-      try {
-        switch (step) {
-          case "PARAM_VALIDATION":
-            for (const [index, item] of routeDef.paths.entries()) {
-              if (item.startsWith(":")) {
-                const parser = routeDef.params[item.replace(":", "")];
-                parsedParams[item] = parser
-                  ? await getParseFn(parser)(pathArray[index])
-                  : pathArray[index];
-              }
-            }
-            req.params = parsedParams;
-
-            step = "SEARCH_PARAM_VALIDATION";
-            break;
-          case "SEARCH_PARAM_VALIDATION":
-            for (const [key, parser] of Object.entries(routeDef.searchParams)) {
-              parsedSearchParams[key] = await getParseFn(parser)(
-                searchParams[key],
-              );
-            }
-            req.searchParams = parsedSearchParams;
-
-            step = "BODY_VALIDATION";
-            break;
-          case "BODY_VALIDATION":
-            if (routeDef.iBody) {
-              parsedBody = await getParseFn(routeDef.iBody)(data);
-              req.data = parsedBody;
-            }
-
-            step = "MIDDLEWARE_CALLS";
-            break;
-          case "MIDDLEWARE_CALLS":
-            routeDef.middlewares.forEach(async (fn) => {
-              const middlewareResult = await fn(req, {
-                ...res,
-                next(nextOptions?: any) {
-                  return {
-                    ctx: mergeDeep(res.ctx, nextOptions?.ctx),
-                    headers: mergeHeaders(res.headers, nextOptions?.headers),
-                    status: nextOptions?.status,
-                    statusText: nextOptions?.statusText,
-                    data: null,
-                  };
-                },
-              });
-
-              res = middlewareResult;
-            });
-
-            step = "RESOLVER_CALL";
-            break;
-          case "RESOLVER_CALL":
-            if (!routeDef.resolver) {
-              throw "No resolver exist";
-            }
-
-            const result = await routeDef.resolver(req, {
-              ...res,
-              send(options?: any) {
-                return sendFn(options, {
-                  headers: res.headers,
-                  status: res.status || 200,
-                  statusText: res.statusText || "ok",
-                });
-              },
-            });
-            step = "DONE";
-            return result;
-        }
-      } catch (error) {
-        const result = await routeDef.errorResolver(
-          {
-            error,
-            errorOrigin: step,
-          },
-          {
-            method,
-            headers,
-            path,
-            params,
-            searchParams,
-            data,
-          },
-          {
-            ...res,
-            send(options?: any) {
-              return sendFn(options, {
-                status: 500,
-                statusText: "Something wen't wrong",
-              });
-            },
-          },
-        )!;
-
-        step = "DONE";
-        return result;
-      }
-    }
-  }
-  const resultPromise = fn() as ResolverResultPromise;
-  resultPromise.data = async () => {
-    const result = await resultPromise;
-    return result.data();
-  };
-
-  return resultPromise;
-}
-
-function sendFn(
-  options: {
-    data?: any;
-    error?: any;
-    status?: number;
-    statusText?: string;
-    headers?: Record<string, string>;
-  },
-  defaults: {
-    status?: number;
-    statusText?: string;
-    headers?: Record<string, string>;
-  } = {},
-): ResolverResult<any> {
-  const result = {
-    status: options.status || defaults.status,
-    statusText: options.statusText || defaults.statusText,
-    headers: mergeHeaders(defaults.headers || {}, options.headers || {}),
-  } as ResolverResult<any>;
-
-  result.ok = result.status > 199 && result.status < 300;
-
-  result.data = () => {
-    return new Promise((resolve, reject) => {
-      if (result.ok) {
-        resolve(options.data);
-      } else {
-        reject(options.error);
-      }
-    });
-  };
-
-  return result;
-}

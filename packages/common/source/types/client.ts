@@ -15,6 +15,8 @@ import { Simplify } from "./utils";
 
 export type inferFetchOptions<R> = R extends Route<
   any,
+  any,
+  any,
   infer Method,
   infer Path,
   any,
@@ -34,12 +36,27 @@ export type inferFetchOptions<R> = R extends Route<
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
 
+type Data<T> =
+  | { data: T }
+  | {
+      dataAsJSON: T;
+    }
+  | {
+      dataAsFormData: T;
+    }
+  | {
+      dataAsUrlEncoded: T;
+    };
+
+type DistributiveOmit<T, K extends string | number | symbol> = T extends any
+  ? Omit<T, K>
+  : never;
+
 export type FetchOptions = {
   // headers?: Record<string, string | string[] | undefined>;
   headers?: Record<string, string>;
   method: HTTPMethod | string;
   path: string;
-  data?: any;
   searchParams?: Record<string, any>;
   transformer?: Partial<Transformer>;
   prefixUrl?: URL | string;
@@ -47,9 +64,16 @@ export type FetchOptions = {
     input: string | URL | Request,
     init?: RequestInit,
   ) => Promise<Response>;
+
+  data?: any;
+  // dataAsJson?: any;
+  // dataAsFormData?: any;
+  // dataAsUrlEncoded?: any;
 } & Omit<RequestInit, "body" | "headers" | "method">;
 
 export type inferResponsePromise<R> = R extends Route<
+  any,
+  any,
   any,
   any,
   any,
@@ -63,17 +87,6 @@ export type inferResponsePromise<R> = R extends Route<
     >
   : never;
 
-type _FetchShortcutFunction<
-  Routes extends AnyRoute[],
-  Method extends HTTPMethod,
-> = <
-  P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
-  R extends ExtractRoute<Routes[number], Method, P>,
->(
-  path: P,
-  options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
-) => inferResponsePromise<R>;
-
 type FetchShortcutFunction<
   Routes extends AnyRoute[],
   Method extends HTTPMethod,
@@ -86,11 +99,15 @@ type FetchShortcutFunction<
   > extends never
     ? [
         path: P,
-        options?: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
+        options?: Simplify<
+          DistributiveOmit<inferFetchOptions<R>, "method" | "path">
+        >,
       ]
     : [
         path: P,
-        options: Simplify<Omit<inferFetchOptions<R>, "method" | "path">>,
+        options: Simplify<
+          DistributiveOmit<inferFetchOptions<R>, "method" | "path">
+        >,
       ]
 ) => inferResponsePromise<R>;
 
@@ -102,7 +119,7 @@ export interface DredgeClient<Routes extends AnyRoute[]> {
   >(
     path: P,
     options: Simplify<
-      { method: M } & Omit<inferFetchOptions<R>, "path" | "method">
+      { method: M } & DistributiveOmit<inferFetchOptions<R>, "path" | "method">
     >,
   ): inferResponsePromise<R>;
 

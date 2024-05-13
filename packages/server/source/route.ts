@@ -6,8 +6,16 @@ import {
   trimSlashes,
 } from "@dredge/common";
 
-export function dredgeRoute<ServerCtx extends object>() {
-  return createRouteBuilder() as UnresolvedRoute<ServerCtx, "get", [], {}, {}>;
+export function dredgeRoute<Context extends object>() {
+  return createRouteBuilder() as UnresolvedRoute<
+    [],
+    Context,
+    Context,
+    "get",
+    [],
+    {},
+    {}
+  >;
 }
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
@@ -40,10 +48,17 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const builder = {
     _def,
 
-    error: (fn) => {
+    // error: (fn) => {
+    //   return createRouteBuilder({
+    //     ..._def,
+    //     errorResolver: fn,
+    //   });
+    // },
+
+    options: ({ dataShortcuts } = {}) => {
       return createRouteBuilder({
         ..._def,
-        errorResolver: fn,
+        dataShortcuts,
       });
     },
 

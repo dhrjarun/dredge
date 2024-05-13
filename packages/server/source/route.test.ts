@@ -1,13 +1,19 @@
 import { expect, test } from "vitest";
 import z from "zod";
-import { createRouteBuilder } from "./route";
+import { dredgeRoute } from "./route";
 
 test("route", () => {
-  let postRoute = createRouteBuilder()
+  let postRoute = dredgeRoute<{ info: "no-info" }>()
+    .options({
+      dataShortcuts: ["json", "formData"],
+    })
     .path("posts/:user")
     .path("top-of-the-world/:t")
     .params({
       user: z.enum(["dhrjarun", "dd"]),
+    })
+    .use((req, res) => {
+      return res.next();
     })
     .params({
       t: z.string(),
