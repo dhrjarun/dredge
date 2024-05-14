@@ -35,20 +35,22 @@ import { URL } from "url";
 // fix unknown data type bug
 // refactor api execute function
 // path function in root getting single string argument
+// fix searchParam function name type in route
+// header deletion in next function or send function [by setting it to undefined or null]
+
+// -------- implemented but not tested --------
+// shortcuts alias error if used method names or other used, both type error and js
+// -- dataShortcut field to in outTransformer
 
 // ----------------
 // TODO
 // ----------------
 
 // fix types issue in deepMerge function
-// fix searchParam function name type in route
 // header types
-// header deletion in next function or send function [by setting it to undefined or null]
-
-// shortcuts alias error if used method names or other used, both type error and js
 
 // api refactor with transformer, error
-// -- dataShortcut field to in outTransformer
+// -- implement api route resolver
 // -- create directClient adapter
 // -- refactor adapters
 // -- error and error transformer

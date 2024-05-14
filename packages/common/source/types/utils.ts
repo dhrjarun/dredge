@@ -123,3 +123,9 @@ export type PickFirstDefined<TType, TPick> = undefined extends TType
     ? never
     : TPick
   : TType;
+
+// ts-essentials
+
+export type MarkOptional<Type, Keys extends keyof Type> = Type extends Type
+  ? Omit<Type, Keys> & Partial<Pick<Type, Keys>>
+  : never;

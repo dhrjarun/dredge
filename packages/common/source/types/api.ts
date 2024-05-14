@@ -7,11 +7,12 @@ import {
   inferResolverOption,
   inferResolverResultPromise,
   inferRouteContext,
+  inferRouteDataShortcut,
   inferRouteMethod,
   inferRoutePath,
   isAnyRoute,
 } from "./route";
-import { MaybePromise, Overwrite, Simplify } from "./utils";
+import { MarkOptional, MaybePromise, Overwrite, Simplify } from "./utils";
 
 export type inferRoutes<Api> = Api extends DredgeApi<any, infer Routes>
   ? Routes
@@ -57,9 +58,13 @@ export type DredgeResolverOptions<Context> = {
 };
 
 export interface ApiBuilderDef {
+  options: {
+    prefixUrl?: URL;
+    defaultContext?: object;
+  };
   routes: AnyRoute[];
   inputTransformers: TransformInMiddlewareFunction<any, any>[];
-  outputTransformers: TransformOutMiddlewareFunction<any, any>[];
+  outputTransformers: TransformOutMiddlewareFunction<any, any, any>[];
   errorMiddlewares: Function[];
 }
 
@@ -71,6 +76,19 @@ export interface _DredgeApi<
   ErrorCtx,
 > {
   _def: ApiBuilderDef;
+
+  options<const DefaultContext extends Partial<Context>>(options: {
+    defaultContext: DefaultContext;
+    prefixUrl: string | URL;
+  }): _DredgeApi<
+    keyof DefaultContext extends keyof Context
+      ? MarkOptional<Context, keyof DefaultContext>
+      : Context,
+    Routes,
+    TransformInCtx,
+    TransformOutCtx,
+    ErrorCtx
+  >;
 
   routes<$Routes extends Array<AnyRoute>>(
     routes: $Routes,
@@ -95,7 +113,11 @@ export interface _DredgeApi<
   >;
 
   transformOut<$ContextOverride>(
-    fn: TransformOutMiddlewareFunction<TransformOutCtx, $ContextOverride>,
+    fn: TransformOutMiddlewareFunction<
+      TransformOutCtx,
+      $ContextOverride,
+      Routes
+    >,
   ): _DredgeApi<
     Context,
     Routes,
@@ -121,19 +143,19 @@ export interface _DredgeApi<
   ): Promise<ParsedResponse>;
 
   transformRequest(
-    request: RawRequest & {
+    request: (RawRequest | ParsedRequest) & {
       ctx: Context;
     },
   ): Promise<ParsedRequest>;
 
-  transformResponse(
-    request: ParsedRequest,
-    response: ParsedResponse & {
-      ctx: Context;
-    },
-  ): Promise<RawResponse>;
+  // transformResponse(
+  //   request: ParsedRequest,
+  //   response: ParsedResponse & {
+  //     ctx: Context;
+  //   },
+  // ): Promise<RawResponse>;
 
-  transformError(error: any): Promise<RawResponse>;
+  // transformError(error: any): Promise<RawResponse>;
 }
 
 export type AnyDredgeApi = _DredgeApi<any, any, any, any, any>;
@@ -156,7 +178,7 @@ export type ParsedRequest = {
   method: string;
   path: string;
   params: Record<string, string>;
-  searchParams: Record<string, string | string[]>;
+  searchParams: ParsedSearchParams;
   headers: Record<string, string>;
   data: unknown;
 };
@@ -168,7 +190,9 @@ export type ParsedResponse = {
   data: unknown;
 };
 
-type TransformInMiddlewareResult<ContextOverride> = Partial<ParsedRequest> & {
+export type ParsedSearchParams = Record<string, string | string[]>;
+
+type TransformInMiddlewareResult<ContextOverride> = ParsedRequest & {
   ctx: ContextOverride;
 };
 
@@ -176,11 +200,16 @@ type TransformOutMiddlewareResult<ContextOverride> = Partial<RawRequest> & {
   ctx: ContextOverride;
 };
 
-type TransformOutMiddlewareFunction<Context, ContextOverride> = {
+type TransformOutMiddlewareFunction<Context, ContextOverride, Routes> = {
   (
     req: ParsedRequest,
     res: ParsedResponse & {
       ctx: Context;
+      dataShortcut:
+        | "auto"
+        | (Routes extends AnyRoute[]
+            ? inferRouteDataShortcut<Routes[number]>
+            : never);
       next: {
         (): TransformOutMiddlewareResult<{}>;
         <$ContextOverride>(opts: {
@@ -205,7 +234,7 @@ type TransformInMiddlewareFunction<Context, ContextOverride> = {
         <$ContextOverride>(opts: {
           ctx?: $ContextOverride;
           path?: string;
-          searchParams?: number;
+          searchParams?: ParsedSearchParams;
           data?: any;
           headers?: Record<string, string>;
         }): TransformInMiddlewareResult<$ContextOverride>;
