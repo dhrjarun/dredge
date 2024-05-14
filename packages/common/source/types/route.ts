@@ -297,6 +297,20 @@ type TrimSlashes<T> = T extends `/${infer U}/`
 
 type inferPathArray<T> = _inferPathArray<TrimSlashes<T>>;
 
+type NotAllowedDataShortcuts =
+  | "method"
+  | HTTPMethod
+  | "paths"
+  | "path"
+  | "searchParams"
+  | "searchParam"
+  | "params"
+  | "use"
+  | "resolve"
+  | "output"
+  | "data"
+  | "headers";
+
 // TODO
 // IBody and OBody default type
 // OBody Schema implementation
@@ -328,18 +342,20 @@ export interface UnresolvedRoute<
 
   options<const $DataShortcuts extends string[] = []>(options?: {
     dataShortcuts?: $DataShortcuts;
-  }): UnresolvedRoute<
-    {
-      dataShortcuts: $DataShortcuts;
-    },
-    Context,
-    ContextOverride,
-    Method,
-    Paths,
-    SearchParams,
-    IBody,
-    OBody
-  >;
+  }): $DataShortcuts extends NotAllowedDataShortcuts
+    ? "Invalid DataShortcut"
+    : UnresolvedRoute<
+        {
+          dataShortcuts: $DataShortcuts;
+        },
+        Context,
+        ContextOverride,
+        Method,
+        Paths,
+        SearchParams,
+        IBody,
+        OBody
+      >;
 
   path<const T extends string>(
     path: T,
@@ -379,7 +395,7 @@ export interface UnresolvedRoute<
     OBody
   >;
 
-  searchParam<const T extends { [key: string]: Parser }>(
+  searchParams<const T extends { [key: string]: Parser }>(
     queries: T,
   ): UnresolvedRoute<
     Options,
@@ -600,6 +616,20 @@ export type inferRouteContext<R> = R extends Route<
   any
 >
   ? Context
+  : never;
+
+export type inferRouteDataShortcut<R> = R extends Route<
+  infer Options extends { dataShortcuts: string[] },
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? Options["dataShortcuts"][number]
   : never;
 
 export type inferRouteMethod<R> = R extends Route<

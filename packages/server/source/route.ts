@@ -56,6 +56,29 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     // },
 
     options: ({ dataShortcuts } = {}) => {
+      const notAllowedDataShortcuts = [
+        "data",
+        "params",
+        "param",
+        "searchParams",
+        "searchParam",
+        "method",
+        "get",
+        "post",
+        "put",
+        "delete",
+        "patch",
+        "head",
+        "headers",
+        "resolve",
+        "use",
+      ];
+      dataShortcuts?.forEach((item) => {
+        if (notAllowedDataShortcuts.includes(item)) {
+          throw `Invalid DataShortcut: ${item}`;
+        }
+      });
+
       return createRouteBuilder({
         ..._def,
         dataShortcuts,
@@ -117,7 +140,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    searchParam: (searchParams) => {
+    searchParams: (searchParams) => {
       const _searchParams = _def.searchParams;
 
       // check if it already defined
