@@ -51,6 +51,7 @@ import { URL } from "url";
 
 // api refactor with transformer, error
 // -- implement api route resolver
+// -- implement dataShortcut in api js
 // -- create directClient adapter
 // -- refactor adapters
 // -- error and error transformer
