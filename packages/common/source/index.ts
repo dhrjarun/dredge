@@ -6,3 +6,4 @@ export * from "./types/utils";
 export * from "./transformer";
 export * from "./parser";
 export * from "./utils/trim-slashes";
+export * from "./types/direct-client";

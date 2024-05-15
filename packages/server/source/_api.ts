@@ -1,16 +1,16 @@
 import { type ResolverResultPromise, getParseFn } from "@dredge/common";
 import type {
   AnyRoute,
-  DredgeApi,
   ResolverOptions,
   ResolverResult,
+  _DredgeApi,
 } from "@dredge/common";
 import { mergeDeep, mergeHeaders } from "./utils/merge";
 
 export function dredgeApi<Context extends object = {}>() {
   const fn = <const Routes extends AnyRoute[]>(
     routes: Routes,
-  ): DredgeApi<Context, Routes> => {
+  ): _DredgeApi<Context, Routes> => {
     return buildDredgeApi(routes);
   };
 
@@ -20,7 +20,7 @@ export function dredgeApi<Context extends object = {}>() {
 export function buildDredgeApi<
   Context extends object,
   const Routes extends AnyRoute[],
->(routes: Routes): DredgeApi<Context, Routes> {
+>(routes: Routes): _DredgeApi<Context, Routes> {
   const root = new DredgePath({
     name: "$root",
   });
@@ -51,7 +51,7 @@ export function buildDredgeApi<
         ...options,
       });
     },
-  } as DredgeApi<Context, Routes>;
+  } as _DredgeApi<Context, Routes>;
 }
 
 export class DredgePath {

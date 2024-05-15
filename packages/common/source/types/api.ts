@@ -14,40 +14,18 @@ import {
 } from "./route";
 import { MarkOptional, MaybePromise, Overwrite, Simplify } from "./utils";
 
-export type inferRoutes<Api> = Api extends DredgeApi<any, infer Routes>
+export type inferRoutes<Api> = Api extends DredgeApi<
+  any,
+  infer Routes extends AnyRoute[],
+  any,
+  any,
+  any
+>
   ? Routes
   : never;
+
 export type inferRouteUnion<Api> = inferRoutes<Api>[number];
 
-export interface ResolveRoute<
-  Context extends object,
-  Routes extends AnyRoute[],
-> {
-  <
-    P extends inferRoutePath<Routes[number]>,
-    M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
-    R extends ExtractRoute<Routes[number], M, P>,
-  >(
-    path: P,
-    options: isAnyRoute<R> extends true
-      ? Omit<ResolverOptions, "path">
-      : Simplify<
-          { method: M } & Omit<
-            inferResolverOption<R>,
-            "path" | "method" | "ctx"
-          > &
-            (keyof Context extends never ? {} : { ctx: Context })
-        >,
-  ): inferResolverResultPromise<R>;
-}
-
-export interface DredgeApi<Context extends object, Routes extends AnyRoute[]> {
-  _def: {
-    root: any;
-  };
-
-  resolveRoute: ResolveRoute<Context, Routes>;
-}
 export type DredgeResolverOptions<Context> = {
   ctx?: Context;
   method?: HTTPMethod | string;
@@ -68,7 +46,7 @@ export interface ApiBuilderDef {
   errorMiddlewares: Function[];
 }
 
-export interface _DredgeApi<
+export interface DredgeApi<
   Context,
   Routes,
   TransformInCtx,
@@ -80,7 +58,7 @@ export interface _DredgeApi<
   options<const DefaultContext extends Partial<Context>>(options: {
     defaultContext: DefaultContext;
     prefixUrl: string | URL;
-  }): _DredgeApi<
+  }): DredgeApi<
     keyof DefaultContext extends keyof Context
       ? MarkOptional<Context, keyof DefaultContext>
       : Context,
@@ -93,7 +71,7 @@ export interface _DredgeApi<
   routes<$Routes extends Array<AnyRoute>>(
     routes: $Routes,
   ): inferRouteContext<$Routes[number]> extends Context
-    ? _DredgeApi<
+    ? DredgeApi<
         Routes extends Array<AnyRoute> ? [...Routes, ...$Routes] : $Routes,
         Context,
         TransformInCtx,
@@ -104,7 +82,7 @@ export interface _DredgeApi<
 
   transformIn<$ContextOverride>(
     fn: TransformInMiddlewareFunction<TransformInCtx, $ContextOverride>,
-  ): _DredgeApi<
+  ): DredgeApi<
     Context,
     Routes,
     Overwrite<TransformInCtx, $ContextOverride>,
@@ -118,7 +96,7 @@ export interface _DredgeApi<
       $ContextOverride,
       Routes
     >,
-  ): _DredgeApi<
+  ): DredgeApi<
     Context,
     Routes,
     TransformInCtx,
@@ -128,37 +106,37 @@ export interface _DredgeApi<
 
   error(
     fn: ErrorMiddlewareFunction,
-  ): _DredgeApi<Context, Routes, TransformInCtx, TransformOutCtx, ErrorCtx>;
+  ): DredgeApi<Context, Routes, TransformInCtx, TransformOutCtx, ErrorCtx>;
 
-  resolveRoute(
-    request: RawRequest & {
-      ctx: Context;
-    },
-  ): Promise<RawResponse>;
+  resolveRoute(ctx: Context, request: RawRequest): Promise<RawResponse>;
 
   resolveRouteWithoutTransforms(
-    request: Omit<ParsedRequest, "params"> & {
-      ctx: Context;
-    },
+    ctx: Context,
+    request: Omit<ParsedRequest, "params">,
   ): Promise<ParsedResponse>;
 
+  // _transformRequest(
+  //   ctx: Context,
+  //   request: RawRequest | ParsedRequest,
+  // ): Promise<ParsedRequest>;
+
   transformRequest(
-    request: (RawRequest | ParsedRequest) & {
-      ctx: Context;
+    ctx: Context,
+    request: RawRequest & {
+      $parsed: ParsedRequest;
     },
   ): Promise<ParsedRequest>;
 
-  // transformResponse(
-  //   request: ParsedRequest,
-  //   response: ParsedResponse & {
-  //     ctx: Context;
-  //   },
-  // ): Promise<RawResponse>;
+  transformResponse(
+    ctx: Context,
+    request: ParsedRequest,
+    response: ParsedResponse,
+  ): Promise<RawResponse>;
 
   // transformError(error: any): Promise<RawResponse>;
 }
 
-export type AnyDredgeApi = _DredgeApi<any, any, any, any, any>;
+export type AnyDredgeApi = DredgeApi<any, any, any, any, any>;
 
 export type RawRequest = {
   method: string;
@@ -196,7 +174,7 @@ type TransformInMiddlewareResult<ContextOverride> = ParsedRequest & {
   ctx: ContextOverride;
 };
 
-type TransformOutMiddlewareResult<ContextOverride> = Partial<RawRequest> & {
+type TransformOutMiddlewareResult<ContextOverride> = RawResponse & {
   ctx: ContextOverride;
 };
 
@@ -261,3 +239,30 @@ type ErrorMiddlewareFunction = {
     },
   ): MaybePromise<ResolverResult<unknown>>;
 };
+
+interface _ResolveRoute<Context extends object, Routes extends AnyRoute[]> {
+  <
+    P extends inferRoutePath<Routes[number]>,
+    M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
+    R extends ExtractRoute<Routes[number], M, P>,
+  >(
+    path: P,
+    options: isAnyRoute<R> extends true
+      ? Omit<ResolverOptions, "path">
+      : Simplify<
+          { method: M } & Omit<
+            inferResolverOption<R>,
+            "path" | "method" | "ctx"
+          > &
+            (keyof Context extends never ? {} : { ctx: Context })
+        >,
+  ): inferResolverResultPromise<R>;
+}
+
+export interface _DredgeApi<Context extends object, Routes extends AnyRoute[]> {
+  _def: {
+    root: any;
+  };
+
+  resolveRoute: _ResolveRoute<Context, Routes>;
+}

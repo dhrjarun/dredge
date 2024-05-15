@@ -3,17 +3,17 @@ import type {
   AnyDredgeApi,
   AnyRoute,
   ApiBuilderDef,
+  DredgeApi,
   MarkOptional,
   ParsedRequest,
   ParsedResponse,
   ParsedSearchParams,
-  RawRequest,
-  _DredgeApi,
+  RawResponse,
 } from "@dredge/common";
 import { mergeDeep, mergeHeaders } from "./utils/merge";
 
 export function dredgeApi<Context extends object = {}>() {
-  return createApiBuilder({}) as _DredgeApi<
+  return createApiBuilder({}) as DredgeApi<
     Context,
     [],
     Context,
@@ -86,7 +86,7 @@ function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
       });
     },
 
-    transformOut: (fn) => {
+    transformOut(fn) {
       return createApiBuilder({
         ...def,
         outputTransformers: [...def.outputTransformers, fn],
@@ -100,108 +100,89 @@ function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
       });
     },
 
-    resolveRoute: (request) => {
-      return "" as any;
-    },
-    resolveRouteWithoutTransforms: (request) => {
-      return resolveRouteWithoutTransforms(rootPath, request);
-    },
-
-    transformRequest: async (request) => {
-      const { prefixUrl, defaultContext } = def.options;
-      let _path = "";
-      if ("path" in request) {
-        _path = request.path;
-      } else if ("url" in request) {
-        const initialPathname = trimSlashes(prefixUrl?.pathname || "/");
-
-        _path = request.url.pathname;
-
-        if (!_path.startsWith(initialPathname)) {
-          throw "Invalid url";
-        }
-
-        _path = trimSlashes(_path).slice(initialPathname.length);
-      }
-
-      const path = trimSlashes(_path);
-      const pathArray = path.split("/");
-
-      let current = rootPath;
-      pathArray.forEach((item) => {
-        const child = current.getStaticChild(item) || current.getDynamicChild();
-
-        if (!child) {
-          throw "Invalid path";
-        }
-
-        current = child;
-      });
-
-      const routeDef = current.getRoute(request.method)!._def;
-      if (!routeDef) {
-        throw "Invalid path, no route exist";
-      }
-
-      const params: Record<string, string> = routeDef.paths.reduce(
-        (acc: any, item, index) => {
-          if (item.startsWith(":")) {
-            acc[item.replace(":", "")] = pathArray[index];
-          }
-          return acc;
-        },
-        {},
+    async resolveRoute(ctx, request) {
+      const rf = getRouteDef(
+        rootPath,
+        request.method,
+        request.url,
+        def.options.prefixUrl,
       );
 
-      let currentCtx = {
-        ...defaultContext,
-        ...request.ctx,
-      };
-      const searchParams =
-        "searchParams" in request
-          ? request.searchParams
-          : searchParamsToObject(request.url.searchParams);
-      const data = "data" in request ? request.data : null;
+      const { params, path } = rf.getPathParams();
+      const transformedRequest = await this.transformRequest(ctx, {
+        ...request,
+        $parsed: {
+          data: null,
+          params,
+          path,
+          headers: request.headers,
+          method: request.method,
+          searchParams: searchParamsToObject(request.url.searchParams),
+        },
+      });
 
-      let transformedRequest: ParsedRequest = {
-        params,
-        path,
-        headers: request.headers,
-        method: request.method,
-        data,
-        searchParams,
+      return rf.validateAndExecute(
+        {
+          ...transformedRequest,
+          path,
+          params,
+        },
+        ctx,
+      );
+    },
+
+    async resolveRouteWithoutTransforms(ctx, request) {
+      const rf = getRouteDef(rootPath, request.method, request.path);
+
+      const { params, path } = rf.getPathParams();
+
+      return rf.validateAndExecute(
+        {
+          ...request,
+          path,
+          params,
+        },
+        ctx,
+      );
+    },
+
+    async transformRequest(ctx, request) {
+      let transformedRequest = request.$parsed;
+
+      let currentCtx = {
+        ...def.options.defaultContext,
+        ...ctx,
       };
 
       try {
-        if ("url" in request) {
-          for (const middleware of def.inputTransformers) {
-            const result = await middleware({
-              ...request,
-              $parsed: transformedRequest,
-              next: (options?: any) => {
-                const { headers, method, searchParams, params, path } =
-                  transformedRequest;
+        for (const middleware of def.inputTransformers) {
+          const result = await middleware({
+            ...request,
+            ctx: currentCtx,
+            $parsed: transformedRequest,
+            next: (options?: any) => {
+              const { headers, method, searchParams, params, path } =
+                transformedRequest;
 
-                return {
-                  ctx: mergeDeep(currentCtx, options?.ctx || {}),
-                  data: options.data,
-                  headers: mergeHeaders(headers, options?.headers || {}),
-                  method: method,
-                  searchParams: {
-                    ...searchParams,
-                    ...(options?.searchParams || {}),
-                  },
-                  params: params,
-                  path: path,
-                };
-              },
-            });
+              return {
+                ctx: mergeDeep(currentCtx, options?.ctx || {}),
+                data: options.data,
+                headers: mergeHeaders(headers, options?.headers || {}),
+                method: method,
+                searchParams: {
+                  ...searchParams,
+                  ...(options?.searchParams || {}),
+                },
+                params: params,
+                path: path,
+              };
+            },
+          });
 
-            const { ctx, ...newRequest } = result;
+          const { ctx, ...newRequest } = result;
 
-            currentCtx = ctx;
-            transformedRequest = newRequest;
-          }
+          currentCtx = ctx;
+          transformedRequest = newRequest;
         }
       } catch (err) {
         return Promise.reject({});
@@ -209,6 +190,154 @@ function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
 
       return transformedRequest;
     },
+
+    async transformResponse(ctx, request, response) {
+      let transformedResponse: RawResponse = {
+        body: null,
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+      };
+
+      let currentCtx = {
+        ...def.options.defaultContext,
+        ...ctx,
+      };
+
+      try {
+        for (const middleware of def.outputTransformers) {
+          const result = await middleware(request, {
+            ...response,
+            $raw: transformedResponse,
+            ctx: currentCtx,
+            dataShortcut: "auto",
+            next: (options?: any) => {
+              const { status, statusText, headers, body } = transformedResponse;
+
+              return {
+                ctx: mergeDeep(currentCtx, options?.ctx || {}),
+                headers: mergeHeaders(headers, options?.headers || {}),
+                body: options.body || body,
+                status: options.status || status,
+                statusText: options.statusText || statusText,
+              };
+            },
+          });
+
+          const { ctx, ...newResponse } = result;
+
+          currentCtx = ctx;
+          transformedResponse = newResponse;
+        }
+      } catch (err) {
+        return Promise.reject({});
+      }
+
+      return transformedResponse;
+    },
+
+    // _transformRequest: async (ctx, request) => {
+    //   const { prefixUrl, defaultContext } = def.options;
+    //   let _path = "";
+    //   if ("path" in request) {
+    //     _path = request.path;
+    //   } else if ("url" in request) {
+    //     const initialPathname = trimSlashes(prefixUrl?.pathname || "/");
+
+    //     _path = request.url.pathname;
+
+    //     if (!_path.startsWith(initialPathname)) {
+    //       throw "Invalid url";
+    //     }
+
+    //     _path = trimSlashes(_path).slice(initialPathname.length);
+    //   }
+
+    //   const path = trimSlashes(_path);
+    //   const pathArray = path.split("/");
+
+    //   let current = rootPath;
+    //   pathArray.forEach((item) => {
+    //     const child = current.getStaticChild(item) || current.getDynamicChild();
+
+    //     if (!child) {
+    //       throw "Invalid path";
+    //     }
+
+    //     current = child;
+    //   });
+
+    //   const routeDef = current.getRoute(request.method)!._def;
+    //   if (!routeDef) {
+    //     throw "Invalid path, no route exist";
+    //   }
+
+    //   const params: Record<string, string> = routeDef.paths.reduce(
+    //     (acc: any, item, index) => {
+    //       if (item.startsWith(":")) {
+    //         acc[item.replace(":", "")] = pathArray[index];
+    //       }
+    //       return acc;
+    //     },
+    //     {},
+    //   );
+
+    //   let currentCtx = {
+    //     ...defaultContext,
+    //     ...request.ctx,
+    //   };
+    //   const searchParams =
+    //     "searchParams" in request
+    //       ? request.searchParams
+    //       : searchParamsToObject(request.url.searchParams);
+    //   const data = "data" in request ? request.data : null;
+
+    //   let transformedRequest: ParsedRequest = {
+    //     params,
+    //     path,
+    //     headers: request.headers,
+    //     method: request.method,
+    //     data,
+    //     searchParams,
+    //   };
+
+    //   try {
+    //     if ("url" in request) {
+    //       for (const middleware of def.inputTransformers) {
+    //         const result = await middleware({
+    //           ...request,
+    //           $parsed: transformedRequest,
+    //           next: (options?: any) => {
+    //             const { headers, method, searchParams, params, path } =
+    //               transformedRequest;
+
+    //             return {
+    //               ctx: mergeDeep(currentCtx, options?.ctx || {}),
+    //               data: options.data,
+    //               headers: mergeHeaders(headers, options?.headers || {}),
+    //               method: method,
+    //               searchParams: {
+    //                 ...searchParams,
+    //                 ...(options?.searchParams || {}),
+    //               },
+    //               params: params,
+    //               path: path,
+    //             };
+    //           },
+    //         });
+
+    //         const { ctx, ...newRequest } = result;
+
+    //         currentCtx = ctx;
+    //         transformedRequest = newRequest;
+    //       }
+    //     }
+    //   } catch (err) {
+    //     return Promise.reject({});
+    //   }
+
+    //   return transformedRequest;
+    // },
   } as AnyDredgeApi;
 
   return builder;
@@ -230,28 +359,23 @@ function searchParamsToObject(searchParams: URLSearchParams) {
 
 function getRouteDef(
   root: DredgePath,
-  request: RawRequest | ParsedRequest,
+  method: string,
+  url: URL | string,
   prefixUrl?: URL,
 ) {
-  let _path = "";
-  if ("path" in request) {
-    _path = request.path;
-  } else if ("url" in request) {
-    const initialPathname = trimSlashes(prefixUrl?.pathname || "/");
+  let _path = url instanceof URL ? url.pathname : url;
 
-    _path = request.url.pathname;
-
-    if (!_path.startsWith(initialPathname)) {
-      throw "Invalid url";
-    }
-
-    _path = trimSlashes(_path).slice(initialPathname.length);
+  const initialPathname = trimSlashes(prefixUrl?.pathname || "/");
+  if (!_path.startsWith(initialPathname)) {
+    throw "Invalid url";
   }
 
+  _path = trimSlashes(_path).slice(initialPathname.length);
+
+  let current = root;
   const path = trimSlashes(_path);
   const pathArray = path.split("/");
 
-  let current = root;
   pathArray.forEach((item) => {
     const child = current.getStaticChild(item) || current.getDynamicChild();
 
@@ -262,9 +386,176 @@ function getRouteDef(
     current = child;
   });
 
-  const routeDef = current.getRoute(request.method)!._def || null;
+  const routeDef = current.getRoute(method)!._def || null;
 
-  return routeDef;
+  return {
+    getPathParams() {
+      const params: Record<string, string> = routeDef.paths.reduce(
+        (acc: any, item, index) => {
+          if (item.startsWith(":")) {
+            acc[item.replace(":", "")] = pathArray[index];
+          }
+          return acc;
+        },
+        {},
+      );
+
+      return {
+        path,
+        params,
+      };
+    },
+
+    async validate(request: ParsedRequest) {
+      const {
+        path,
+        searchParams = {},
+        data,
+        method = "get",
+        headers = {},
+        params = {},
+      } = request;
+
+      let validatedRequest: any = {
+        method,
+        headers,
+        path,
+        params,
+        data,
+        searchParams,
+      };
+
+      let response: ParsedResponse = {
+        headers: {},
+        data: null,
+      };
+
+      let step:
+        | "PARAM_VALIDATION"
+        | "SEARCH_PARAM_VALIDATION"
+        | "BODY_VALIDATION"
+        | "DONE" = "PARAM_VALIDATION";
+
+      try {
+        switch (step as any) {
+          case "PARAM_VALIDATION":
+            const validatedParams: Record<string, any> = {};
+            for (const [index, item] of routeDef.paths.entries()) {
+              if (item.startsWith(":")) {
+                const parser = routeDef.params[item.replace(":", "")];
+                validatedParams[item] = parser
+                  ? await getParseFn(parser)(pathArray[index])
+                  : pathArray[index];
+              }
+            }
+            validatedRequest.params = validatedParams;
+
+            step = "SEARCH_PARAM_VALIDATION";
+            break;
+          case "SEARCH_PARAM_VALIDATION":
+            const validatedSearchParams: Record<string, any> = {};
+            for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+              validatedSearchParams[key] = await getParseFn(parser)(
+                searchParams[key],
+              );
+            }
+            validatedRequest.searchParams = validatedSearchParams;
+
+            step = "BODY_VALIDATION";
+            break;
+          case "BODY_VALIDATION":
+            let validatedData: unknown;
+
+            if (routeDef.iBody) {
+              validatedData = await getParseFn(routeDef.iBody)(data);
+              validatedRequest.data = validatedData;
+            }
+
+            step = "DONE";
+            break;
+        }
+
+        return [validatedRequest, response];
+      } catch (error) {
+        return Promise.reject({});
+      }
+    },
+
+    async execute(validatedRequest: any, res: any) {
+      let { currentCtx, response } = res;
+
+      let step: "MIDDLEWARE_CALLS" | "RESOLVER_CALL" | "DONE" =
+        "MIDDLEWARE_CALLS";
+
+      try {
+        switch (step as string) {
+          case "MIDDLEWARE_CALLS":
+            for (const fn of routeDef.middlewares) {
+              const middlewareResult = await fn(validatedRequest, {
+                ...response,
+                ctx: currentCtx,
+                next(nextOptions?: any) {
+                  return {
+                    ctx: mergeDeep(currentCtx, nextOptions?.ctx),
+                    headers: mergeHeaders(
+                      response.headers,
+                      nextOptions?.headers,
+                    ),
+                    status: nextOptions?.status,
+                    statusText: nextOptions?.statusText,
+                    data: null,
+                  };
+                },
+              });
+
+              const { ctx, ...newResponse } = middlewareResult;
+              currentCtx = ctx;
+              response = newResponse;
+            }
+
+            step = "RESOLVER_CALL";
+            break;
+          case "RESOLVER_CALL":
+            if (!routeDef.resolver) {
+              throw "No resolver exist";
+            }
+
+            const result = await routeDef.resolver(validatedRequest, {
+              ...response,
+              ctx: currentCtx,
+              send(options?: any) {
+                const dataShortcuts = routeDef.dataShortcuts;
+
+                return {
+                  headers: mergeHeaders(response.headers, options?.headers),
+                  data: options.data,
+                  status: response.status || 200,
+                  statusText: response.statusText || "ok",
+                };
+              },
+            });
+
+            response = result;
+            step = "DONE";
+        }
+
+        return response;
+      } catch (error) {
+        return Promise.reject({});
+      }
+    },
+
+    async validateAndExecute(request: ParsedRequest, ctx: any) {
+      const [req, res] = await this.validate(request);
+
+      const result = this.execute(req, {
+        ...res,
+        ctx,
+      });
+
+      return result;
+    },
+  };
 }
 
 export async function resolveRouteWithoutTransforms(
@@ -373,7 +664,7 @@ export async function resolveRouteWithoutTransforms(
           step = "MIDDLEWARE_CALLS";
           break;
         case "MIDDLEWARE_CALLS":
-          routeDef.middlewares.forEach(async (fn) => {
+          for (const fn of routeDef.middlewares) {
             const middlewareResult = await fn(validatedRequest, {
               ...response,
               ctx: currentCtx,
@@ -388,10 +679,10 @@ export async function resolveRouteWithoutTransforms(
               },
             });
 
-            const { ctx, ...res } = middlewareResult;
+            const { ctx, ...newResponse } = middlewareResult;
             currentCtx = ctx;
-            response = res;
-          });
+            response = newResponse;
+          }
 
           step = "RESOLVER_CALL";
           break;
