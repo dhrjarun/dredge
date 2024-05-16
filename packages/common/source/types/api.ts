@@ -14,7 +14,7 @@ import {
 } from "./route";
 import { MarkOptional, MaybePromise, Overwrite, Simplify } from "./utils";
 
-export type inferRoutes<Api> = Api extends DredgeApi<
+export type inferApiRoutes<Api> = Api extends DredgeApi<
   any,
   infer Routes extends AnyRoute[],
   any,
@@ -24,7 +24,17 @@ export type inferRoutes<Api> = Api extends DredgeApi<
   ? Routes
   : never;
 
-export type inferRouteUnion<Api> = inferRoutes<Api>[number];
+export type inferApiContext<Api> = Api extends DredgeApi<
+  infer Context,
+  any,
+  any,
+  any,
+  any
+>
+  ? Context
+  : {};
+
+export type inferRouteUnion<Api> = inferApiRoutes<Api>[number];
 
 export type DredgeResolverOptions<Context> = {
   ctx?: Context;
@@ -68,12 +78,12 @@ export interface DredgeApi<
     ErrorCtx
   >;
 
-  routes<$Routes extends Array<AnyRoute>>(
+  routes<const $Routes extends Array<AnyRoute>>(
     routes: $Routes,
   ): inferRouteContext<$Routes[number]> extends Context
     ? DredgeApi<
-        Routes extends Array<AnyRoute> ? [...Routes, ...$Routes] : $Routes,
         Context,
+        Routes extends Array<AnyRoute> ? [...Routes, ...$Routes] : $Routes,
         TransformInCtx,
         TransformOutCtx,
         ErrorCtx
@@ -146,8 +156,8 @@ export type RawRequest = {
 };
 
 export type RawResponse = {
-  status?: number;
-  statusText?: string;
+  status: number;
+  statusText: string;
   headers: Record<string, string>;
   body: unknown;
 };
@@ -166,6 +176,7 @@ export type ParsedResponse = {
   statusText?: string;
   headers: Record<string, string>;
   data: unknown;
+  dataShortcutUsed: string;
 };
 
 export type ParsedSearchParams = Record<string, string | string[]>;
@@ -183,7 +194,7 @@ type TransformOutMiddlewareFunction<Context, ContextOverride, Routes> = {
     req: ParsedRequest,
     res: ParsedResponse & {
       ctx: Context;
-      dataShortcut:
+      dataShortcutUsed:
         | "auto"
         | (Routes extends AnyRoute[]
             ? inferRouteDataShortcut<Routes[number]>

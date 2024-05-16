@@ -41,18 +41,12 @@ export interface ResolverOptions {
   searchParams?: Record<string, any>;
 }
 
-// export interface ResolverResult<Data> {
-//   data: () => Promise<Data>;
-//   ok: boolean;
-//   headers: Record<string, string>;
-//   status: number;
-//   statusText: string;
-// }
 export interface ResolverResult<Data> {
   data: Data;
   headers: Record<string, string>;
   status: number;
   statusText: string;
+  dataShortcutUsed: string;
 }
 
 export type ResolverResultPromise<T = any> = {
@@ -247,7 +241,7 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
   paths: string[];
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
-  dataShortcuts?: string[];
+  dataShortcuts: string[];
 
   iBody?: Parser;
   oBody?: Parser;

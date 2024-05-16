@@ -1,12 +1,12 @@
-import { DredgeClient, FetchOptions, inferRoutes } from "@dredge/common";
+import { DredgeClient, FetchOptions, inferApiRoutes } from "@dredge/common";
 import { dredgeFetch } from "./dredge-fetch";
 
 export function createFetchClient<DredgeApi>(
   defaultOptions: FetchDefaultOptions,
-): DredgeClient<inferRoutes<DredgeApi>> {
+): DredgeClient<inferApiRoutes<DredgeApi>> {
   const fetch = ((path, options) => {
     return dredgeFetch(path, mergeFetchOptions(options, defaultOptions));
-  }) as DredgeClient<inferRoutes<DredgeApi>>;
+  }) as DredgeClient<inferApiRoutes<DredgeApi>>;
 
   const alias = ["get", "post", "put", "patch", "delete", "head"] as const;
 

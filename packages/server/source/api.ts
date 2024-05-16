@@ -195,8 +195,8 @@ function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
       let transformedResponse: RawResponse = {
         body: null,
         headers: response.headers,
-        status: response.status,
-        statusText: response.statusText,
+        status: response.status || 200,
+        statusText: response.statusText || "ok",
       };
 
       let currentCtx = {
@@ -210,7 +210,6 @@ function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
             ...response,
             $raw: transformedResponse,
             ctx: currentCtx,
-            dataShortcut: "auto",
             next: (options?: any) => {
               const { status, statusText, headers, body } = transformedResponse;
 
@@ -235,109 +234,6 @@ function createApiBuilder(initDef: Partial<ApiBuilderDef>) {
 
       return transformedResponse;
     },
-
-    // _transformRequest: async (ctx, request) => {
-    //   const { prefixUrl, defaultContext } = def.options;
-    //   let _path = "";
-    //   if ("path" in request) {
-    //     _path = request.path;
-    //   } else if ("url" in request) {
-    //     const initialPathname = trimSlashes(prefixUrl?.pathname || "/");
-
-    //     _path = request.url.pathname;
-
-    //     if (!_path.startsWith(initialPathname)) {
-    //       throw "Invalid url";
-    //     }
-
-    //     _path = trimSlashes(_path).slice(initialPathname.length);
-    //   }
-
-    //   const path = trimSlashes(_path);
-    //   const pathArray = path.split("/");
-
-    //   let current = rootPath;
-    //   pathArray.forEach((item) => {
-    //     const child = current.getStaticChild(item) || current.getDynamicChild();
-
-    //     if (!child) {
-    //       throw "Invalid path";
-    //     }
-
-    //     current = child;
-    //   });
-
-    //   const routeDef = current.getRoute(request.method)!._def;
-    //   if (!routeDef) {
-    //     throw "Invalid path, no route exist";
-    //   }
-
-    //   const params: Record<string, string> = routeDef.paths.reduce(
-    //     (acc: any, item, index) => {
-    //       if (item.startsWith(":")) {
-    //         acc[item.replace(":", "")] = pathArray[index];
-    //       }
-    //       return acc;
-    //     },
-    //     {},
-    //   );
-
-    //   let currentCtx = {
-    //     ...defaultContext,
-    //     ...request.ctx,
-    //   };
-    //   const searchParams =
-    //     "searchParams" in request
-    //       ? request.searchParams
-    //       : searchParamsToObject(request.url.searchParams);
-    //   const data = "data" in request ? request.data : null;
-
-    //   let transformedRequest: ParsedRequest = {
-    //     params,
-    //     path,
-    //     headers: request.headers,
-    //     method: request.method,
-    //     data,
-    //     searchParams,
-    //   };
-
-    //   try {
-    //     if ("url" in request) {
-    //       for (const middleware of def.inputTransformers) {
-    //         const result = await middleware({
-    //           ...request,
-    //           $parsed: transformedRequest,
-    //           next: (options?: any) => {
-    //             const { headers, method, searchParams, params, path } =
-    //               transformedRequest;
-
-    //             return {
-    //               ctx: mergeDeep(currentCtx, options?.ctx || {}),
-    //               data: options.data,
-    //               headers: mergeHeaders(headers, options?.headers || {}),
-    //               method: method,
-    //               searchParams: {
-    //                 ...searchParams,
-    //                 ...(options?.searchParams || {}),
-    //               },
-    //               params: params,
-    //               path: path,
-    //             };
-    //           },
-    //         });
-
-    //         const { ctx, ...newRequest } = result;
-
-    //         currentCtx = ctx;
-    //         transformedRequest = newRequest;
-    //       }
-    //     }
-    //   } catch (err) {
-    //     return Promise.reject({});
-    //   }
-
-    //   return transformedRequest;
-    // },
   } as AnyDredgeApi;
 
   return builder;
@@ -524,13 +420,24 @@ function getRouteDef(
               ...response,
               ctx: currentCtx,
               send(options?: any) {
-                const dataShortcuts = routeDef.dataShortcuts;
+                const dataShortcuts = ["data", ...routeDef.dataShortcuts];
+                let data: any = null;
+                let dataShortcutUsed: string = "auto";
+                for (const item of dataShortcuts) {
+                  if (typeof options[item] !== "undefined") {
+                    data = options[item];
+                    dataShortcutUsed =
+                      item === "data" ? "auto" : dataShortcutUsed;
+                    break;
+                  }
+                }
 
                 return {
                   headers: mergeHeaders(response.headers, options?.headers),
-                  data: options.data,
+                  data: data,
                   status: response.status || 200,
                   statusText: response.statusText || "ok",
+                  dataShortcutUsed,
                 };
               },
             });

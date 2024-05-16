@@ -25,6 +25,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     paths = [],
     params = {},
     searchParams = {},
+    dataShortcuts = [],
     ...rest
   } = initDef;
 
@@ -35,6 +36,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     params,
     searchParams,
     method,
+    dataShortcuts,
     errorResolver: ({ error, errorOrigin }, req, res) => {
       return res.send({
         status: 500,

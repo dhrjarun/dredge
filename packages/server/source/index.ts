@@ -41,6 +41,9 @@ import { URL } from "url";
 // -------- implemented but not tested --------
 // shortcuts alias error if used method names or other used, both type error and js
 // -- dataShortcut field to in outTransformer
+// -- create directClient adapter
+// -- implement dataShortcut in api js
+// -- implement api route resolver
 
 // ----------------
 // TODO
@@ -50,9 +53,6 @@ import { URL } from "url";
 // header types
 
 // api refactor with transformer, error
-// -- implement api route resolver
-// -- implement dataShortcut in api js
-// -- create directClient adapter
 // -- refactor adapters
 // -- error and error transformer
 

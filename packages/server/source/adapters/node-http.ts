@@ -9,12 +9,50 @@ import {
 import busboy from "busboy";
 import { FormDataEncoder } from "form-data-encoder";
 import parseUrl from "parseurl";
+import { joinDuplicateHeaders } from "../utils/headers";
 
 export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
-  api: DredgeApi<Context, AnyRoute[]>;
+  api: DredgeApi<Context, AnyRoute[], Context, Context, Context>;
   transformer?: Partial<Transformer>;
   ctx: Context;
   prefixUrl: URL | string;
+}
+
+export function _createNodeHttpRequestHandler<Context extends object = {}>(
+  options: CreateNodeHttpRequestHandlerOptions<Context>,
+) {
+  const { api, ctx } = options;
+
+  return async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    const url = parseUrl(req);
+    const prefixUrl =
+      options.prefixUrl instanceof URL
+        ? options.prefixUrl
+        : new URL(options.prefixUrl);
+
+    if (!url) {
+      throw "invalid url";
+    }
+
+    const body = await getRequestBody(req);
+
+    const result = await api.resolveRoute(ctx, {
+      url: new URL(url),
+      body,
+      headers: joinDuplicateHeaders(req.headers || {}),
+      method: req.method || "get",
+    });
+
+    res.statusCode = result.status;
+    res.statusMessage = result.statusText;
+
+    Object.entries(result.headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+
+    res.write(result.body);
+    res.end();
+  };
 }
 
 export function createNodeHttpRequestHandler<Context extends object = {}>(
@@ -38,7 +76,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
       throw "Invalid url";
     }
     const path = trimSlashes(urlPathname).slice(initialPathname.length);
-    const body = getRequestBody(req, { transformer });
+    const body = getBody(req, { transformer });
     const data = await body.data();
     const searchParams = transformer.searchParams.deserialize(
       new URLSearchParams(url.search ?? ""),
@@ -75,7 +113,26 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
   };
 }
 
-export function getRequestBody(
+function getRequestBody(req: http.IncomingMessage) {
+  let buf: Buffer | null = null;
+
+  return new Promise<Buffer>((resolve, reject) => {
+    const bodyChunks: any[] = [];
+    req
+      .on("error", (err) => {
+        reject(err);
+      })
+      .on("data", (chunk) => {
+        bodyChunks.push(chunk);
+      })
+      .on("end", () => {
+        buf = Buffer.concat(bodyChunks);
+        resolve(buf);
+      });
+  });
+}
+
+export function getBody(
   req: http.IncomingMessage,
   options: { transformer?: Partial<Transformer> },
 ) {
