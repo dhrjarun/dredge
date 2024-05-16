@@ -11,7 +11,7 @@ import {
 } from "./route";
 import { RequiredKeys, Simplify } from "./utils";
 
-interface ResolverOptions {
+export interface DirectClientOptions {
   ctx?: object;
   method?: HTTPMethod | string;
   data?: any;
