@@ -1,4 +1,4 @@
-import { HTTPMethod } from "./http";
+import { DredgeHeaders, DredgeSearchParams, HTTPMethod } from "./http";
 import {
   AnyRoute,
   ExtractRoute,
@@ -65,9 +65,9 @@ export interface DredgeApi<
 > {
   _def: ApiBuilderDef;
 
-  options<const DefaultContext extends Partial<Context>>(options: {
-    defaultContext: DefaultContext;
-    prefixUrl: string | URL;
+  options<const DefaultContext extends Partial<Context> = {}>(options: {
+    prefixUrl?: string | URL;
+    defaultContext?: DefaultContext;
   }): DredgeApi<
     keyof DefaultContext extends keyof Context
       ? MarkOptional<Context, keyof DefaultContext>
@@ -151,14 +151,14 @@ export type AnyDredgeApi = DredgeApi<any, any, any, any, any>;
 export type RawRequest = {
   method: string;
   url: URL;
-  headers: Record<string, string>;
+  headers: DredgeHeaders;
   body: unknown;
 };
 
 export type RawResponse = {
   status: number;
   statusText: string;
-  headers: Record<string, string>;
+  headers: DredgeHeaders;
   body: unknown;
 };
 
@@ -166,8 +166,8 @@ export type ParsedRequest = {
   method: string;
   path: string;
   params: Record<string, string>;
-  searchParams: ParsedSearchParams;
-  headers: Record<string, string>;
+  searchParams: DredgeSearchParams;
+  headers: DredgeHeaders;
   data: unknown;
 };
 
@@ -178,8 +178,6 @@ export type ParsedResponse = {
   data: unknown;
   dataShortcutUsed: string;
 };
-
-export type ParsedSearchParams = Record<string, string | string[]>;
 
 type TransformInMiddlewareResult<ContextOverride> = ParsedRequest & {
   ctx: ContextOverride;
@@ -223,7 +221,7 @@ type TransformInMiddlewareFunction<Context, ContextOverride> = {
         <$ContextOverride>(opts: {
           ctx?: $ContextOverride;
           path?: string;
-          searchParams?: ParsedSearchParams;
+          searchParams?: DredgeSearchParams;
           data?: any;
           headers?: Record<string, string>;
         }): TransformInMiddlewareResult<$ContextOverride>;

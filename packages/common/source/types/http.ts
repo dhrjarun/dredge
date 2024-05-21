@@ -15,3 +15,6 @@ export type DredgeResponsePromise<T = any> = {
 
   data(): Promise<T>;
 } & Promise<DredgeResponse<T>>;
+
+export type DredgeSearchParams = Record<string, string | string[]>;
+export type DredgeHeaders = Record<string, string>;
