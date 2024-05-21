@@ -1,13 +1,9 @@
-import type { AddressInfo } from "net";
-import { createFetchClient } from "@dredge/client";
-import { DredgeApi, inferApiRoutes } from "@dredge/common";
-import { afterEach, expect, test } from "vitest";
+import { inferApiRoutes } from "@dredge/common";
+import { expect, test } from "vitest";
 import z from "zod";
 import { dredgeApi } from "../api";
-import { dredge } from "../dredge";
 import { dredgeRoute } from "../route";
 import { createDirectClient } from "./direct-client";
-import { CreateHTTPServerOptions, createHTTPServer } from "./standalone";
 
 const route = dredgeRoute();
 
@@ -66,8 +62,6 @@ const api = dredgeApi().routes([
     }),
 ]);
 
-type rs = inferApiRoutes<typeof api>;
-
 const client = createDirectClient(api);
 
 test("direct-client", async () => {
@@ -82,23 +76,24 @@ test("direct-client", async () => {
       size: "no-size",
     },
   });
+
   expect(response.data).toMatchObject({
     age: 20,
   });
 });
 
-// test("formdata", async () => {
-//   const data = await client
-//     .post("/form", {
-//       data: {
-//         name: "fileName",
-//         file: new Blob(["good file"], {}),
-//       },
-//       headers: {
-//         "Content-Type": "multipart/form-data",
-//       },
-//     })
-//     .data();
+test("formdata", async () => {
+  const data = await client
+    .post("/form", {
+      data: {
+        name: "fileName",
+        file: new Blob(["good file"], {}),
+      },
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+    .data();
 
-//   expect(await data.file.text()).toBe("good file");
-// });
+  expect(await data.file.text()).toBe("good file");
+});

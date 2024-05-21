@@ -37,6 +37,7 @@ import { URL } from "url";
 // path function in root getting single string argument
 // fix searchParam function name type in route
 // header deletion in next function or send function [by setting it to undefined or null]
+// fix types issue in deepMerge function
 
 // -------- implemented but not tested --------
 // shortcuts alias error if used method names or other used, both type error and js
@@ -49,19 +50,20 @@ import { URL } from "url";
 // TODO
 // ----------------
 
-// fix types issue in deepMerge function
 // header types
 
-// api refactor with transformer, error
+// API
 // -- refactor adapters
 // -- error and error transformer
+// fix directClient responsePromise data function not working
+// Implement type check of Context of all routes and API in .routes method of apiBuilder
 
 // Client
 // transformer and error implementation
-// dataShortcut implementation
+// dataShortcut implementation [need to ask some question]
 // return full error instead of dataError in client and everywhere
 // create Request error
-// think what can be done with ctx in here
+// think what can be done with ctx in here [ it will be of type Record<string, unknown>]
 
 // better names
 // docs on public functions
@@ -109,3 +111,11 @@ import { URL } from "url";
 // })
 // deserializeWith((req, res) => {})
 // [serializeWith, deserializeWith]
+
+function fn<T, U>(arg: { t: T; u: U }) {
+  return arg;
+}
+
+fn({ t: 2, u: 3 });
+
+fn<2>({ t: 2, u: 3 });

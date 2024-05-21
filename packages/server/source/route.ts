@@ -90,7 +90,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     path: (path) => {
       const _paths = _def.paths;
       const paths = trimSlashes(path).split("/");
-      console.log("paths", paths);
 
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
       paths.forEach((item) => {

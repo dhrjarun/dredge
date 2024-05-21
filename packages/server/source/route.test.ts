@@ -18,7 +18,7 @@ test("route", () => {
     .params({
       t: z.string(),
     })
-    .searchParam({
+    .searchParams({
       size: z.string(),
     })
     .post(z.string())

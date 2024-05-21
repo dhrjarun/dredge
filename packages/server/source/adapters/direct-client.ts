@@ -38,13 +38,13 @@ export function createDirectClient<const Api extends AnyDredgeApi>(
       },
     );
 
-    return decorateResponse(result);
+    return decorateResponsePromise(result);
   };
 
   const alias = ["get", "post", "put", "patch", "delete", "head"] as const;
 
   alias.forEach((method) => {
-    client[method] = (path: any, options?: DirectClientOptions) => {
+    client[method] = async (path: any, options?: DirectClientOptions) => {
       const {
         ctx = {},
         data = null,
@@ -52,7 +52,7 @@ export function createDirectClient<const Api extends AnyDredgeApi>(
         searchParams = {},
       } = options || {};
 
-      const result = api.resolveRouteWithoutTransforms(ctx, {
+      const responsePromise = api.resolveRouteWithoutTransforms(ctx, {
         path,
         data,
         method,
@@ -60,18 +60,16 @@ export function createDirectClient<const Api extends AnyDredgeApi>(
         searchParams,
       });
 
-      return decorateResponse(result);
+      decorateResponsePromise(responsePromise);
+      return responsePromise;
     };
   });
 
   return client as DirectClient<inferApiRoutes<Api>>;
 }
 
-function decorateResponse(res: any) {
-  res.data = async () => {
-    const result = await res;
-    return result.data;
+function decorateResponsePromise(responsePromise: any) {
+  responsePromise.data = async () => {
+    return (await responsePromise).data;
   };
-
-  return res;
 }
