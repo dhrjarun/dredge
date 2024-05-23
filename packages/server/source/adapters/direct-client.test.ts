@@ -1,4 +1,3 @@
-import { inferApiRoutes } from "@dredge/common";
 import { expect, test } from "vitest";
 import z from "zod";
 import { dredgeApi } from "../api";

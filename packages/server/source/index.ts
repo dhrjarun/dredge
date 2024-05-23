@@ -38,6 +38,7 @@ import { URL } from "url";
 // fix searchParam function name type in route
 // header deletion in next function or send function [by setting it to undefined or null]
 // fix types issue in deepMerge function
+// fix directClient responsePromise data function not working
 
 // -------- implemented but not tested --------
 // shortcuts alias error if used method names or other used, both type error and js
@@ -53,17 +54,17 @@ import { URL } from "url";
 // header types
 
 // API
-// -- refactor adapters
-// -- error and error transformer
-// fix directClient responsePromise data function not working
+// error and error transformer
+// refactor adapters
 // Implement type check of Context of all routes and API in .routes method of apiBuilder
+// Implement type change in API context, if given defaultContext in options method
 
 // Client
-// transformer and error implementation
-// dataShortcut implementation [need to ask some question]
-// return full error instead of dataError in client and everywhere
-// create Request error
 // think what can be done with ctx in here [ it will be of type Record<string, unknown>]
+// transformer implementation
+// error implementation -- create Request error
+// dataShortcut implementation
+// return full error instead of dataError in client and everywhere
 
 // better names
 // docs on public functions
