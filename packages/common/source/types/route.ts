@@ -1,36 +1,12 @@
 import { IsAny } from "ts-essentials";
-import { Parser, ParserWithoutInput, inferParserType } from "../parser";
-import { HTTPMethod } from "./http";
+import {
+  Parser,
+  ParserWithoutInput,
+  inferCurrentData,
+  inferParserType,
+} from "../parser";
+import { DredgeHeaders, DredgeSearchParams, HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
-
-export interface MiddlewareResult<C> {
-  ctx: C;
-  headers: Record<string, string>; // Header names are lower-case
-  status?: number;
-  statusText?: string;
-  data: any;
-}
-
-export type inferSearchParamsType<SearchParams> = Simplify<{
-  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
-}>;
-
-export type MiddlewareFunction<
-  Options,
-  Context,
-  ContextOverride,
-  Paths,
-  Params,
-  SearchParams,
-  Method,
-  IBody,
-  OBody,
-> = {
-  (
-    req: Req<Method, Paths, Params, SearchParams, IBody>,
-    res: Omit<Res<Options, Context, OBody>, "send">,
-  ): MaybePromise<MiddlewareResult<ContextOverride>>;
-};
 
 export interface ResolverOptions {
   ctx?: object;
@@ -41,17 +17,24 @@ export interface ResolverOptions {
   searchParams?: Record<string, any>;
 }
 
-export interface ResolverResult<Data> {
-  data: Data;
-  headers: Record<string, string>;
-  status: number;
-  statusText: string;
-  dataShortcutUsed: string;
-}
-
 export type ResolverResultPromise<T = any> = {
   data(): Promise<T>;
 } & Promise<ResolverResult<T>>;
+
+export type inferResolverResult<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer OBody,
+  any
+>
+  ? ResolverResult<OBody extends Parser ? inferParserType<OBody> : unknown>
+  : never;
 
 export type inferResolverOption<R> = R extends Route<
   any,
@@ -62,6 +45,7 @@ export type inferResolverOption<R> = R extends Route<
   any,
   infer SearchParams extends Record<string, Parser>,
   infer IBody,
+  any,
   any
 >
   ? {
@@ -75,6 +59,35 @@ export type inferResolverOption<R> = R extends Route<
         ? {}
         : { searchParams: inferSearchParamsType<SearchParams> })
   : never;
+
+// ---
+
+export type inferSearchParamsType<SearchParams> = Simplify<{
+  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+}>;
+
+type inferParamsType<Params> = Simplify<{
+  [key in keyof Params]: Params[key] extends null
+    ? string
+    : inferParserType<Params[key]>;
+}>;
+
+export interface MiddlewareResult<C, Data = null> {
+  ctx: C;
+  headers: Record<string, string>; // Header names are lower-case
+  status?: number;
+  statusText?: string;
+  data?: Data;
+  dataType?: string;
+}
+
+export interface ResolverResult<Data> {
+  data: Data;
+  headers: DredgeHeaders;
+  status: number;
+  statusText: string;
+  dataShortcutUsed: string;
+}
 
 type Data<T, Shortcuts> =
   | { data: T }
@@ -95,7 +108,8 @@ export type isAnyRoute<R> = R extends Route<
   infer Params,
   infer SearchParams,
   infer IBody,
-  infer OBody
+  infer OBody,
+  infer EBody
 >
   ?
       | IsAny<Context>
@@ -105,24 +119,11 @@ export type isAnyRoute<R> = R extends Route<
       | IsAny<Params>
       | IsAny<SearchParams>
       | IsAny<IBody>
-      | IsAny<OBody> extends true
+      | IsAny<OBody>
+      | IsAny<EBody> extends true
     ? true
     : false
   : false;
-
-export type inferResolverResult<R> = R extends Route<
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  infer OBody
->
-  ? ResolverResult<OBody extends Parser ? inferParserType<OBody> : unknown>
-  : never;
 
 export type inferResolverResultPromise<R> = R extends Route<
   any,
@@ -133,106 +134,153 @@ export type inferResolverResultPromise<R> = R extends Route<
   any,
   any,
   any,
-  infer OBody
+  infer OBody,
+  any
 >
   ? ResolverResultPromise<
       OBody extends Parser ? inferParserType<OBody> : unknown
     >
   : never;
 
-export type ErrorResolverFunction = {
+type inferDataTypes<Options> = Options extends { dataShortcuts?: any }
+  ? Options["dataShortcuts"]
+  : [];
+
+export type MiddlewareFunction<
+  DataTypes,
+  Context,
+  NewContext,
+  Method,
+  Params,
+  SearchParams,
+  IData,
+  OData,
+  NewOData,
+> = {
   (
-    errorInfo: {
-      errorOrigin: string;
-      error: unknown;
-    },
-    req: Req<string, string[], any, any, any>,
-    res: Omit<Res<any, any, "error">, "next">,
-  ): MaybePromise<ResolverResult<unknown>>;
+    req: Readonly<{
+      method: Method;
+      path: string;
+      params: Params;
+      searchParams: SearchParams;
+      headers: DredgeHeaders;
+      data: IData;
+    }>,
+    res: Readonly<{
+      ctx: Context;
+      headers: DredgeHeaders;
+      status?: number;
+      statusText?: string;
+      data: OData;
+      next: NextFunction<DataTypes>;
+    }>,
+  ): MaybePromise<MiddlewareResult<NewContext, NewOData>>;
+};
+
+export type ErrorMiddlewareFunction<
+  DataTypes,
+  Context,
+  NewContext,
+  EData,
+  NewEData,
+> = {
+  (
+    error: any,
+    req: Readonly<{
+      method: string;
+      path: string;
+      params: Record<string, string>;
+      searchParams: DredgeSearchParams;
+      headers: DredgeHeaders;
+      data: unknown;
+    }>,
+    res: Readonly<{
+      ctx: Context;
+      headers: DredgeHeaders;
+      status?: number;
+      statusText?: string;
+      data: EData;
+      next: NextFunction<DataTypes>;
+    }>,
+  ): MaybePromise<MiddlewareResult<NewContext, NewEData>>;
 };
 
 export type ResolverFunction<
-  Options,
+  DataTypes,
   Context,
   Method,
-  Paths,
   Params,
   SearchParams,
-  IBody,
-  OBody,
+  IData,
   OData,
+  ODataStructure,
+  NewOData,
 > = {
   (
-    req: Req<Method, Paths, Params, SearchParams, IBody>,
-    res: Omit<Res<Options, Context, OBody>, "next">,
-  ): MaybePromise<ResolverResult<OData>>;
+    req: Readonly<{
+      method: Method;
+      path: string;
+      params: Params;
+      searchParams: SearchParams;
+      headers: DredgeHeaders;
+      data: IData;
+    }>,
+    res: Readonly<{
+      ctx: Context;
+      headers: DredgeHeaders;
+      status?: number;
+      statusText?: string;
+      data: OData;
+      end: EndFunction<DataTypes, ODataStructure>;
+    }>,
+  ): MaybePromise<ResolverResult<NewOData>>;
   _type?: string | undefined;
 };
 
-type Req<Method, _Paths, Params, SearchParams, IBody> = {
-  readonly method: Method;
-  readonly path: string;
-
-  readonly params: {
-    [key in keyof Params]: Params[key] extends null
-      ? string
-      : inferParserType<Params[key]>;
-  };
-  readonly searchParams: {
-    [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
-  };
-  readonly headers: Record<string, string | string[] | undefined>;
-
-  readonly data: IBody extends null ? never : inferParserType<IBody>;
+export type RejectorFunction<DataTypes, Context, Method, OData, NewOData> = {
+  (
+    error: any,
+    req: Readonly<{
+      method: Method;
+      path: string;
+      params: Record<string, string>;
+      searchParams: DredgeSearchParams;
+      headers: DredgeHeaders;
+      data: unknown;
+    }>,
+    res: Readonly<{
+      ctx: Context;
+      headers: DredgeHeaders;
+      status?: number;
+      statusText?: string;
+      data: OData;
+      end: EndFunction<DataTypes>;
+    }>,
+  ): MaybePromise<ResolverResult<NewOData>>;
+  _type?: string | undefined;
 };
 
-type Res<
-  Options,
-  Context,
-  OBody,
-  type extends "error" | "success" = "success",
-> = {
-  readonly ctx: Context;
-  readonly headers: Record<string, string | string[] | undefined>;
-  readonly status?: number;
-  readonly statusText?: string;
-  readonly data: OBody extends null ? never : inferParserType<OBody>;
-  send: type extends "success"
-    ? {
-        (): ResolverResult<unknown>;
-        <T>(
-          opts: Data<
-            T,
-            Options extends { dataShortcuts?: any }
-              ? Options["dataShortcuts"]
-              : []
-          > & {
-            // data?: T;
-            headers?: Record<string, string>;
-            status?: number;
-            statusText?: string;
-          },
-        ): ResolverResult<T>;
-      }
-    : {
-        (): ResolverResult<unknown>;
-        (opts: {
-          error?: any;
-          headers?: Record<string, string>;
-          status?: number;
-          statusText?: string;
-        }): ResolverResult<unknown>;
-      };
-
-  next: {
-    (): MiddlewareResult<{}>;
-    <$ContextOverride>(opts: {
+type NextFunction<DataTypes = [], DT = any> = {
+  (): MiddlewareResult<{}>;
+  <$ContextOverride, T extends DT>(
+    opts: Data<T, DataTypes> & {
       ctx?: $ContextOverride;
       headers?: Record<string, string>;
       status?: number;
       statusText?: string;
-    }): MiddlewareResult<$ContextOverride>;
-  };
+    },
+  ): MiddlewareResult<$ContextOverride, T>;
+};
+
+type EndFunction<DataTypes = [], DT = any> = {
+  (): ResolverResult<null>;
+  <T extends DT>(
+    opts: Data<T, DataTypes> & {
+      headers?: Record<string, string>;
+      status?: number;
+      statusText?: string;
+    },
+  ): ResolverResult<T>;
 };
 
 export type RouteBuilderDef<isResolved extends boolean = boolean> = {
@@ -257,7 +305,7 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
     any,
     any
   >[];
-  errorResolver: ErrorResolverFunction;
+  errorMiddlewares: ErrorMiddlewareFunction<any, any, any, any, any>[];
   resolver?: ResolverFunction<any, any, any, any, any, any, any, any, any>;
 };
 
@@ -271,6 +319,7 @@ export interface Route<
   SearchParams,
   IBody,
   OBody,
+  EBody,
 > {
   _def: RouteBuilderDef<true>;
 }
@@ -292,6 +341,7 @@ type TrimSlashes<T> = T extends `/${infer U}/`
 type inferPathArray<T> = _inferPathArray<TrimSlashes<T>>;
 
 type NotAllowedDataShortcuts =
+  | "default"
   | "method"
   | HTTPMethod
   | "paths"
@@ -304,6 +354,24 @@ type NotAllowedDataShortcuts =
   | "output"
   | "data"
   | "headers";
+
+interface ContextOverrideType {
+  success: object;
+  error: object;
+}
+
+type GetContextOverride<
+  T,
+  U extends keyof ContextOverrideType,
+> = T extends ContextOverrideType ? T[U] : {};
+
+type UpdateCurrentDataType<T, U> = T extends { _current: any }
+  ? Omit<T, "_current"> & { _current: U }
+  : { _current: U };
+
+type UpdateActualDataType<T, U> = T extends { _current: any }
+  ? U & { _current: T["_current"] }
+  : U;
 
 // TODO
 // IBody and OBody default type
@@ -318,21 +386,9 @@ export interface UnresolvedRoute<
   SearchParams = {},
   IBody = null,
   OBody = null,
+  EBody = null,
 > {
   _def: RouteBuilderDef<false>;
-
-  // error(
-  //   fn: ErrorResolverFunction,
-  // ): UnresolvedRoute<
-  //   Options,
-  //   Context,
-  //   ContextOverride,
-  //   Method,
-  //   Paths,
-  //   SearchParams,
-  //   IBody,
-  //   OBody
-  // >;
 
   options<const $DataShortcuts extends string[] = []>(options?: {
     dataShortcuts?: $DataShortcuts;
@@ -368,7 +424,8 @@ export interface UnresolvedRoute<
     },
     SearchParams,
     IBody,
-    OBody
+    OBody,
+    EBody
   >;
 
   params<
@@ -386,7 +443,8 @@ export interface UnresolvedRoute<
     Overwrite<Params, T>,
     SearchParams,
     IBody,
-    OBody
+    OBody,
+    EBody
   >;
 
   searchParams<const T extends { [key: string]: Parser }>(
@@ -399,43 +457,99 @@ export interface UnresolvedRoute<
     Paths,
     Params,
     T,
-    IBody
+    IBody,
+    EBody
   >;
 
-  use<$ContextOverride>(
+  use<NewContext, NewOData>(
     fn: MiddlewareFunction<
-      Options,
-      ContextOverride,
-      $ContextOverride,
-      Paths,
-      Params,
-      SearchParams,
+      inferDataTypes<Options>,
+      GetContextOverride<ContextOverride, "success">,
+      NewContext,
       Method,
-      IBody,
-      OBody
+      inferParamsType<Params>,
+      inferSearchParamsType<SearchParams>,
+      inferParserType<IBody>,
+      inferCurrentData<OBody>,
+      NewOData
     >,
   ): UnresolvedRoute<
     Options,
     Context,
-    Overwrite<ContextOverride, $ContextOverride>,
+    // Overwrite<ContextOverride, $ContextOverride>,
+    {
+      success: Overwrite<
+        GetContextOverride<ContextOverride, "success">,
+        NewContext
+      >;
+      error: GetContextOverride<ContextOverride, "error">;
+    },
     Method,
     Paths,
     Params,
     SearchParams,
-    IBody
+    IBody,
+    UpdateCurrentDataType<OBody, NewOData>,
+    EBody
   >;
 
-  resolve<T>(
-    fn: ResolverFunction<
-      Options,
-      ContextOverride,
+  error<NewContext, NewEData>(
+    fn: ErrorMiddlewareFunction<
+      inferDataTypes<Options>,
+      GetContextOverride<ContextOverride, "error">,
+      NewContext,
+      inferCurrentData<EBody>,
+      NewEData
+    >,
+  ): UnresolvedRoute<
+    Options,
+    Context,
+    {
+      success: GetContextOverride<ContextOverride, "success">;
+      error: Overwrite<
+        GetContextOverride<ContextOverride, "error">,
+        NewContext
+      >;
+    },
+    Method,
+    Paths,
+    SearchParams,
+    IBody,
+    OBody,
+    EBody
+  >;
+
+  output<P extends Parser>(): UnresolvedRoute<
+    Options,
+    Context,
+    ContextOverride,
+    Method,
+    Paths,
+    Params,
+    SearchParams,
+    IBody,
+    UpdateActualDataType<OBody, P>,
+    EBody
+  >;
+
+  done<ST, ET>(
+    resolve: ResolverFunction<
+      inferDataTypes<Options>,
+      GetContextOverride<ContextOverride, "success">,
       Method,
-      Paths,
-      Params,
-      SearchParams,
-      IBody,
-      OBody,
-      T
+      inferParamsType<Params>,
+      inferSearchParamsType<SearchParams>,
+      inferParserType<IBody>,
+      inferCurrentData<OBody>,
+      inferParserType<OBody>,
+      ST
+    >,
+    reject: RejectorFunction<
+      inferDataTypes<Options>,
+      GetContextOverride<ContextOverride, "error">,
+      Method,
+      inferCurrentData<EBody>,
+      ET
     >,
   ): Route<
     Options,
@@ -446,7 +560,12 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    ParserWithoutInput<T>
+    inferParserType<OBody> extends never
+      ? UpdateCurrentDataType<ParserWithoutInput<ST>, ST>
+      : UpdateCurrentDataType<OBody, ST>,
+    inferParserType<EBody> extends never
+      ? UpdateCurrentDataType<ParserWithoutInput<ET>, ET>
+      : UpdateCurrentDataType<EBody, ET>
   >;
 
   method<M extends HTTPMethod, P extends Parser>(
@@ -461,7 +580,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     P,
-    OBody
+    OBody,
+    EBody
   >;
   get(): UnresolvedRoute<
     Options,
@@ -472,7 +592,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    OBody
+    OBody,
+    EBody
   >;
   post<P extends Parser>(
     parser: P,
@@ -485,7 +606,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     P,
-    OBody
+    OBody,
+    EBody
   >;
   put<P extends Parser>(
     parser: P,
@@ -498,7 +620,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     P,
-    OBody
+    OBody,
+    EBody
   >;
   delete(): UnresolvedRoute<
     Options,
@@ -509,7 +632,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    OBody
+    OBody,
+    EBody
   >;
   patch<P extends Parser>(
     parser: P,
@@ -522,7 +646,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     P,
-    OBody
+    OBody,
+    EBody
   >;
   head(): UnresolvedRoute<
     Options,
@@ -533,11 +658,12 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    OBody
+    OBody,
+    EBody
   >;
 }
 
-export type AnyRoute = Route<any, any, any, any, any, any, any, any, any>;
+export type AnyRoute = Route<any, any, any, any, any, any, any, any, any, any>;
 export type AnyUnresolvedRoute = UnresolvedRoute<
   any,
   any,
@@ -573,6 +699,7 @@ export type inferRoutePath<R> = R extends Route<
   infer Params extends Record<string, Parser>,
   any,
   any,
+  any,
   any
 >
   ? inferPathType<Path, Params>
@@ -591,6 +718,7 @@ export type ExtractRoute<
   infer Params extends Record<string, Parser>,
   any,
   any,
+  any,
   any
 >
   ? [Method, Path] extends [M, inferPathType<PathArray, Params>]
@@ -601,6 +729,7 @@ export type ExtractRoute<
 export type inferRouteContext<R> = R extends Route<
   any,
   infer Context,
+  any,
   any,
   any,
   any,
@@ -621,6 +750,7 @@ export type inferRouteDataShortcut<R> = R extends Route<
   any,
   any,
   any,
+  any,
   any
 >
   ? Options["dataShortcuts"][number]
@@ -631,6 +761,7 @@ export type inferRouteMethod<R> = R extends Route<
   any,
   any,
   infer Method extends HTTPMethod,
+  any,
   any,
   any,
   any,
