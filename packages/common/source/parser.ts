@@ -1,49 +1,44 @@
-import { z } from "zod";
-
 // zod / typeschema
-export type ParserZodEsque<Input, ParsedInput, Current = Input> = {
-  _input: Input;
-  _output: ParsedInput;
-  _current: Current;
+export type ParserZodEsque<TInput, TParsedInput> = {
+  _input: TInput;
+  _output: TParsedInput;
 };
 
-export type ParserMyZodEsque<Input, Current = Input> = {
-  parse: (input: any) => Input;
-  _current: Current;
+export type ParserMyZodEsque<TInput> = {
+  parse: (input: any) => TInput;
 };
 
-export type ParserSuperstructEsque<Input, Current = Input> = {
-  create: (input: unknown) => Input;
-  _current: Current;
+export type ParserSuperstructEsque<TInput> = {
+  create: (input: unknown) => TInput;
 };
 
-export type ParserCustomValidatorEsque<Input, Current = Input> = {
-  (input: unknown): Promise<Input> | Input;
-  _current: Current;
+export type ParserCustomValidatorEsque<TInput> = (
+  input: unknown,
+) => Promise<TInput> | TInput;
+
+export type ParserYupEsque<TInput> = {
+  validateSync: (input: unknown) => TInput;
 };
 
-export type ParserYupEsque<Input, Current = Input> = {
-  validateSync: (input: unknown) => Input;
-  _current: Current;
+export type ParserScaleEsque<TInput> = {
+  assert(value: unknown): asserts value is TInput;
 };
 
-export type ParserScaleEsque<Input, Current = Input> = {
-  assert(value: unknown): asserts value is Input;
-  _current: Current;
+export type NoParser<Input = any> = {
+  _noParserType: Input;
 };
 
-export type ParserWithoutInput<TInput, Current = TInput> =
-  | ParserCustomValidatorEsque<TInput, Current>
-  | ParserMyZodEsque<TInput, Current>
-  | ParserScaleEsque<TInput, Current>
-  | ParserSuperstructEsque<TInput, Current>
-  | ParserYupEsque<TInput, Current>;
+export type ParserWithoutInput<TInput> =
+  | ParserCustomValidatorEsque<TInput>
+  | ParserMyZodEsque<TInput>
+  | ParserScaleEsque<TInput>
+  | ParserSuperstructEsque<TInput>
+  | ParserYupEsque<TInput>;
 
-export type ParserWithInputOutput<
+export type ParserWithInputOutput<TInput, TParsedInput> = ParserZodEsque<
   TInput,
-  TParsedInput,
-  Current = TInput,
-> = ParserZodEsque<TInput, TParsedInput, Current>;
+  TParsedInput
+>;
 
 export type Parser = ParserWithInputOutput<any, any> | ParserWithoutInput<any>;
 
@@ -52,8 +47,6 @@ export type inferParserType<P> = P extends ParserWithoutInput<infer T>
   : P extends ParserWithInputOutput<infer TI, infer TO>
     ? TO
     : never;
-
-export type inferCurrentData<P> = P extends { _current: infer C } ? C : never;
 
 export type inferParser<TParser extends Parser> =
   TParser extends ParserWithInputOutput<infer $TIn, infer $TOut>
