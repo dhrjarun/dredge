@@ -46,6 +46,8 @@ import { URL } from "url";
 // -- create directClient adapter
 // -- implement dataShortcut in api js
 // -- implement api route resolver
+// make ContextOverride in route any object type {success: Type, error: Type}
+// implement error method for error middlewares
 
 // ----------------
 // TODO
@@ -53,16 +55,27 @@ import { URL } from "url";
 
 // header types
 
+// Route
+// params and searchParams schema for a field should be defined only once
+// method and body schema should be defined only once
+// fix route javascript
+// implement defaultContext in route.options
+
+// implement direct client and route caller javascript
+
 // API
-// error and error transformer
 // refactor adapters
 // Implement type check of Context of all routes and API in .routes method of apiBuilder
 // Implement type change in API context, if given defaultContext in options method
+// remove error middleware and make ContextOverride type an object
+// data support in next
+// remove resolve and add done method
 
 // Client
+// relocate client type in client module
 // think what can be done with ctx in here [ it will be of type Record<string, unknown>]
 // transformer implementation
-// error implementation -- create Request error
+// error implementation -- create Validation error
 // dataShortcut implementation
 // return full error instead of dataError in client and everywhere
 
@@ -113,10 +126,11 @@ import { URL } from "url";
 // deserializeWith((req, res) => {})
 // [serializeWith, deserializeWith]
 
-function fn<T, U>(arg: { t: T; u: U }) {
-  return arg;
-}
+// QUESTION
+// function fn<T, U>(arg: { t: T; u: U }) {
+//   return arg;
+// }
 
-fn({ t: 2, u: 3 });
+// fn({ t: 2, u: 3 });
 
-fn<2>({ t: 2, u: 3 });
+// fn<2>({ t: 2, u: 3 });

@@ -1,66 +1,7 @@
-import { IsAny } from "ts-essentials";
-import {
-  NoParser,
-  Parser,
-  ParserWithoutInput,
-  inferParserType,
-} from "../parser";
+import { Exact, IsAny, IsNever, IsUnknown } from "ts-essentials";
+import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { DredgeHeaders, DredgeSearchParams, HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
-
-export interface ResolverOptions {
-  ctx?: object;
-  method?: HTTPMethod | string;
-  data?: any;
-  path: string;
-  headers?: Record<string, string | string[] | undefined>;
-  searchParams?: Record<string, any>;
-}
-
-export type ResolverResultPromise<T = any> = {
-  data(): Promise<T>;
-} & Promise<EndResult<T>>;
-
-export type inferResolverResult<R> = R extends Route<
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  infer OBody,
-  any
->
-  ? EndResult<OBody extends Parser ? inferParserType<OBody> : unknown>
-  : never;
-
-export type inferResolverOption<R> = R extends Route<
-  any,
-  any,
-  any,
-  infer Method,
-  infer Path,
-  any,
-  infer SearchParams extends Record<string, Parser>,
-  infer IBody,
-  any,
-  any
->
-  ? {
-      headers?: Record<string, string | string[] | undefined>;
-      method: Method;
-      path: inferPathType<Path, SearchParams>;
-    } & ([Method] extends ["post" | "put" | "patch"]
-      ? { data: inferParserType<IBody> }
-      : {}) &
-      (keyof SearchParams extends never
-        ? {}
-        : { searchParams: inferSearchParamsType<SearchParams> })
-  : never;
-
-// ---
 
 export type inferSearchParamsType<SearchParams> = Simplify<{
   [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
@@ -134,25 +75,8 @@ export type isAnyRoute<R> = R extends Route<
     : false
   : false;
 
-export type inferResolverResultPromise<R> = R extends Route<
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  infer OBody,
-  any
->
-  ? ResolverResultPromise<
-      OBody extends Parser ? inferParserType<OBody> : unknown
-    >
-  : never;
-
-type inferDataTypes<Options> = Options extends { dataShortcuts?: any }
-  ? Options["dataShortcuts"]
+type inferDataTypes<Options> = Options extends { dataTypes?: any }
+  ? Options["dataTypes"]
   : [];
 
 type ParamMethod<P> = {
@@ -253,7 +177,7 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
   paths: string[];
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
-  dataShortcuts: string[];
+  dataTypes: string[];
 
   iBody?: Parser;
   oBody?: Parser;
@@ -335,13 +259,10 @@ type OverwriteErrorContext<ContextOverride, NewContext> = {
   error: Overwrite<inferErrorContext<ContextOverride>, NewContext>;
 };
 
-type InitialNull = null & { type: "INITIAL_NULL" };
-type x = ParserWithoutInput<InitialNull>;
-type xx = inferParserType<any>;
+type inferParserTypeIfNever<P, U = any> = IsNever<P> extends true
+  ? U
+  : inferParserType<P>;
 
-// TODO
-// IBody and OBody default type
-// OBody Schema implementation
 export interface UnresolvedRoute<
   Options,
   Context,
@@ -351,18 +272,18 @@ export interface UnresolvedRoute<
   Params = {},
   SearchParams = {},
   IBody = ParserWithoutInput<unknown>,
-  OBody = any,
-  EBody = any,
+  OBody = never,
+  EBody = never,
 > {
   _def: RouteBuilderDef<false>;
 
-  options<const $DataShortcuts extends string[] = []>(options?: {
-    dataShortcuts?: $DataShortcuts;
-  }): $DataShortcuts extends NotAllowedDataShortcuts
-    ? "Invalid DataShortcut"
+  options<const $DataTypes extends string[] = []>(options?: {
+    dataTypes?: $DataTypes;
+  }): $DataTypes extends NotAllowedDataShortcuts
+    ? "One or more of dataType is invalid!"
     : UnresolvedRoute<
         {
-          dataShortcuts: $DataShortcuts;
+          dataTypes: $DataTypes;
         },
         Context,
         ContextOverride,
@@ -428,7 +349,10 @@ export interface UnresolvedRoute<
     EBody
   >;
 
-  use<NewContext = {}, NewOData = undefined>(fn: {
+  use<
+    NewContext = {},
+    NewOData extends inferParserTypeIfNever<OBody, any> = never,
+  >(fn: {
     (
       req: Readonly<{
         url: string;
@@ -443,9 +367,15 @@ export interface UnresolvedRoute<
         headers: DredgeHeaders;
         status?: number;
         statusText?: string;
-        data: IsAny<OBody> extends true ? null : inferParserType<OBody>;
-        next: NextFunction<inferDataTypes<Options>, inferParserType<OBody>>;
-        end: EndFunction<inferDataTypes<Options>, inferParserType<OBody>>;
+        data: inferParserTypeIfNever<OBody, null>;
+        next: NextFunction<
+          inferDataTypes<Options>,
+          inferParserTypeIfNever<OBody, any>
+        >;
+        end: EndFunction<
+          inferDataTypes<Options>,
+          inferParserTypeIfNever<OBody, any>
+        >;
       }>,
     ): MaybePromise<MiddlewareResult<NewContext, NewOData>> | void;
   }): UnresolvedRoute<
@@ -457,15 +387,18 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    IsAny<OBody> extends true
-      ? NewOData extends undefined // not sure why never is not working, that's why going with undefined
-        ? OBody
-        : ParserWithoutInput<NewOData>
+    IsNever<OBody> extends true
+      ? IsNever<NewOData> extends false // not sure why never is not working, that's why going with undefined
+        ? ParserWithoutInput<NewOData>
+        : OBody
       : OBody,
     EBody
   >;
 
-  error<NewContext, NewEData = undefined>(fn: {
+  error<
+    NewContext,
+    NewEData extends inferParserTypeIfNever<EBody, any> = never,
+  >(fn: {
     (
       error: any,
       req: Readonly<{
@@ -481,9 +414,15 @@ export interface UnresolvedRoute<
         headers: DredgeHeaders;
         status?: number;
         statusText?: string;
-        data: IsAny<EBody> extends true ? null : inferParserType<EBody>;
-        next: NextFunction<inferDataTypes<Options>, inferParserType<EBody>>;
-        end: EndFunction<inferDataTypes<Options>, inferParserType<EBody>>;
+        data: inferParserTypeIfNever<EBody, null>;
+        next: NextFunction<
+          inferDataTypes<Options>,
+          inferParserTypeIfNever<EBody, any>
+        >;
+        end: EndFunction<
+          inferDataTypes<Options>,
+          inferParserTypeIfNever<EBody, any>
+        >;
       }>,
     ): MaybePromise<NextResult<NewContext, NewEData>>;
   }): UnresolvedRoute<
@@ -495,10 +434,10 @@ export interface UnresolvedRoute<
     SearchParams,
     IBody,
     OBody,
-    IsAny<EBody> extends true
-      ? NewEData extends undefined
-        ? EBody
-        : ParserWithoutInput<NewEData>
+    IsNever<EBody> extends true
+      ? IsNever<NewEData> extends false
+        ? ParserWithoutInput<NewEData>
+        : EBody
       : EBody
   >;
 

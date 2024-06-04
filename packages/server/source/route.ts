@@ -10,8 +10,11 @@ export function dredgeRoute<Context extends object>() {
   return createRouteBuilder() as UnresolvedRoute<
     [],
     Context,
-    Context,
-    "get",
+    {
+      success: Context;
+      error: Context;
+    },
+    string,
     [],
     {},
     {}
@@ -22,43 +25,32 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const {
     method = "get",
     middlewares = [],
+    errorMiddlewares = [],
     paths = [],
     params = {},
     searchParams = {},
-    dataShortcuts = [],
+    dataTypes = [],
     ...rest
   } = initDef;
 
   const _def: RouteBuilderDef = {
     isResolved: false,
     middlewares,
+    errorMiddlewares,
     paths,
     params,
     searchParams,
     method,
-    dataShortcuts,
-    errorResolver: ({ error, errorOrigin }, req, res) => {
-      return res.send({
-        status: 500,
-        error: error,
-        statusText: `Something wen't wrong at origin: ${errorOrigin}`,
-      });
-    },
+    dataTypes,
     ...rest,
   };
 
   const builder = {
     _def,
 
-    // error: (fn) => {
-    //   return createRouteBuilder({
-    //     ..._def,
-    //     errorResolver: fn,
-    //   });
-    // },
-
-    options: ({ dataShortcuts } = {}) => {
-      const notAllowedDataShortcuts = [
+    options: ({ dataTypes } = {}) => {
+      const notAllowedDataTypes = [
+        "default",
         "data",
         "params",
         "param",
@@ -75,15 +67,15 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         "resolve",
         "use",
       ];
-      dataShortcuts?.forEach((item) => {
-        if (notAllowedDataShortcuts.includes(item)) {
-          throw `Invalid DataShortcut: ${item}`;
+      dataTypes?.forEach((item) => {
+        if (notAllowedDataTypes.includes(item)) {
+          throw `Invalid DataType: ${item}`;
         }
       });
 
       return createRouteBuilder({
         ..._def,
-        dataShortcuts,
+        dataTypes,
       });
     },
 
@@ -125,9 +117,9 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         }
 
         // check if path is defined or not - I guess it doesn't need. it would be useful to define params before defining corresponding path
-        if (!_paths.includes(`:${path}`)) {
-          throw `:${path} is not defined`;
-        }
+        // if (!_paths.includes(`:${path}`)) {
+        //   throw `:${path} is not defined`;
+        // }
 
         // validate parser
       });
@@ -171,7 +163,23 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
+    error(cb) {
+      const errorMiddlewares = _def.errorMiddlewares;
+      errorMiddlewares.push(cb);
+      return createRouteBuilder({
+        ..._def,
+        errorMiddlewares,
+      });
+    },
+
     method: (method, parser) => {
+      const _method = _def.method;
+      const _parser = _def.iBody;
+
+      if (_method || _parser) {
+        throw "Method and request data schema is already defined";
+      }
+
       if (parser) {
         return createRouteBuilder({
           ..._def,
@@ -186,21 +194,45 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    resolve: (fn) => {
-      if (_def.resolver) throw "Resolver already exist";
+    output(parser) {
+      const _parser = _def.oBody;
 
-      const route = createRouteBuilder({
+      if (_parser) {
+        throw "Response data schema is already defined";
+      }
+
+      return createRouteBuilder({
         ..._def,
-        resolver: fn,
+        oBody: parser,
       });
+    },
+
+    build() {
+      // check if method, path is defined or not..
 
       return {
         _def: {
-          ...route._def,
+          ..._def,
           isResolved: true,
         },
       };
     },
+
+    // resolve: (fn) => {
+    //   if (_def.resolver) throw "Resolver already exist";
+
+    //   const route = createRouteBuilder({
+    //     ..._def,
+    //     resolver: fn,
+    //   });
+
+    //   return {
+    //     _def: {
+    //       ...route._def,
+    //       isResolved: true,
+    //     },
+    //   };
+    // },
   } as AnyUnresolvedRoute;
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
