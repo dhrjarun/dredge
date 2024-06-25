@@ -1,264 +1,174 @@
-import {
-  DredgeHeaders,
-  DredgeResponse,
-  DredgeResponsePromise,
-  DredgeSearchParams,
-  HTTPMethod,
-  MaybePromise,
-  mergeDeep,
-  mergeHeaders,
-  trimSlashes,
-} from "@dredge/common";
+import { mergeDeep, trimSlashes } from "@dredge/common";
+import { HTTPError } from "./errors/HTTPError";
+import { FetchOptions, NormalizedFetchOptions } from "./types/options";
+import { DredgeResponse, DredgeResponsePromise } from "./types/response";
 
-type FetchOptions = {
-  fetch?: (
-    input: string | URL | Request,
-    init?: RequestInit,
-  ) => Promise<Response>;
-  transformIn?: TransformInMiddlewareFunction[];
-  transformOut?: TransformOutMiddlewareFunction[];
-  dataShortcuts?: string[];
-  prefixUrl?: URL | string;
-  ctx?: Context;
-} & DredgeRequestInit;
+export const mergeHeaders = (
+  source1: HeadersInit = {},
+  source2: HeadersInit = {},
+) => {
+  const result = new globalThis.Headers(source1 as RequestInit["headers"]);
+  const isHeadersInstance = source2 instanceof globalThis.Headers;
+  const source = new globalThis.Headers(source2 as RequestInit["headers"]);
 
-type DredgeRequestInit = {
-  method: HTTPMethod | string;
-  path: string;
-  searchParams?: DredgeSearchParams;
-  headers?: DredgeHeaders;
-  data?: any;
-} & Omit<RequestInit, "body" | "headers" | "method">;
+  for (const [key, value] of source.entries()) {
+    if ((isHeadersInstance && value === "undefined") || value === undefined) {
+      result.delete(key);
+    } else {
+      result.set(key, value);
+    }
+  }
 
-type Context = Record<string, unknown>;
-
-type TransformInMiddlewareResult = RequestInit & {
-  url: URL;
-  ctx: Context;
-};
-
-type TransformInMiddlewareFunction = {
-  (
-    req: DredgeRequestInit & {
-      dataShortcutUsed: "auto" | string;
-      next: {
-        (): TransformInMiddlewareResult;
-        (
-          opts: RequestInit & {
-            url?: string | URL;
-            ctx?: Context;
-          },
-        ): TransformInMiddlewareResult;
-      };
-      $transformed: Request;
-    },
-  ): MaybePromise<TransformInMiddlewareResult>;
-};
-
-type TransformOutMiddlewareResult = {
-  status?: number;
-  statusText?: string;
-  headers: DredgeHeaders;
-  data: unknown;
-  ctx: Context;
-};
-
-type TransformOutMiddlewareFunction = {
-  (
-    req: Request,
-    res: Response & {
-      ctx: Context;
-      next: {
-        (): TransformOutMiddlewareResult;
-        (opts: {
-          ctx?: Context;
-          status?: number;
-          statusText?: string;
-          headers?: DredgeHeaders;
-          data?: any | (() => any);
-        }): TransformOutMiddlewareResult;
-      };
-      $transformed: {
-        status?: number;
-        statusText?: string;
-        headers: DredgeHeaders;
-        data?: any | (() => any);
-      };
-    },
-  ): MaybePromise<TransformOutMiddlewareResult>;
+  return result;
 };
 
 export function dredgeFetch(
   path: string,
-  options: Omit<FetchOptions, "path">,
+  options: Omit<FetchOptions, "path"> & Record<string, any>,
 ): DredgeResponsePromise<any> {
-  const {
-    fetch: _fetch,
-    transformIn = [],
-    transformOut = [],
-    dataShortcuts: _dataShortcuts = [],
-    ctx = {},
-    prefixUrl: _prefixUrl,
-    ...requestInit
-  } = options;
+  if (!options.prefixUrl) {
+    throw "No prefix URL provided";
+  }
 
-  async function transformRequest(ctx: Context, request: DredgeRequestInit) {
-    let requestInit = request as any;
-    const dataShortcuts = ["data", ..._dataShortcuts];
-    let data: any = null;
-    let dataShortcutUsed: string = "auto";
+  if (!options.stringify) {
+    throw "stringify is not provided";
+  }
 
-    for (const item of dataShortcuts) {
-      if (typeof requestInit[item] !== "undefined") {
-        data = requestInit[item];
-        dataShortcutUsed = item === "data" ? "auto" : dataShortcutUsed;
-        delete requestInit[item];
+  if (!options.parse) {
+    throw "parser function has not been provided";
+  }
+
+  const _options = {
+    ...options,
+    throwHttpError: !!options.throwHttpErrors,
+    path,
+    ctx: options.ctx || {},
+    prefixUrl:
+      options.prefixUrl instanceof URL
+        ? options.prefixUrl
+        : new URL(options.prefixUrl),
+    headers: new Headers(options.headers),
+    hooks: mergeDeep(
+      {
+        afterResponse: [],
+      },
+      options.hooks || {},
+    ),
+    fetch: options.fetch ?? globalThis.fetch.bind(globalThis),
+    dataTypes: options?.dataTypes || [],
+  } as unknown as NormalizedFetchOptions;
+
+  for (const item of _options.dataTypes) {
+    if (item in _options) {
+      _options.data = options[item];
+      _options.dataType = item;
+
+      delete _options[item];
+    }
+  }
+
+  let url = createURL(_options).toString();
+  let request: any = null;
+  let response: any = null;
+
+  async function fetchResponse() {
+    const url = createURL(_options);
+    request = new globalThis.Request(url, {
+      ..._options,
+      body: _options.stringify(_options.data, {
+        url: url.toString(),
+        ctx: _options.ctx,
+        method: _options.method,
+        headers: _options.headers,
+        dataType: _options.dataType,
+      }),
+    });
+
+    for (const hook of _options.hooks.beforeRequest) {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await hook(
+        _options as unknown as NormalizedFetchOptions,
+        request,
+      );
+
+      if (result instanceof Request) {
+        request = result;
         break;
+      }
+
+      if (result instanceof Response) {
+        return result;
       }
     }
 
-    const { headers, searchParams, ...restOfRequestInit } = requestInit;
-    if (!_prefixUrl) {
-      throw "No prefix URL provided";
-    }
-    const prefixUrl =
-      _prefixUrl instanceof URL ? _prefixUrl : new URL(_prefixUrl);
-    const url = new URL(prefixUrl);
-    url.pathname = trimSlashes(prefixUrl.pathname) + "/" + trimSlashes(path);
-    url.search = objectToSearchParams(searchParams).toString();
-
-    let transformedRequest = {
-      url: url,
-      headers,
-      ...restOfRequestInit,
-    };
-
-    let currentCtx = {
-      ...ctx,
-    };
-
-    for (const middleware of transformIn) {
-      const result = await middleware({
-        ...requestInit,
-        data,
-        dataShortcutUsed,
-        next: (options?: any) => {
-          currentCtx = mergeDeep(currentCtx, options.ctx);
-
-          return {
-            ...restOfRequestInit,
-            ...options,
-            url:
-              typeof options.url === "string"
-                ? new URL(options.url)
-                : options.url || url,
-            ctx: currentCtx,
-            headers: mergeHeaders(headers, options?.headers || {}),
-          };
-        },
-        $transformed: transformedRequest,
-      });
-
-      const { ctx, ...newRequest } = result;
-      currentCtx = ctx;
-      transformedRequest = newRequest;
-    }
-
-    return transformedRequest;
+    const fetchResponse = await _options.fetch(request);
+    return fetchResponse;
   }
 
-  async function transformResponse(
-    ctx: Context,
-    request: Request,
-    response: Response,
-  ) {
-    let transformedResponse = {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      data: null,
-    };
-
-    let currentCtx = {
-      ...ctx,
-    };
-
-    for (const middleware of transformOut) {
-      const result = await middleware(request, {
-        ...response,
-        ctx: currentCtx,
-        next: (options?: any) => {
-          return {
-            ctx: mergeDeep(currentCtx, options?.ctx || {}),
-            headers: mergeHeaders(
-              transformedResponse.headers,
-              options?.headers || {},
-            ),
-            status: options?.status || transformedResponse.status,
-            statusText: options?.statusText || transformedResponse.statusText,
-            data: options.data || null,
-          };
-        },
-        $transformed: transformResponse,
+  async function createDredgeResponse(response: globalThis.Response) {
+    (response as any).data = () => {
+      return _options.parse(response.body, {
+        ctx: _options.ctx,
+        url,
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+        dataType: _options.responseDataType,
       });
+    };
 
-      const { ctx, ...newResponse } = result;
+    return response;
+  }
 
-      currentCtx = ctx;
-      transformedResponse = newResponse;
+  function decorateResponsePromise(responsePromise: any) {
+    for (const dt of _options.dataTypes) {
+      response[dt] = async () => {
+        _options.dataType = dt;
+        return (await responsePromise).data();
+      };
     }
+
+    return responsePromise;
   }
 
   async function fn() {
     try {
-      const transformedRequest = transformRequest(ctx, requestInit);
-      const request = new globalThis.Request(
-        transformedRequest.url,
-        transformedRequest,
-      );
-      const fetch = _fetch ?? globalThis.fetch.bind(globalThis);
+      response = await fetchResponse();
 
-      const response: any = await fetch(request);
+      for (const hook of _options.hooks.afterResponse) {
+        const modifiedResponse = await hook(
+          _options as NormalizedFetchOptions,
+          request,
+          response,
+        );
+
+        if (modifiedResponse instanceof globalThis.Response) {
+          response = modifiedResponse;
+        }
+      }
+
+      if (!response.ok && _options.throwHttpErrors) {
+        let error = new HTTPError(
+          response,
+          request,
+          _options as unknown as NormalizedFetchOptions,
+        );
+
+        for (const hook of _options.hooks.beforeError) {
+          error = await hook(error);
+        }
+
+        throw error;
+      }
+
+      return createDredgeResponse(response);
     } catch (err) {}
   }
 
-  // async function _function() {
-  //   const response: any = await fetch(request);
+  const responsePromise = fn();
+  decorateResponsePromise(responsePromise);
 
-  //   response.data = async () => {
-  //     const contentType = response.headers.get("Content-Type");
-  //     let data: any;
-
-  //     if (contentType?.startsWith("application/json")) {
-  //       data = transformer.json.deserialize(await response.text());
-  //     }
-  //     if (contentType?.startsWith("multipart/form-data")) {
-  //       data = transformer.formData.deserialize(await response.formData());
-  //     }
-
-  //     if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-  //       const searchParams = new URLSearchParams(await response.text());
-  //       data = transformer.searchParams.deserialize(searchParams);
-  //     }
-
-  //     if (response.ok) {
-  //       return Promise.resolve(data);
-  //     } else {
-  //       return Promise.reject(data);
-  //     }
-  //   };
-
-  //   response.json = async () => {
-  //     return transformer.json.deserialize(await response.text());
-  //   };
-
-  //   return response as DredgeResponse<any>;
-  // }
-
-  // const responsePromise = _function() as DredgeResponsePromise;
-  // decorateResponsePromise(responsePromise);
-
-  // return responsePromise;
+  return responsePromise;
 }
 
 function objectToSearchParams(obj: any): URLSearchParams {
@@ -274,3 +184,23 @@ function objectToSearchParams(obj: any): URLSearchParams {
   });
   return searchParams;
 }
+
+function createURL(options: {
+  prefixUrl: URL;
+  path: string;
+  searchParams?: Record<string, string | string[]>;
+}) {
+  const { prefixUrl, path, searchParams = {} } = options;
+
+  const url = new URL(prefixUrl);
+  url.pathname = trimSlashes(prefixUrl.pathname) + "/" + trimSlashes(path);
+  url.search = objectToSearchParams(options.searchParams).toString();
+
+  return url;
+}
+
+// TODO:
+// fix response return type and change DredgeResponse and DredgeResponsePromise
+// see if decorateResponsePromise is working or not
+// searchParams type
+// make it work with types
