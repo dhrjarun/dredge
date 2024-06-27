@@ -1,41 +1,24 @@
 import { mergeDeep, trimSlashes } from "@dredge/common";
 import { HTTPError } from "./errors/HTTPError";
 import { FetchOptions, NormalizedFetchOptions } from "./types/options";
-import { DredgeResponse, DredgeResponsePromise } from "./types/response";
+import { DredgeResponsePromise } from "./types/response";
 
-export const mergeHeaders = (
-  source1: HeadersInit = {},
-  source2: HeadersInit = {},
-) => {
-  const result = new globalThis.Headers(source1 as RequestInit["headers"]);
-  const isHeadersInstance = source2 instanceof globalThis.Headers;
-  const source = new globalThis.Headers(source2 as RequestInit["headers"]);
-
-  for (const [key, value] of source.entries()) {
-    if ((isHeadersInstance && value === "undefined") || value === undefined) {
-      result.delete(key);
-    } else {
-      result.set(key, value);
-    }
-  }
-
-  return result;
-};
-
-export function dredgeFetch(
+export function dredgeFetch<const DataTypes extends string[] = string[]>(
   path: string,
-  options: Omit<FetchOptions, "path"> & Record<string, any>,
-): DredgeResponsePromise<any> {
+  options: Omit<FetchOptions, "dataTypes"> & { dataTypes: DataTypes } & {
+    [key in DataTypes[number]]?: any;
+  },
+): DredgeResponsePromise<DataTypes> {
   if (!options.prefixUrl) {
     throw "No prefix URL provided";
   }
 
   if (!options.stringify) {
-    throw "stringify is not provided";
+    throw "stringify function is not provided";
   }
 
   if (!options.parse) {
-    throw "parser function has not been provided";
+    throw "parser function is not been provided";
   }
 
   const _options = {
@@ -51,9 +34,12 @@ export function dredgeFetch(
     hooks: mergeDeep(
       {
         afterResponse: [],
+        beforeRequest: [],
+        afterError: [],
       },
       options.hooks || {},
     ),
+    searchParams: options.searchParams || {},
     fetch: options.fetch ?? globalThis.fetch.bind(globalThis),
     dataTypes: options?.dataTypes || [],
   } as unknown as NormalizedFetchOptions;
@@ -85,7 +71,6 @@ export function dredgeFetch(
     });
 
     for (const hook of _options.hooks.beforeRequest) {
-      // eslint-disable-next-line no-await-in-loop
       const result = await hook(
         _options as unknown as NormalizedFetchOptions,
         request,
@@ -108,8 +93,8 @@ export function dredgeFetch(
   async function createDredgeResponse(response: globalThis.Response) {
     (response as any).data = () => {
       return _options.parse(response.body, {
-        ctx: _options.ctx,
         url,
+        ctx: _options.ctx,
         headers: response.headers,
         status: response.status,
         statusText: response.statusText,
@@ -117,13 +102,18 @@ export function dredgeFetch(
       });
     };
 
+    (response as any).clone = () => {
+      const cloned = createDredgeResponse(response.clone());
+      return cloned;
+    };
+
     return response;
   }
 
   function decorateResponsePromise(responsePromise: any) {
     for (const dt of _options.dataTypes) {
-      response[dt] = async () => {
-        _options.dataType = dt;
+      responsePromise[dt] = async () => {
+        _options.responseDataType = dt;
         return (await responsePromise).data();
       };
     }
@@ -133,6 +123,8 @@ export function dredgeFetch(
 
   async function fn() {
     try {
+      // Delay the fetch so that body method shortcuts can set the responseDataType
+      await Promise.resolve();
       response = await fetchResponse();
 
       for (const hook of _options.hooks.afterResponse) {
@@ -168,7 +160,7 @@ export function dredgeFetch(
   const responsePromise = fn();
   decorateResponsePromise(responsePromise);
 
-  return responsePromise;
+  return responsePromise as any;
 }
 
 function objectToSearchParams(obj: any): URLSearchParams {
@@ -198,9 +190,3 @@ function createURL(options: {
 
   return url;
 }
-
-// TODO:
-// fix response return type and change DredgeResponse and DredgeResponsePromise
-// see if decorateResponsePromise is working or not
-// searchParams type
-// make it work with types

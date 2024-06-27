@@ -1,23 +1,16 @@
-import {
-  DredgeHeaders,
-  DredgeSearchParams,
-  HTTPMethod,
-  MarkRequired,
-} from "@dredge/common";
+import { MarkRequired } from "@dredge/common";
 import { HTTPError } from "../errors/HTTPError";
-import { DredgeRequest } from "./request";
-import { DredgeResponse } from "./response";
 
 type Context = Record<string, any>;
 
-export type FetchOptions<DataTypes extends string[] = []> = {
+export type FetchOptions = {
   fetch?: (
     input: string | URL | Request,
     init?: RequestInit,
   ) => Promise<Response>;
-  dataTypes?: DataTypes;
+  dataTypes?: string[];
   prefixUrl?: URL | string;
-  responseDataType?: DataTypes[number];
+  responseDataType?: string;
   ctx?: Context;
   stringify?: (
     data: any,
@@ -71,10 +64,6 @@ export type BeforeErrorHook = (
   error: HTTPError,
 ) => HTTPError | Promise<HTTPError>;
 
-// export type BeforeErrorHook = (
-//   error: HTTPError,
-// ) => HTTPError | Promise<HTTPError>;
-
 export interface NormalizedFetchOptions
   extends MarkRequired<
     FetchOptions,
@@ -99,3 +88,16 @@ interface Hooks {
   afterResponse: AfterResponseHook[];
   beforeError: BeforeErrorHook[];
 }
+
+export type DefaultFetchOptions = Pick<
+  FetchOptions,
+  | "fetch"
+  | "headers"
+  | "dataTypes"
+  | "ctx"
+  | "throwHttpErrors"
+  | "referrer"
+  | "hooks"
+> & {
+  prefixUrl?: string | URL;
+};
