@@ -3,8 +3,13 @@ import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { DredgeHeaders, DredgeSearchParams, HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 
+// export type inferSearchParamsType<SearchParams> = Simplify<{
+//   [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+// }>;
 export type inferSearchParamsType<SearchParams> = Simplify<{
-  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+  [key in keyof SearchParams]:
+    | inferParserType<SearchParams[key]>
+    | inferParserType<SearchParams[key]>[];
 }>;
 
 type inferParamsType<Params> = Simplify<{
@@ -37,6 +42,7 @@ export interface MiddlewareResult<C, Data> {
   statusText?: string;
   data?: Data;
   dataType?: string;
+  isEnd: boolean;
 }
 
 type Data<Shortcuts, T> =
@@ -87,6 +93,17 @@ type ParamMethod<P> = {
   (): Simplify<P & Record<string, any>>;
 };
 
+export type AnyMiddlewareFunction = MiddlewareFunction<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
 export type MiddlewareFunction<
   DataTypes,
   Context,
@@ -103,8 +120,22 @@ export type MiddlewareFunction<
       url: string;
       method: Method;
       headers: DredgeHeaders;
-      searchParam: ParamMethod<SearchParams>;
       param: ParamMethod<Params>;
+      searchParam: ParamMethod<SearchParams>;
+      searchParams: {
+        <T extends keyof SearchParams>(
+          key: T,
+        ): SearchParams extends { [key in T]: any }
+          ? SearchParams[T][]
+          : string[];
+        <T extends string>(key: T): string[];
+        (): Simplify<
+          { [key in keyof SearchParams]: SearchParams[key][] } & Record<
+            string,
+            any[]
+          >
+        >;
+      };
       data: IData;
     }>,
     res: Readonly<{
@@ -119,6 +150,13 @@ export type MiddlewareFunction<
   ): MaybePromise<MiddlewareResult<NewContext, NewOData>> | void;
 };
 
+export type AnyErrorMiddlewareFunction = ErrorMiddlewareFunction<
+  any,
+  any,
+  any,
+  any,
+  any
+>;
 export type ErrorMiddlewareFunction<
   DataTypes,
   Context,
@@ -130,9 +168,19 @@ export type ErrorMiddlewareFunction<
     error: any,
     req: Readonly<{
       method: string;
-      path: string;
-      params: <T extends string>(key: T) => string | undefined;
-      searchParam: <T extends string>(key: T) => string | undefined;
+      url: string;
+      param: {
+        <T extends string>(key: T): string | undefined;
+        (): Record<string, string>;
+      };
+      searchParam: {
+        <T extends string>(key: T): string | undefined;
+        (): Record<string, string>;
+      };
+      searchParams: {
+        <T extends string>(key: T): string[];
+        (): Record<string, string[]>;
+      };
       headers: DredgeHeaders;
       data: unknown;
     }>,
