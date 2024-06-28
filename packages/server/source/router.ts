@@ -1,5 +1,10 @@
 import { getParseFn } from "@dredge/common";
-import type { AnyRoute, DredgeHeaders, MiddlewareResult } from "@dredge/common";
+import type {
+  AnyRoute,
+  DredgeHeaders,
+  MiddlewareResult,
+  Parser,
+} from "@dredge/common";
 import parsePath from "parse-path";
 import { mergeDeep, mergeHeaders } from "./utils/merge";
 
@@ -196,63 +201,108 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(routes: Routes) {
       };
 
       async function fn() {
-        let step:
-          | "PARAM_VALIDATION"
-          | "SEARCH_PARAM_VALIDATION"
-          | "DATA_VALIDATION"
-          | "DONE" = "PARAM_VALIDATION";
-
         try {
-          switch (step as any) {
-            case "PARAM_VALIDATION":
-              const validatedParams: Record<string, any> = {};
-              for (const [index, item] of routeDef.paths.entries()) {
-                if (item.startsWith(":")) {
-                  const parser = routeDef.params[item.replace(":", "")];
-                  validatedParams[item] = parser
-                    ? await getParseFn(parser)(pathArray[index])
-                    : pathArray[index];
-                }
-              }
-              validatedRequest.params = validatedParams;
-
-              step = "SEARCH_PARAM_VALIDATION";
-              break;
-            case "SEARCH_PARAM_VALIDATION":
-              const validatedSearchParams: Record<string, any> = {};
-
-              for (const [key, parser] of Object.entries(
-                routeDef.searchParams,
-              )) {
-                const values = unValidatedRequest.searchParams[key];
-                const validatedValues = [];
-
-                for (const item of values) {
-                  validatedValues.push(await getParseFn(parser)(item));
-                }
-
-                validatedSearchParams[key] = validatedValues;
-              }
-              validatedRequest.searchParams = validatedSearchParams;
-
-              step = "DATA_VALIDATION";
-              break;
-            case "DATA_VALIDATION":
-              let validatedData: unknown;
-
-              if (routeDef.iBody) {
-                validatedData = await getParseFn(routeDef.iBody)(data);
-                validatedRequest.data = validatedData;
-              }
-
-              step = "DONE";
-              break;
+          const validatedParams: Record<string, any> = {};
+          for (const [index, item] of routeDef.paths.entries()) {
+            if (item.startsWith(":")) {
+              const parser = routeDef.params[item.replace(":", "")];
+              validatedParams[item] = parser
+                ? await getValidatorFn(parser, "PARAMS")(pathArray[index])
+                : pathArray[index];
+            }
           }
-        } catch (error) {
-          for (const fn of routeDef.errorMiddlewares) {
-            let currentCtx = ctx;
-            let response = { headers: {} };
+          validatedRequest.params = validatedParams;
 
+          const validatedSearchParams: Record<string, any> = {};
+          for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+            const values = unValidatedRequest.searchParams[key];
+            const validatedValues = [];
+
+            for (const item of values) {
+              validatedValues.push(
+                await getValidatorFn(parser, "SEARCH_PARAMS")(item),
+              );
+            }
+
+            validatedSearchParams[key] = validatedValues;
+          }
+          validatedRequest.searchParams = validatedSearchParams;
+
+          let validatedData: unknown;
+          if (routeDef.iBody) {
+            validatedData = await getValidatorFn(routeDef.iBody, "DATA")(data);
+            validatedRequest.data = validatedData;
+          }
+
+          let currentCtx = ctx;
+          let response: any = {
+            headers: {},
+          };
+
+          const req = {
+            headers: validatedRequest.headers,
+            method: validatedRequest.method,
+            data: validatedRequest.data,
+            url: url,
+            param(key?: string) {
+              return paramFn(validatedRequest.params)(key);
+            },
+            searchParam(key?: string) {
+              return paramFn(validatedRequest.searchParams, true)(key);
+            },
+            searchParams(key?: string) {
+              return paramFn(validatedRequest.searchParams)(key);
+            },
+          };
+
+          let shouldBreak = false;
+
+          for (const fn of routeDef.middlewares) {
+            const middlewareResult = await fn(req, {
+              ...response,
+              ctx: currentCtx,
+              next(nextOptions?: any) {
+                return nextEndFunction(
+                  nextOptions,
+                  {
+                    ...response,
+                    ctx: currentCtx,
+                  },
+                  routeDef.dataTypes,
+                );
+              },
+              end(endOptions?: any) {
+                shouldBreak = true;
+
+                return nextEndFunction(
+                  endOptions,
+                  {
+                    ...response,
+                    ctx: currentCtx,
+                  },
+                  routeDef.dataTypes,
+                );
+              },
+            });
+
+            if (!middlewareResult) {
+              continue;
+            }
+            const { ctx, ...newResponse } = middlewareResult;
+            currentCtx = ctx;
+            response = newResponse;
+
+            if (!shouldBreak) {
+              break;
+            }
+          }
+
+          return response;
+        } catch (error) {
+          let response = { headers: {} };
+          let currentCtx = ctx;
+
+          for (const fn of routeDef.errorMiddlewares) {
             const middlewareResult = await handleMiddleware(
               fn,
               {
@@ -276,72 +326,9 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(routes: Routes) {
               break;
             }
           }
+
+          return response;
         }
-
-        let currentCtx = ctx;
-        let response: any = {
-          headers: {},
-        };
-
-        const req = {
-          headers: validatedRequest.headers,
-          method: validatedRequest.method,
-          data: validatedRequest.data,
-          url: url,
-          param(key?: string) {
-            return paramFn(validatedRequest.params)(key);
-          },
-          searchParam(key?: string) {
-            return paramFn(validatedRequest.searchParams, true)(key);
-          },
-          searchParams(key?: string) {
-            return paramFn(validatedRequest.searchParams)(key);
-          },
-        };
-
-        let shouldBreak = false;
-
-        for (const fn of routeDef.middlewares) {
-          const middlewareResult = await fn(req, {
-            ...response,
-            ctx: currentCtx,
-            next(nextOptions?: any) {
-              return nextEndFunction(
-                nextOptions,
-                {
-                  ...response,
-                  ctx: currentCtx,
-                },
-                routeDef.dataTypes,
-              );
-            },
-            end(endOptions?: any) {
-              shouldBreak = true;
-
-              return nextEndFunction(
-                endOptions,
-                {
-                  ...response,
-                  ctx: currentCtx,
-                },
-                routeDef.dataTypes,
-              );
-            },
-          });
-
-          if (!middlewareResult) {
-            continue;
-          }
-          const { ctx, ...newResponse } = middlewareResult;
-          currentCtx = ctx;
-          response = newResponse;
-
-          if (!shouldBreak) {
-            break;
-          }
-        }
-
-        return response;
       }
 
       let responsePromise = fn();
@@ -391,9 +378,9 @@ function nextEndFunction(
 }
 
 // TODO
-// implement handleErrorMiddleware and handleMiddleware
-// fix types of Param in route.ts types
-// implement validation Error
+// refactor and make direct-client work
+// test client
+// test router
 
 function paramFn(params: Record<string, any>, onlyFirst: boolean = false) {
   return (key?: string) => {
@@ -502,3 +489,29 @@ async function handleMiddleware(
 
   return middlewareResult;
 }
+
+class ValidationError extends Error {
+  issue: any;
+
+  constructor(
+    type: "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA",
+    issue: any,
+  ) {
+    super(`Failed at ${type} validation`);
+
+    this.issue = issue;
+  }
+}
+
+function getValidatorFn(parser: Parser, step: ValidationType) {
+  return async (value: any) => {
+    const fn = getParseFn(parser);
+    try {
+      return await fn(value);
+    } catch (error) {
+      throw new ValidationError(step, error);
+    }
+  };
+}
+
+type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
