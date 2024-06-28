@@ -1,20 +1,27 @@
 import {
-  AnyDredgeApi,
+  AnyRoute,
   DirectClientOptions,
-  inferApiContext,
-  inferApiRoutes,
+  inferRouteContext,
 } from "@dredge/common";
 import { DirectClient } from "@dredge/common";
+import { DredgeRouter } from "../router";
 import { joinDuplicateHeaders } from "../utils/headers";
 import { mergeDeep, mergeHeaders } from "../utils/merge";
 
-export function createDirectClient<const Api extends AnyDredgeApi>(
-  api: Api,
+type inferRoutesContext<Routes, Context = {}> = Routes extends [
+  infer First extends AnyRoute,
+  ...infer Tail extends AnyRoute[],
+]
+  ? inferRoutesContext<Tail, Context & inferRouteContext<First>>
+  : Context;
+
+export function createDirectClient<const Routes extends AnyRoute[]>(
+  router: DredgeRouter,
   defaultOptions?: {
     headers?: Record<string, string>;
-    ctx?: inferApiContext<Api>;
+    ctx?: inferRoutesContext<Routes>;
   },
-): DirectClient<inferApiRoutes<Api>> {
+): DirectClient<Routes> {
   const client: any = (path: string, options?: DirectClientOptions) => {
     const {
       ctx = {},
@@ -24,19 +31,16 @@ export function createDirectClient<const Api extends AnyDredgeApi>(
       searchParams = {},
     } = options || {};
 
-    const result: any = api.resolveRouteWithoutTransforms(
-      mergeDeep(defaultOptions?.ctx || {}, ctx),
-      {
-        path,
-        data,
-        method,
-        headers: mergeHeaders(
-          defaultOptions?.headers || {},
-          joinDuplicateHeaders(headers),
-        ),
-        searchParams,
-      },
-    );
+    const result: any = router.call(path, {
+      ctx: mergeDeep(defaultOptions?.ctx || {}, ctx),
+      data,
+      method,
+      headers: mergeHeaders(
+        defaultOptions?.headers || {},
+        joinDuplicateHeaders(headers),
+      ),
+      searchParams,
+    });
 
     decorateResponsePromise(result);
     return result;
@@ -53,16 +57,13 @@ export function createDirectClient<const Api extends AnyDredgeApi>(
         searchParams = {},
       } = options || {};
 
-      const result = api.resolveRouteWithoutTransforms(
-        mergeDeep(defaultOptions?.ctx || {}, ctx),
-        {
-          path,
-          data,
-          method,
-          headers: joinDuplicateHeaders(headers),
-          searchParams,
-        },
-      );
+      const result = router.call(path, {
+        ctx: mergeDeep(defaultOptions?.ctx || {}, ctx),
+        data,
+        method,
+        headers: joinDuplicateHeaders(headers),
+        searchParams,
+      });
 
       const responsePromise = new Promise((resolve, reject) => {
         result
@@ -77,7 +78,7 @@ export function createDirectClient<const Api extends AnyDredgeApi>(
     };
   });
 
-  return client as DirectClient<inferApiRoutes<Api>>;
+  return client as DirectClient<Routes>;
 }
 
 function decorateResponsePromise(responsePromise: any) {

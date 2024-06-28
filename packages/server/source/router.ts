@@ -96,7 +96,33 @@ const trimSlashes = (path: string): string => {
   return path;
 };
 
-export function dredgeRouter<const Routes extends AnyRoute[]>(routes: Routes) {
+export interface DredgeRouter {
+  _def: {
+    root: RoutePath;
+  };
+
+  call(
+    path: string,
+    options: {
+      headers?: DredgeHeaders;
+      method?: string;
+      data?: any;
+      searchParams?: Record<string, any>;
+      ctx: any;
+      prefixUrl?: string;
+    },
+  ): Promise<{
+    headers: Record<string, string>;
+    status?: number;
+    statusText?: string;
+    dataType?: string;
+    data: any;
+  }>;
+}
+
+export function dredgeRouter<const Routes extends AnyRoute[]>(
+  routes: Routes,
+): DredgeRouter {
   const root = new RoutePath({
     name: "$root",
   });
@@ -121,23 +147,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(routes: Routes) {
       root,
     },
 
-    call: (
-      path: string,
-      options: {
-        headers?: DredgeHeaders;
-        method?: string;
-        data?: any;
-        searchParams?: Record<string, any>;
-        ctx: any;
-        prefixUrl?: string;
-      },
-    ): Promise<{
-      headers: Record<string, string>;
-      status?: number;
-      statusText?: string;
-      dataType?: string;
-      data: any;
-    }> => {
+    call: (path, options) => {
       const {
         method = "get",
         headers = {},
@@ -335,7 +345,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(routes: Routes) {
 
       return responsePromise;
     },
-  };
+  } as DredgeRouter;
 }
 
 function nextEndFunction(
@@ -378,7 +388,6 @@ function nextEndFunction(
 }
 
 // TODO
-// refactor and make direct-client work
 // test client
 // test router
 
