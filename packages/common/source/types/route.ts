@@ -3,9 +3,9 @@ import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { DredgeHeaders, DredgeSearchParams, HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 
-// export type inferSearchParamsType<SearchParams> = Simplify<{
-//   [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
-// }>;
+export type inferSingleSearchParamsType<SearchParams> = Simplify<{
+  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+}>;
 export type inferSearchParamsType<SearchParams> = Simplify<{
   [key in keyof SearchParams]:
     | inferParserType<SearchParams[key]>
@@ -85,7 +85,7 @@ type inferDataTypes<Options> = Options extends { dataTypes?: any }
   ? Options["dataTypes"]
   : [];
 
-type ParamMethod<P> = {
+type ParamFunction<P> = {
   <T extends keyof P>(
     key: T,
   ): P extends { [key in T]: any } ? P[T] : string | undefined;
@@ -120,8 +120,8 @@ export type MiddlewareFunction<
       url: string;
       method: Method;
       headers: DredgeHeaders;
-      param: ParamMethod<Params>;
-      searchParam: ParamMethod<SearchParams>;
+      param: ParamFunction<Params>;
+      searchParam: ParamFunction<SearchParams>;
       searchParams: {
         <T extends keyof SearchParams>(
           key: T,
@@ -147,7 +147,7 @@ export type MiddlewareFunction<
       next: NextFunction<DataTypes>;
       end: EndFunction<DataTypes>;
     }>,
-  ): MaybePromise<MiddlewareResult<NewContext, NewOData>> | void;
+  ): MaybePromise<MiddlewareResult<NewContext, NewOData> | void>;
 };
 
 export type AnyErrorMiddlewareFunction = ErrorMiddlewareFunction<
@@ -193,7 +193,7 @@ export type ErrorMiddlewareFunction<
       next: NextFunction<DataTypes, EData>;
       end: EndFunction<DataTypes, EData>;
     }>,
-  ): MaybePromise<NextResult<NewContext, NewEData>>;
+  ): MaybePromise<MiddlewareResult<NewContext, NewEData> | void> | void;
 };
 
 type NextFunction<DataTypes = [], DT = any> = {
@@ -221,7 +221,7 @@ type EndFunction<DataTypes = [], DT = any> = {
 
 export type RouteBuilderDef<isResolved extends boolean = boolean> = {
   isResolved: isResolved;
-  method: HTTPMethod;
+  method?: HTTPMethod;
   paths: string[];
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
@@ -400,33 +400,46 @@ export interface UnresolvedRoute<
   use<
     NewContext = {},
     NewOData extends inferParserTypeIfNever<OBody, any> = never,
-  >(fn: {
-    (
-      req: Readonly<{
-        url: string;
-        method: Method;
-        headers: DredgeHeaders;
-        searchParam: ParamMethod<SearchParams>;
-        param: ParamMethod<Params>;
-        data: inferParserType<IBody>;
-      }>,
-      res: Readonly<{
-        ctx: inferSuccessContext<ContextOverride>;
-        headers: DredgeHeaders;
-        status?: number;
-        statusText?: string;
-        data: inferParserTypeIfNever<OBody, null>;
-        next: NextFunction<
-          inferDataTypes<Options>,
-          inferParserTypeIfNever<OBody, any>
-        >;
-        end: EndFunction<
-          inferDataTypes<Options>,
-          inferParserTypeIfNever<OBody, any>
-        >;
-      }>,
-    ): MaybePromise<MiddlewareResult<NewContext, NewOData>> | void;
-  }): UnresolvedRoute<
+  >(
+    fn: MiddlewareFunction<
+      inferDataTypes<Options>,
+      inferSuccessContext<ContextOverride>,
+      NewContext,
+      Method,
+      inferParamsType<Params>,
+      inferSingleSearchParamsType<SearchParams>,
+      inferParserType<IBody>,
+      inferParserTypeIfNever<OBody, any>,
+      NewOData
+    >,
+    // fn: {
+    //   (
+    //     req: Readonly<{
+    //       url: string;
+    //       method: Method;
+    //       headers: DredgeHeaders;
+    //       searchParam: ParamFunction<SearchParams>;
+    //       param: ParamFunction<Params>;
+    //       data: inferParserType<IBody>;
+    //     }>,
+    //     res: Readonly<{
+    //       ctx: inferSuccessContext<ContextOverride>;
+    //       headers: DredgeHeaders;
+    //       status?: number;
+    //       statusText?: string;
+    //       data: inferParserTypeIfNever<OBody, null>;
+    //       next: NextFunction<
+    //         inferDataTypes<Options>,
+    //         inferParserTypeIfNever<OBody, any>
+    //       >;
+    //       end: EndFunction<
+    //         inferDataTypes<Options>,
+    //         inferParserTypeIfNever<OBody, any>
+    //       >;
+    //     }>,
+    //   ): MaybePromise<MiddlewareResult<NewContext, NewOData>> | void;
+    // },
+  ): UnresolvedRoute<
     Options,
     Context,
     OverwriteSuccessContext<ContextOverride, NewContext>,
@@ -446,34 +459,53 @@ export interface UnresolvedRoute<
   error<
     NewContext,
     NewEData extends inferParserTypeIfNever<EBody, any> = never,
-  >(fn: {
-    (
-      error: any,
-      req: Readonly<{
-        method: string;
-        path: string;
-        params: <T extends string>(key: T) => string | undefined;
-        searchParam: <T extends string>(key: T) => string | undefined;
-        headers: DredgeHeaders;
-        data: unknown;
-      }>,
-      res: Readonly<{
-        ctx: inferErrorContext<ContextOverride>;
-        headers: DredgeHeaders;
-        status?: number;
-        statusText?: string;
-        data: inferParserTypeIfNever<EBody, null>;
-        next: NextFunction<
-          inferDataTypes<Options>,
-          inferParserTypeIfNever<EBody, any>
-        >;
-        end: EndFunction<
-          inferDataTypes<Options>,
-          inferParserTypeIfNever<EBody, any>
-        >;
-      }>,
-    ): MaybePromise<NextResult<NewContext, NewEData>>;
-  }): UnresolvedRoute<
+  >(
+    fn: ErrorMiddlewareFunction<
+      inferDataTypes<Options>,
+      inferErrorContext<ContextOverride>,
+      NewContext,
+      inferParserTypeIfNever<EBody, null>,
+      NewEData
+    >,
+    // fn: {
+    //   (
+    //     error: any,
+    //     req: Readonly<{
+    //       method: string;
+    //       url: string;
+    //       param: {
+    //         <T extends string>(key: T): string | undefined;
+    //         (): Record<string, string>;
+    //       };
+    //       searchParam: {
+    //         <T extends string>(key: T): string | undefined;
+    //         (): Record<string, string>;
+    //       };
+    //       searchParams: {
+    //         <T extends string>(key: T): string[];
+    //         (): Record<string, string[]>;
+    //       };
+    //       headers: DredgeHeaders;
+    //       data: unknown;
+    //     }>,
+    //     res: Readonly<{
+    //       ctx: inferErrorContext<ContextOverride>;
+    //       headers: DredgeHeaders;
+    //       status?: number;
+    //       statusText?: string;
+    //       data: inferParserTypeIfNever<EBody, null>;
+    //       next: NextFunction<
+    //         inferDataTypes<Options>,
+    //         inferParserTypeIfNever<EBody, any>
+    //       >;
+    //       end: EndFunction<
+    //         inferDataTypes<Options>,
+    //         inferParserTypeIfNever<EBody, any>
+    //       >;
+    //     }>,
+    //   ): MaybePromise<NextResult<NewContext, NewEData>>;
+    // },
+  ): UnresolvedRoute<
     Options,
     Context,
     OverwriteErrorContext<ContextOverride, NewContext>,
