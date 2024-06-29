@@ -330,6 +330,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             const middlewareResult = await handleMiddleware(
               fn,
               {
+                isError: true,
                 error,
                 request: unValidatedRequest,
                 response: response,
@@ -428,6 +429,7 @@ function paramFn(params: Record<string, any>, onlyFirst: boolean = false) {
 async function handleMiddleware(
   fn: Function,
   payload: {
+    isError?: boolean;
     error?: any;
     request: {
       headers: Record<string, string>;
@@ -447,7 +449,7 @@ async function handleMiddleware(
   },
   dataTypes: string[] = [],
 ): Promise<MiddlewareResult<any, any> | void> {
-  const { request, response, ctx, error } = payload;
+  const { request, response, ctx, error, isError = false } = payload;
 
   const req = {
     headers: request.headers,
@@ -496,7 +498,7 @@ async function handleMiddleware(
 
   let middlewareResult: MiddlewareResult<any, any>;
 
-  if (error) {
+  if (isError) {
     middlewareResult = await fn(error, req, res);
   } else {
     middlewareResult = await fn(req, res);
