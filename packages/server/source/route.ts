@@ -23,7 +23,7 @@ export function dredgeRoute<Context extends object>() {
 
 export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const {
-    method = "get",
+    method,
     middlewares = [],
     errorMiddlewares = [],
     paths = [],
@@ -86,17 +86,25 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
       paths.forEach((item) => {
         if (!pathRegex.test(item)) {
-          throw `invalid path ${item}`;
+          throw new Error(`invalid path ${item}`);
         }
       });
 
       const newParamPaths = paths.reduce((acc: string[], item) => {
-        if (item.startsWith(":")) acc.push(item);
+        if (item.startsWith(":")) {
+          if (acc.includes(item)) {
+            throw new Error(`Param '${item}' is used more than once`);
+          }
+
+          acc.push(item);
+        }
+
         return acc;
       }, []);
+
       _paths.forEach((item) => {
         if (newParamPaths.includes(item)) {
-          throw `param '${item}' is already defined`;
+          throw new Error(`Param '${item}' is already defined`);
         }
       });
 
@@ -111,15 +119,13 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       const _paths = _def.paths;
 
       Object.entries(params).forEach(([path, parser]) => {
-        // check if it is already defined - might not be useful sometimes
         if (_params[path]) {
           throw `${path} param schema already defined`;
         }
 
-        // check if path is defined or not - I guess it doesn't need. it would be useful to define params before defining corresponding path
-        // if (!_paths.includes(`:${path}`)) {
-        //   throw `:${path} is not defined`;
-        // }
+        if (!_paths.includes(`:${path}`)) {
+          throw `Param '${path}' is not defined`;
+        }
 
         // validate parser
       });
@@ -155,7 +161,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
 
     use: (cb) => {
-      const middlewares = _def.middlewares;
+      const middlewares = [..._def.middlewares];
       middlewares.push(cb);
       return createRouteBuilder({
         ..._def,
@@ -164,7 +170,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
 
     error(cb) {
-      const errorMiddlewares = _def.errorMiddlewares;
+      const errorMiddlewares = [..._def.errorMiddlewares];
       errorMiddlewares.push(cb);
       return createRouteBuilder({
         ..._def,
@@ -173,6 +179,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
 
     method: (method, parser) => {
+      const _paths = _def.paths;
       const _method = _def.method;
       const _parser = _def.iBody;
 
@@ -208,7 +215,17 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
 
     build() {
-      // check if method, path is defined or not..
+      const _paths = _def.paths;
+      const _method = _def.method;
+      const _parser = _def.iBody;
+
+      if (!_paths.length) {
+        throw "Paths are not defined";
+      }
+
+      if (!_method) {
+        throw "Method is not defined";
+      }
 
       return {
         _def: {
