@@ -163,20 +163,25 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       const _path = trimSlashes(path);
       const pathArray = _path.split("/");
       const urlSearchParams = new URLSearchParams(searchParams);
-      const url =
-        trimSlashes(prefixUrl) + "/" + _path + "?" + urlSearchParams.toString();
+      let url = trimSlashes(prefixUrl) + "/" + _path;
+      const search = urlSearchParams.toString();
+      if (search) {
+        url += "?" + search;
+      }
 
       pathArray.forEach((item) => {
         const child = current.getStaticChild(item) || current.getDynamicChild();
 
         if (!child) {
-          throw "Invalid path";
+          throw "not-found";
         }
 
         current = child;
       });
-
-      const routeDef = current.getRoute(method)!._def || null;
+      const routeDef = current.getRoute(method)?._def!;
+      if (!routeDef) {
+        throw "not-found";
+      }
 
       const params: Record<string, string> = routeDef.paths.reduce(
         (acc: any, item, index) => {
@@ -196,7 +201,10 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         searchParams,
         data,
       };
-      for (const [key, value] of unValidatedRequest.searchParams.entries()) {
+
+      for (const [key, value] of Object.entries(
+        unValidatedRequest.searchParams,
+      )) {
         const valueArray = Array.isArray(value) ? value : [value];
         unValidatedRequest.searchParams[key] = valueArray;
       }
@@ -213,13 +221,14 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       async function fn() {
         try {
           const validatedParams: Record<string, any> = {};
-          for (const [index, item] of routeDef.paths.entries()) {
-            if (item.startsWith(":")) {
-              const parser = routeDef.params[item.replace(":", "")];
-              validatedParams[item] = parser
-                ? await getValidatorFn(parser, "PARAMS")(pathArray[index])
-                : pathArray[index];
-            }
+          for (const [key, value] of Object.entries(
+            unValidatedRequest.params,
+          )) {
+            const parser = routeDef.params[key];
+
+            validatedParams[key] = parser
+              ? await getValidatorFn(parser, "PARAMS")(value)
+              : value;
           }
           validatedRequest.params = validatedParams;
 
@@ -227,6 +236,11 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
           for (const [key, parser] of Object.entries(routeDef.searchParams)) {
             const values = unValidatedRequest.searchParams[key];
             const validatedValues = [];
+
+            if (!values) {
+              await getValidatorFn(parser, "SEARCH_PARAMS")(undefined);
+              continue;
+            }
 
             for (const item of values) {
               validatedValues.push(
@@ -387,10 +401,6 @@ function nextEndFunction(
   };
 }
 
-// TODO
-// test client
-// test router
-
 function paramFn(params: Record<string, any>, onlyFirst: boolean = false) {
   return (key?: string) => {
     if (key) {
@@ -499,8 +509,9 @@ async function handleMiddleware(
   return middlewareResult;
 }
 
-class ValidationError extends Error {
+export class ValidationError extends Error {
   issue: any;
+  type: ValidationType;
 
   constructor(
     type: "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA",
@@ -508,6 +519,7 @@ class ValidationError extends Error {
   ) {
     super(`Failed at ${type} validation`);
 
+    this.type = type;
     this.issue = issue;
   }
 }
