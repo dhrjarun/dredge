@@ -108,7 +108,7 @@ export interface DredgeRouter {
       method?: string;
       data?: any;
       searchParams?: Record<string, any>;
-      ctx: any;
+      ctx?: any;
       prefixUrl?: string;
     },
   ): Promise<{
@@ -196,7 +196,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       const unValidatedRequest = {
         url,
         method,
-        headers,
+        headers: normalizeHeaders(headers),
         params,
         searchParams,
         data,
@@ -209,14 +209,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         unValidatedRequest.searchParams[key] = valueArray;
       }
 
-      let validatedRequest = {
-        url,
-        method,
-        headers,
-        params,
-        searchParams,
-        data,
-      };
+      let validatedRequest = { ...unValidatedRequest };
 
       async function fn() {
         try {
@@ -263,60 +256,54 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             headers: {},
           };
 
-          const req = {
-            headers: validatedRequest.headers,
-            method: validatedRequest.method,
-            data: validatedRequest.data,
-            url: url,
-            param(key?: string) {
-              return paramFn(validatedRequest.params)(key);
-            },
-            searchParam(key?: string) {
-              return paramFn(validatedRequest.searchParams, true)(key);
-            },
-            searchParams(key?: string) {
-              return paramFn(validatedRequest.searchParams)(key);
-            },
-          };
-
-          let shouldBreak = false;
+          // let shouldBreak = false;
 
           for (const fn of routeDef.middlewares) {
-            const middlewareResult = await fn(req, {
-              ...response,
-              ctx: currentCtx,
-              next(nextOptions?: any) {
-                return nextEndFunction(
-                  nextOptions,
-                  {
-                    ...response,
-                    ctx: currentCtx,
-                  },
-                  routeDef.dataTypes,
-                );
-              },
-              end(endOptions?: any) {
-                shouldBreak = true;
+            // const middlewareResult = await fn(req, {
+            //   ...response,
+            //   ctx: currentCtx,
+            //   next(nextOptions?: any) {
+            //     return nextEndFunction(
+            //       nextOptions,
+            //       {
+            //         ...response,
+            //         ctx: currentCtx,
+            //       },
+            //       routeDef.dataTypes,
+            //     );
+            //   },
+            //   end(endOptions?: any) {
+            //     shouldBreak = true;
 
-                return nextEndFunction(
-                  endOptions,
-                  {
-                    ...response,
-                    ctx: currentCtx,
-                  },
-                  routeDef.dataTypes,
-                );
+            //     return nextEndFunction(
+            //       endOptions,
+            //       {
+            //         ...response,
+            //         ctx: currentCtx,
+            //       },
+            //       routeDef.dataTypes,
+            //     );
+            //   },
+            // });
+            const middlewareResult = await handleMiddleware(
+              fn,
+              {
+                isError: false,
+                ctx: currentCtx,
+                request: validatedRequest,
+                response,
               },
-            });
+              routeDef.dataTypes,
+            );
 
             if (!middlewareResult) {
               continue;
             }
-            const { ctx, ...newResponse } = middlewareResult;
+            const { ctx, isEnd, ...newResponse } = middlewareResult;
             currentCtx = ctx;
             response = newResponse;
 
-            if (!shouldBreak) {
+            if (isEnd) {
               break;
             }
           }
@@ -347,7 +334,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             currentCtx = newCtx;
             response = newResponse;
 
-            if (!isEnd) {
+            if (isEnd) {
               break;
             }
           }
@@ -382,7 +369,7 @@ function nextEndFunction(
   }
 
   const _dataTypes = ["data", ...dataTypes];
-  let data: any = previousOptions?.data || null;
+  let data: any = previousOptions?.data;
   let dataType = undefined;
 
   for (const item of _dataTypes) {
@@ -399,6 +386,7 @@ function nextEndFunction(
     status: options?.status || previousOptions?.status,
     statusText: options?.statusText || previousOptions?.statusText,
     data,
+    dataType,
   };
 }
 
@@ -444,6 +432,7 @@ async function handleMiddleware(
       data?: any;
       status?: number;
       statusText?: string;
+      dataType?: string;
     };
     ctx: any;
   },
@@ -452,7 +441,13 @@ async function handleMiddleware(
   const { request, response, ctx, error, isError = false } = payload;
 
   const req = {
-    headers: request.headers,
+    header(headerName?: string) {
+      if (headerName) {
+        return request.headers?.[headerName.toLowerCase()];
+      }
+
+      return request.headers;
+    },
     method: request.method,
     data: request.data,
     url: request.url,
@@ -470,8 +465,18 @@ async function handleMiddleware(
   let isEnd = false;
 
   const res = {
-    ...response,
+    status: response.status,
+    statusText: response.statusText,
+    data: response.data,
+    dataType: response.dataType,
     ctx,
+    header(headerName?: string) {
+      if (headerName) {
+        return response.headers?.[headerName.toLowerCase()];
+      }
+
+      return response.headers;
+    },
     next(nextOptions?: any) {
       return nextEndFunction(
         nextOptions,
@@ -538,3 +543,13 @@ function getValidatorFn(parser: Parser, step: ValidationType) {
 }
 
 type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
+
+function normalizeHeaders(headers: Record<string, string>) {
+  const newHeaders: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(headers)) {
+    newHeaders[key.toLowerCase()] = value;
+  }
+
+  return newHeaders;
+}

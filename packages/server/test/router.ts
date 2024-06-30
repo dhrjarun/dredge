@@ -3,8 +3,205 @@ import { z } from "zod";
 import { dredgeRoute } from "../source/route";
 import { ValidationError, dredgeRouter } from "../source/router";
 
+const prefixUrl = "https://life.com";
+
+describe("execution flow", () => {
+  test("it will throw, if request did not matched", () => {
+    const router = dredgeRouter([
+      dredgeRoute().path("/test-i").get().build(),
+      dredgeRoute().path("test-ii/:param/end").post().build(),
+      dredgeRoute().path("test-iii").delete().build(),
+    ]);
+
+    expect(() => {
+      router.call("/test-i/param/end", {
+        method: "post",
+      });
+    }).toThrowError();
+
+    expect(() => {
+      router.call("/test-ii/param/end", {
+        method: "post",
+      });
+    }).not.toThrowError();
+
+    expect(() => {
+      router.call("/test-iii", {
+        method: "post",
+      });
+    }).toThrowError();
+
+    expect(() => {
+      router.call("/test-iii", {
+        method: "delete",
+      });
+    }).not.toThrowError();
+  });
+
+  test("all success middleware should run", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          return res.next({
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        })
+        .use((req, res) => {
+          return res.next({
+            status: 200,
+            statusText: "ok",
+          });
+        })
+        .use((req, res) => {
+          return res.next({
+            data: "dummy-data",
+          });
+        })
+        .build(),
+    ]);
+
+    const response = await router.call("/test", {
+      method: "get",
+    });
+
+    expect(response.headers).toStrictEqual({
+      "content-type": "application/json",
+    });
+    expect(response.status).toBe(200);
+    expect(response.statusText).toBe("ok");
+    expect(response.data).toBe("dummy-data");
+  });
+
+  test("all error middleware should run", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .use(() => {
+          throw "any";
+        })
+        .error((err, req, res) => {
+          return res.next({
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        })
+        .error((err, req, res) => {
+          return res.next({
+            status: 404,
+            statusText: "not-found",
+          });
+        })
+        .error((err, req, res) => {
+          return res.next({
+            data: "dummy-data",
+          });
+        })
+        .build(),
+    ]);
+
+    const response = await router.call("/test", {
+      method: "get",
+    });
+
+    expect(response.headers).toStrictEqual({
+      "content-type": "application/json",
+    });
+    expect(response.status).toBe(404);
+    expect(response.statusText).toBe("not-found");
+    expect(response.data).toBe("dummy-data");
+  });
+
+  test("res.end() function should skip the rest of the success middleware", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          return res.next({
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        })
+        .use((req, res) => {
+          return res.end({
+            status: 200,
+            statusText: "ok",
+          });
+        })
+        .use((req, res) => {
+          return res.next({
+            data: "dummy-data",
+            status: 201,
+            statusText: "created",
+          });
+        })
+        .build(),
+    ]);
+
+    const response = await router.call("/test", {
+      method: "get",
+    });
+
+    expect(response.headers).toStrictEqual({
+      "content-type": "application/json",
+    });
+    expect(response.status).toBe(200);
+    expect(response.statusText).toBe("ok");
+    expect(response.data).toBe(undefined);
+  });
+
+  test("res.end() function should skip the rest of the error middleware", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .use(() => {
+          throw "any";
+        })
+        .error((err, req, res) => {
+          return res.next({
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        })
+        .error((err, req, res) => {
+          return res.end({
+            status: 404,
+            statusText: "not-found",
+          });
+        })
+        .error((err, req, res) => {
+          return res.next({
+            data: "dummy-data",
+            status: 400,
+            statusText: "bad-data",
+          });
+        })
+        .build(),
+    ]);
+
+    const response = await router.call("/test", {
+      method: "get",
+    });
+
+    expect(response.headers).toStrictEqual({
+      "content-type": "application/json",
+    });
+    expect(response.status).toBe(404);
+    expect(response.statusText).toBe("not-found");
+    expect(response.data).toBe(undefined);
+  });
+});
+
 describe("req", () => {
-  const prefixUrl = "https://life.com";
   let route = dredgeRoute().path("/universe/:galaxy/solar-system/:planet");
 
   test("valid req.url and req.method", async () => {
@@ -79,76 +276,6 @@ describe("req", () => {
       method: "get",
       ctx: {},
       prefixUrl: "https://life.com",
-    });
-  });
-
-  describe("req.searchParam", () => {
-    const spRoute = dredgeRoute()
-      .path("/sp")
-      .searchParams({
-        required: z.string(),
-        optional: z.string().optional(),
-      })
-      .get()
-      .use((req) => {
-        expect(req.searchParam("required")).toBe("i am required");
-
-        expect(req.searchParam()).toMatchObject({
-          required: "i am required",
-        });
-      })
-      .searchParams({});
-
-    test("optional searchParam should work", async () => {
-      const router = dredgeRouter([
-        spRoute
-          .error((err) => {
-            throw err;
-          })
-          .build(),
-      ]);
-
-      await router.call("sp", {
-        method: "get",
-        ctx: {},
-        prefixUrl,
-        searchParams: {
-          required: "i am required",
-        },
-      });
-
-      await router.call("sp", {
-        method: "get",
-        ctx: {},
-        prefixUrl,
-        searchParams: {
-          required: "i am required",
-          optional: "i am optional",
-        },
-      });
-    });
-
-    test("required searchParam if not provided, will throw", async () => {
-      const router = dredgeRouter([
-        spRoute
-          .use(() => {
-            throw "no-needed";
-          })
-          .error((err) => {
-            expect(err).instanceOf(ValidationError);
-            expect(err.type).toBe("SEARCH_PARAMS");
-          })
-          .build(),
-      ]);
-
-      await router.call("sp", {
-        method: "get",
-        ctx: {},
-        prefixUrl,
-        searchParams: {
-          optional: "i am optional",
-        },
-      });
     });
   });
 
@@ -234,7 +361,6 @@ describe("req", () => {
             throw err;
           }
 
-          console.log(req.searchParams());
           expect(req.searchParams("page")).toStrictEqual(["02", "005"]);
           expect(req.searchParams("skip")).toStrictEqual(["005"]);
 
@@ -253,6 +379,257 @@ describe("req", () => {
       searchParams: {
         page: ["02", "005"],
         skip: "005",
+      },
+    });
+  });
+
+  test("data should be in req object", () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .post(z.string().toUpperCase())
+        .use((req) => {
+          expect(req.data).toBe("TEST-DATA");
+
+          throw "DBT";
+        })
+        .error((err, req) => {
+          if (err !== "DBT") throw err;
+
+          expect(req.data).toBe("test-data");
+        })
+        .build(),
+    ]);
+
+    router.call("/test", {
+      prefixUrl,
+      method: "post",
+      ctx: {},
+      data: "test-data",
+    });
+  });
+
+  test("req.header should return headers", () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .put(z.string())
+        .use((req) => {
+          expect(req.header("content-Type")).toBe("application/json");
+          expect(req.header("Content-Type")).toBe("application/json");
+          expect(req.header("content-type")).toBe("application/json");
+
+          expect(req.header()).toBeTypeOf("object");
+
+          throw "DBT";
+        })
+        .error((err, req) => {
+          if (err !== "DBT") throw err;
+
+          expect(req.header("content-Type")).toBe("application/json");
+          expect(req.header("Content-Type")).toBe("application/json");
+          expect(req.header("content-type")).toBe("application/json");
+
+          expect(req.header()).toBeTypeOf("object");
+        })
+        .build(),
+    ]);
+
+    router.call("/test", {
+      prefixUrl,
+      method: "put",
+      data: "test-data",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept-Encoding": "gzip",
+      },
+    });
+  });
+});
+
+describe("res object", () => {
+  test("res.next should modify the response", () => {
+    function initialCheck(res: any) {
+      expect(res.status).toBeUndefined();
+      expect(res.statusText).toBeUndefined();
+      expect(res.data).toBeUndefined();
+      expect(res.ctx).toStrictEqual({
+        db: "fake-db",
+      });
+      expect(res.header()).toStrictEqual({});
+    }
+
+    function afterModificationCheck(res) {
+      expect(res.status).toBe(200);
+      expect(res.statusText).toBe("ok");
+      expect(res.ctx).toStrictEqual({
+        db: "fake-db",
+        isInitialCheckDone: true,
+      });
+
+      expect(res.header("content-type")).toBe("application/json");
+      expect(res.header("content-Type")).toBe("application/json");
+
+      expect(res.data).toBe("response-data");
+    }
+
+    const router = dredgeRouter([
+      dredgeRoute<{ db: "fake-db" }>()
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          initialCheck(res);
+
+          return res.next({
+            status: 200,
+            statusText: "ok",
+            ctx: {
+              isInitialCheckDone: true,
+            },
+            data: "response-data",
+            headers: {
+              "content-Type": "application/json",
+            },
+          });
+        })
+        .use((req, res) => {
+          afterModificationCheck(res);
+        })
+        .error((err) => {
+          if (err !== "DBT") throw err;
+        })
+        .error((err, req, res) => {
+          initialCheck(res);
+
+          return res.next({
+            status: 200,
+            statusText: "ok",
+            ctx: {
+              isInitialCheckDone: true,
+            },
+            data: "initial-check",
+          });
+        })
+        .error((err, req, res) => {
+          afterModificationCheck(res);
+        })
+        .build(),
+    ]);
+
+    router.call("/test", {
+      ctx: { db: "fake-db" },
+    });
+  });
+
+  test("dataType in res.next", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .options({
+          dataTypes: ["json", "formData"],
+        })
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          expect(res.dataType).toBeUndefined();
+
+          return res.next({
+            json: { payload: null },
+          });
+        })
+        .use((req, res) => {
+          expect(res.dataType).toBe("json");
+          expect(res.data).toStrictEqual({ payload: null });
+
+          throw "DBT";
+        })
+        .error((err) => {
+          if (err !== "DBT") throw err;
+        })
+        .error((err, req, res) => {
+          expect(res.dataType).toBeUndefined();
+
+          return res.next({
+            json: { payload: null },
+          });
+        })
+        .error((err, req, res) => {
+          expect(res.dataType).toBe("json");
+          expect(res.data).toStrictEqual({ payload: null });
+        })
+        .build(),
+    ]);
+
+    await router.call("/test", {
+      method: "get",
+    });
+  });
+});
+
+describe("Validation", () => {
+  const spRoute = dredgeRoute()
+    .path("/sp")
+    .searchParams({
+      required: z.string(),
+      optional: z.string().optional(),
+    })
+    .get()
+    .use((req) => {
+      expect(req.searchParam("required")).toBe("i am required");
+
+      expect(req.searchParam()).toMatchObject({
+        required: "i am required",
+      });
+    })
+    .searchParams({});
+
+  test("optional searchParam should work", async () => {
+    const router = dredgeRouter([
+      spRoute
+        .error((err) => {
+          throw err;
+        })
+        .build(),
+    ]);
+
+    await router.call("sp", {
+      method: "get",
+      ctx: {},
+      prefixUrl,
+      searchParams: {
+        required: "i am required",
+      },
+    });
+
+    await router.call("sp", {
+      method: "get",
+      ctx: {},
+      prefixUrl,
+      searchParams: {
+        required: "i am required",
+        optional: "i am optional",
+      },
+    });
+  });
+
+  test("required searchParam if not provided, will throw", async () => {
+    const router = dredgeRouter([
+      spRoute
+        .use(() => {
+          throw "no-needed";
+        })
+        .error((err) => {
+          expect(err).instanceOf(ValidationError);
+          expect(err.type).toBe("SEARCH_PARAMS");
+        })
+        .build(),
+    ]);
+
+    await router.call("sp", {
+      method: "get",
+      ctx: {},
+      prefixUrl,
+      searchParams: {
+        optional: "i am optional",
       },
     });
   });
