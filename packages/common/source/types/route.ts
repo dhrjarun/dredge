@@ -1,6 +1,6 @@
 import { Exact, IsAny, IsNever, IsUnknown } from "ts-essentials";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
-import { DredgeHeaders, DredgeSearchParams, HTTPMethod } from "./http";
+import { DredgeHeaders, HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 
 export type inferSingleSearchParamsType<SearchParams> = Simplify<{
@@ -46,7 +46,7 @@ export interface MiddlewareResult<C, Data> {
 }
 
 type Data<Shortcuts, T> =
-  | { data: T }
+  | { data?: T }
   | (Shortcuts extends string[]
       ? Shortcuts[number] extends infer U
         ? U extends string
@@ -104,6 +104,7 @@ export type AnyMiddlewareFunction = MiddlewareFunction<
   any,
   any
 >;
+
 export type MiddlewareFunction<
   DataTypes,
   Context,
@@ -116,10 +117,14 @@ export type MiddlewareFunction<
   NewOData,
 > = {
   (
-    req: Readonly<{
-      url: string;
-      method: Method;
-      headers: DredgeHeaders;
+    req: {
+      readonly url: string;
+      readonly method: Method;
+      readonly data: IData;
+      header: {
+        (headerName: string): string | undefined;
+        (): Record<string, string>;
+      };
       param: ParamFunction<Params>;
       searchParam: ParamFunction<SearchParams>;
       searchParams: {
@@ -136,17 +141,22 @@ export type MiddlewareFunction<
           >
         >;
       };
-      data: IData;
-    }>,
-    res: Readonly<{
-      ctx: Context;
-      headers: DredgeHeaders;
-      status?: number;
-      statusText?: string;
-      data: OData;
+    },
+    res: {
+      readonly ctx: Context;
+      readonly status?: number;
+      readonly statusText?: string;
+      readonly data: OData;
+      readonly dataType?: DataTypes extends string[]
+        ? DataTypes[number]
+        : undefined;
+      header: {
+        (headerName: string): string | undefined;
+        (): Record<string, string>;
+      };
       next: NextFunction<DataTypes>;
       end: EndFunction<DataTypes>;
-    }>,
+    },
   ): MaybePromise<MiddlewareResult<NewContext, NewOData> | void>;
 };
 
@@ -166,9 +176,11 @@ export type ErrorMiddlewareFunction<
 > = {
   (
     error: any,
-    req: Readonly<{
-      method: string;
-      url: string;
+    req: {
+      readonly method: string;
+      readonly url: string;
+      readonly data: unknown;
+
       param: {
         <T extends string>(key: T): string | undefined;
         (): Record<string, string>;
@@ -181,18 +193,27 @@ export type ErrorMiddlewareFunction<
         <T extends string>(key: T): string[];
         (): Record<string, string[]>;
       };
-      headers: DredgeHeaders;
-      data: unknown;
-    }>,
-    res: Readonly<{
-      ctx: Context;
-      headers: DredgeHeaders;
-      status?: number;
-      statusText?: string;
-      data: EData;
-      next: NextFunction<DataTypes, EData>;
-      end: EndFunction<DataTypes, EData>;
-    }>,
+      header: {
+        (headerName: string): string | undefined;
+        (): Record<string, string>;
+      };
+    },
+    res: {
+      readonly ctx: Context;
+      readonly status?: number;
+      readonly statusText?: string;
+      readonly data: EData;
+      readonly dataType?: DataTypes extends string[]
+        ? DataTypes[number]
+        : undefined;
+
+      header: {
+        (headerName: string): string | undefined;
+        (): Record<string, string>;
+      };
+      next: NextFunction<DataTypes>;
+      end: EndFunction<DataTypes>;
+    },
   ): MaybePromise<MiddlewareResult<NewContext, NewEData> | void> | void;
 };
 
@@ -613,7 +634,7 @@ export interface UnresolvedRoute<
     EBody
   >;
   post<P extends Parser>(
-    parser: P,
+    parser?: P,
   ): UnresolvedRoute<
     Options,
     Context,
@@ -627,7 +648,7 @@ export interface UnresolvedRoute<
     EBody
   >;
   put<P extends Parser>(
-    parser: P,
+    parser?: P,
   ): UnresolvedRoute<
     Options,
     Context,
@@ -653,7 +674,7 @@ export interface UnresolvedRoute<
     EBody
   >;
   patch<P extends Parser>(
-    parser: P,
+    parser?: P,
   ): UnresolvedRoute<
     Options,
     Context,
