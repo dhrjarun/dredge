@@ -321,16 +321,16 @@ export interface UnresolvedRoute<
   _def: RouteBuilderDef<false>;
 
   options<
-    const $DataTypes extends string[] = [],
+    const $DataTypes extends string[],
     const DefaultContext extends Partial<
       Options extends { initialContext: any } ? Options["initialContext"] : {}
-    > = {},
+    >,
   >(options?: {
     dataTypes?: $DataTypes;
     dataTransformer?: {
       [key in $DataTypes[number]]?: {
-        forRequest: (data: any) => any;
-        forResponse: (data: any) => any;
+        forRequest?: (data: any) => any;
+        forResponse?: (data: any) => any;
       };
     };
     defaultContext?: DefaultContext;

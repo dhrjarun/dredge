@@ -1,6 +1,89 @@
 import { assert, describe, expect, test } from "vitest";
 import { dredgeRoute } from "../source/route";
 
+describe("route.options()", () => {
+  test("dataType should be in route._def", () => {
+    const route = dredgeRoute()
+      .options({
+        dataTypes: ["json", "form"],
+      })
+      .options({
+        dataTypes: ["xml", "yaml"],
+      });
+
+    expect(route._def.dataTypes).toStrictEqual(["json", "form", "xml", "yaml"]);
+  });
+
+  test("invalid dataTypes will throw error", () => {});
+
+  test("if a dataType are provided more than once, the later ones are rejected", () => {
+    const route = dredgeRoute()
+      .options({
+        dataTypes: ["a", "b", "c", "d", "b", "d", "e"],
+      })
+      .options({
+        dataTypes: ["d", "e"],
+      });
+
+    expect(route._def.dataTypes).toStrictEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  test("defaultContext should be in route._def", () => {
+    const route = dredgeRoute<{
+      db: any;
+      local: any;
+      session: { username: string };
+    }>()
+      .options({
+        dataTypes: ["json", "form"],
+        defaultContext: {
+          db: "fake-db",
+          session: {
+            username: "fake-user",
+          },
+        },
+      })
+      .options({
+        defaultContext: {
+          db: "test-db",
+        },
+      });
+
+    expect(route._def.defaultContext).toStrictEqual({
+      db: "test-db",
+      session: {
+        username: "fake-user",
+      },
+    });
+  });
+
+  test("dataTransformer should be in route._def", () => {
+    const json = {
+      forRequest: (data) => data,
+      forResponse: (data) => data,
+    };
+
+    const route = dredgeRoute()
+      .options({
+        dataTypes: ["json", "form"],
+        dataTransformer: {
+          json: {
+            forRequest: json.forRequest,
+          },
+        },
+      })
+      .options({
+        dataTransformer: {
+          json: {
+            forResponse: json.forResponse,
+          },
+        },
+      });
+
+    expect(route._def.dataTransformer.json).toStrictEqual(json);
+  });
+});
+
 describe("route.path()", () => {
   test("paths should be registered in _def", () => {
     let route = dredgeRoute().path("universe/milky-way/solar-system/:planet/");

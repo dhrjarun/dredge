@@ -98,7 +98,9 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
       return createRouteBuilder({
         ..._def,
-        dataTypes: [..._dataTypes, ...dataTypes],
+        dataTypes: Array.from(
+          new Set([..._dataTypes, ...Array.from(new Set(dataTypes))]),
+        ),
         defaultContext: {
           ..._defaultContext,
           ...defaultContext,
