@@ -5,7 +5,6 @@ import type {
   MiddlewareResult,
   Parser,
 } from "@dredge/common";
-import parsePath from "parse-path";
 import { mergeDeep, mergeHeaders } from "./utils/merge";
 
 export class RoutePath {
@@ -107,9 +106,11 @@ export interface DredgeRouter {
       headers?: DredgeHeaders;
       method?: string;
       data?: any;
+      dataType?: string;
       searchParams?: Record<string, any>;
       ctx?: any;
       prefixUrl?: string;
+      transformData?: boolean | "onlyRequest" | "onlyResponse";
     },
   ): Promise<{
     headers: Record<string, string>;
@@ -147,18 +148,19 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       root,
     },
 
-    call: (path, options) => {
+    call: async (path, options) => {
       const {
         method = "get",
         headers = {},
-        data = null,
+        data: _data = null,
         searchParams = {},
-        ctx = {},
+        ctx: _ctx = {},
         prefixUrl = "/",
+        dataType,
+        transformData = true,
       } = options;
 
       // TODO: validate path
-
       let current = root;
       const _path = trimSlashes(path);
       const pathArray = _path.split("/");
@@ -178,10 +180,27 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
         current = child;
       });
+
       const routeDef = current.getRoute(method)?._def!;
       if (!routeDef) {
         throw "not-found";
       }
+
+      const ctx = {
+        ...routeDef.defaultContext,
+        ..._ctx,
+      };
+
+      // transformRequestData
+      const shouldTransformRequestData =
+        transformData == true || transformData == "onlyRequest";
+      const requestDataTransformer = dataType
+        ? routeDef.dataTransformer?.[dataType]?.forRequest ||
+          ((data: any) => data)
+        : (data: any) => data;
+      const data = shouldTransformRequestData
+        ? requestDataTransformer(_data)
+        : _data;
 
       const params: Record<string, string> = routeDef.paths.reduce(
         (acc: any, item, index) => {
@@ -256,35 +275,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             headers: {},
           };
 
-          // let shouldBreak = false;
-
           for (const fn of routeDef.middlewares) {
-            // const middlewareResult = await fn(req, {
-            //   ...response,
-            //   ctx: currentCtx,
-            //   next(nextOptions?: any) {
-            //     return nextEndFunction(
-            //       nextOptions,
-            //       {
-            //         ...response,
-            //         ctx: currentCtx,
-            //       },
-            //       routeDef.dataTypes,
-            //     );
-            //   },
-            //   end(endOptions?: any) {
-            //     shouldBreak = true;
-
-            //     return nextEndFunction(
-            //       endOptions,
-            //       {
-            //         ...response,
-            //         ctx: currentCtx,
-            //       },
-            //       routeDef.dataTypes,
-            //     );
-            //   },
-            // });
             const middlewareResult = await handleMiddleware(
               fn,
               {
@@ -343,9 +334,20 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         }
       }
 
-      let responsePromise = fn();
+      let response = await fn();
 
-      return responsePromise;
+      // transformResponseData
+      const shouldTransformResponseData =
+        transformData == true || transformData == "onlyRequest";
+      const responseDataTransformer = dataType
+        ? routeDef.dataTransformer?.[dataType]?.forResponse ||
+          ((data: any) => data)
+        : (data: any) => data;
+      response.data = shouldTransformResponseData
+        ? responseDataTransformer(response.data)
+        : _data;
+
+      return response;
     },
   } as DredgeRouter;
 }

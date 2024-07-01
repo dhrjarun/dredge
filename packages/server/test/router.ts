@@ -13,29 +13,29 @@ describe("execution flow", () => {
       dredgeRoute().path("test-iii").delete().build(),
     ]);
 
-    expect(() => {
+    expect(
       router.call("/test-i/param/end", {
         method: "post",
-      });
-    }).toThrowError();
+      }),
+    ).rejects.toThrowError();
 
-    expect(() => {
+    expect(
       router.call("/test-ii/param/end", {
         method: "post",
-      });
-    }).not.toThrowError();
+      }),
+    ).resolves.toMatchObject({});
 
-    expect(() => {
+    expect(
       router.call("/test-iii", {
         method: "post",
-      });
-    }).toThrowError();
+      }),
+    ).rejects.toThrowError();
 
-    expect(() => {
+    expect(
       router.call("/test-iii", {
         method: "delete",
-      });
-    }).not.toThrowError();
+      }),
+    ).resolves.toMatchObject({});
   });
 
   test("all success middleware should run", async () => {
@@ -409,6 +409,47 @@ describe("req", () => {
     });
   });
 
+  test("data should be transformed", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .options({
+          dataTransformer: {
+            json: {
+              forRequest: (data) => {
+                return { json: data };
+              },
+              forResponse: (data) => {
+                return { resData: data };
+              },
+            },
+          },
+        })
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          expect(req.data).toStrictEqual({
+            json: "dummy-data",
+          });
+
+          return res.end({
+            data: "dummy-data",
+          });
+        })
+        .error((err) => {
+          if (err !== "DBT") throw err;
+        })
+        .build(),
+    ]);
+
+    const res = await router.call("/test", {
+      method: "get",
+      data: "dummy-data",
+      dataType: "json",
+    });
+
+    expect(res.data).toStrictEqual({ resData: "dummy-data" });
+  });
+
   test("req.header should return headers", () => {
     const router = dredgeRouter([
       dredgeRoute()
@@ -448,6 +489,53 @@ describe("req", () => {
 });
 
 describe("res object", () => {
+  test("defaultContext should be merged", () => {
+    const router = dredgeRouter([
+      dredgeRoute<{ db: any; session: { username: string }; local: any }>()
+        .options({
+          defaultContext: {
+            db: "fake-db",
+            session: {
+              username: "fake-user",
+            },
+          },
+        })
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          expect(res.ctx).toStrictEqual({
+            db: "test-db",
+            local: "LOCAL",
+            session: {
+              username: "fake-user",
+            },
+          });
+
+          throw "DBT";
+        })
+        .error((err) => {
+          if (err !== "DBT") throw err;
+        })
+        .error((err, req, res) => {
+          expect(res.ctx).toStrictEqual({
+            db: "test-db",
+            local: "LOCAL",
+            session: {
+              username: "fake-user",
+            },
+          });
+        })
+        .build(),
+    ]);
+
+    router.call("/test", {
+      ctx: {
+        db: "test-db",
+        local: "LOCAL",
+      },
+    });
+  });
+
   test("res.next should modify the response", () => {
     function initialCheck(res: any) {
       expect(res.status).toBeUndefined();
