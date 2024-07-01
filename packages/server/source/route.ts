@@ -10,6 +10,7 @@ export function dredgeRoute<Context extends object>() {
   return createRouteBuilder() as UnresolvedRoute<
     {
       initialContext: Context;
+      modifiedInitialContext: Context;
     },
     Context,
     Context,
@@ -29,11 +30,13 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     params = {},
     searchParams = {},
     dataTypes = [],
+    dataTransformer = {},
     ...rest
   } = initDef;
 
   const _def: RouteBuilderDef = {
     isResolved: false,
+    dataTransformer,
     middlewares,
     errorMiddlewares,
     paths,
@@ -47,7 +50,16 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   const builder = {
     _def,
 
-    options: ({ dataTypes } = {}) => {
+    options: (options = {}) => {
+      const _dataTypes = _def.dataTypes || [];
+      const _defaultContext = _def.defaultContext || {};
+      const _dataTransformer = _def.dataTransformer;
+
+      const {
+        dataTypes = [],
+        dataTransformer = {},
+        defaultContext = {},
+      } = options;
       const notAllowedDataTypes = [
         "default",
         "data",
@@ -66,15 +78,32 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         "resolve",
         "use",
       ];
+
       dataTypes?.forEach((item) => {
         if (notAllowedDataTypes.includes(item)) {
           throw `Invalid DataType: ${item}`;
         }
       });
 
+      const newDataTransformer: any = {
+        ..._dataTransformer,
+      };
+
+      for (const [key, value] of Object.entries(dataTransformer)) {
+        newDataTransformer[key] = {
+          ..._dataTransformer[key],
+          ...(value as any),
+        };
+      }
+
       return createRouteBuilder({
         ..._def,
-        dataTypes,
+        dataTypes: [..._dataTypes, ...dataTypes],
+        defaultContext: {
+          ..._defaultContext,
+          ...defaultContext,
+        },
+        dataTransformer: newDataTransformer,
       });
     },
 
@@ -178,7 +207,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     },
 
     method: (method, parser) => {
-      const _paths = _def.paths;
       const _method = _def.method;
       const _parser = _def.iBody;
 
@@ -216,7 +244,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     build() {
       const _paths = _def.paths;
       const _method = _def.method;
-      const _parser = _def.iBody;
 
       if (!_paths.length) {
         throw "Paths are not defined";
@@ -233,22 +260,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         },
       };
     },
-
-    // resolve: (fn) => {
-    //   if (_def.resolver) throw "Resolver already exist";
-
-    //   const route = createRouteBuilder({
-    //     ..._def,
-    //     resolver: fn,
-    //   });
-
-    //   return {
-    //     _def: {
-    //       ...route._def,
-    //       isResolved: true,
-    //     },
-    //   };
-    // },
   } as AnyUnresolvedRoute;
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;

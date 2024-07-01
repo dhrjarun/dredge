@@ -320,14 +320,40 @@ export interface UnresolvedRoute<
 > {
   _def: RouteBuilderDef<false>;
 
-  options<const $DataTypes extends string[] = []>(options?: {
+  options<
+    const $DataTypes extends string[] = [],
+    const DefaultContext extends Partial<
+      Options extends { initialContext: any } ? Options["initialContext"] : {}
+    > = {},
+  >(options?: {
     dataTypes?: $DataTypes;
+    dataTransformer?: {
+      [key in $DataTypes[number]]?: {
+        forRequest: (data: any) => any;
+        forResponse: (data: any) => any;
+      };
+    };
+    defaultContext?: DefaultContext;
   }): $DataTypes extends NotAllowedDataShortcuts
     ? "One or more of dataType is invalid!"
     : UnresolvedRoute<
-        {
-          dataTypes: $DataTypes;
-        },
+        Merge<
+          Options,
+          {
+            dataTypes: [
+              ...(Options extends { dataTypes: string[] }
+                ? Options["dataTypes"]
+                : []),
+              ...$DataTypes,
+            ];
+            modifiedInitialContext: MarkOptional<
+              Options extends { modifiedInitialContext: any }
+                ? Options["modifiedInitialContext"]
+                : never,
+              keyof DefaultContext
+            >;
+          }
+        >,
         SuccessContext,
         ErrorContext,
         Method,
@@ -640,9 +666,11 @@ export type ExtractRoute<
     : never
   : never;
 
-export type inferRouteContext<R> = R extends Route<
+export type inferInitialRouteContext<R> = R extends Route<
+  infer Options extends {
+    initialContext: any;
+  },
   any,
-  infer Context,
   any,
   any,
   any,
@@ -652,7 +680,24 @@ export type inferRouteContext<R> = R extends Route<
   any,
   any
 >
-  ? Context
+  ? Options["initialContext"]
+  : never;
+
+export type inferModifiedInitialRouteContext<R> = R extends Route<
+  infer Options extends {
+    modifiedInitialContext: any;
+  },
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? Options["modifiedInitialContext"]
   : never;
 
 export type inferRouteDataShortcut<R> = R extends Route<
