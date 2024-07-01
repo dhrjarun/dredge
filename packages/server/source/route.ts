@@ -8,12 +8,11 @@ import {
 
 export function dredgeRoute<Context extends object>() {
   return createRouteBuilder() as UnresolvedRoute<
-    [],
-    Context,
     {
-      success: Context;
-      error: Context;
+      initialContext: Context;
     },
+    Context,
+    Context,
     string,
     [],
     {},

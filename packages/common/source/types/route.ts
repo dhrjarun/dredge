@@ -1,6 +1,6 @@
-import { Exact, IsAny, IsNever, IsUnknown } from "ts-essentials";
+import { IsAny, IsNever, MarkOptional, Merge } from "ts-essentials";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
-import { DredgeHeaders, HTTPMethod } from "./http";
+import { HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 
 export type inferSingleSearchParamsType<SearchParams> = Simplify<{
@@ -17,23 +17,6 @@ type inferParamsType<Params> = Simplify<{
     ? string
     : inferParserType<Params[key]>;
 }>;
-
-export interface NextResult<C, Data = never> {
-  ctx: C;
-  headers: Record<string, string>; // Header names are lower-case
-  status?: number;
-  statusText?: string;
-  data?: Data;
-  dataType?: string;
-}
-
-export interface EndResult<Data = null> {
-  data: Data;
-  headers: DredgeHeaders;
-  status: number;
-  statusText: string;
-  dataType: string;
-}
 
 export interface MiddlewareResult<C, Data> {
   ctx: C;
@@ -57,8 +40,8 @@ type Data<Shortcuts, T> =
 
 export type isAnyRoute<R> = R extends Route<
   infer _Options,
-  infer Context,
-  infer ContextOverride,
+  infer SuccessContext,
+  infer ErrorContext,
   infer Method,
   infer Paths,
   infer Params,
@@ -68,8 +51,8 @@ export type isAnyRoute<R> = R extends Route<
   infer EBody
 >
   ?
-      | IsAny<Context>
-      | IsAny<ContextOverride>
+      | IsAny<SuccessContext>
+      | IsAny<ErrorContext>
       | IsAny<Method>
       | IsAny<Paths>
       | IsAny<Params>
@@ -247,6 +230,14 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
   dataTypes: string[];
+  defaultContext?: any;
+  dataTransformer: Record<
+    string,
+    {
+      forRequest?: (data: any) => any;
+      forResponse?: (data: any) => any;
+    }
+  >;
 
   iBody?: Parser;
   oBody?: Parser;
@@ -267,8 +258,8 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
 
 export interface Route<
   Options,
-  Context,
-  ContextOverride,
+  SuccessContext,
+  ErrorContext,
   Method,
   Paths,
   Params,
@@ -311,31 +302,14 @@ type NotAllowedDataShortcuts =
   | "data"
   | "headers";
 
-interface ContextOverrideType {
-  success: object;
-  error: object;
-}
-
-type inferSuccessContext<T> = T extends ContextOverrideType ? T["success"] : {};
-type inferErrorContext<T> = T extends ContextOverrideType ? T["error"] : {};
-
-type OverwriteSuccessContext<ContextOverride, NewContext> = {
-  success: Overwrite<inferSuccessContext<ContextOverride>, NewContext>;
-  error: inferErrorContext<ContextOverride>;
-};
-type OverwriteErrorContext<ContextOverride, NewContext> = {
-  success: inferErrorContext<ContextOverride>;
-  error: Overwrite<inferErrorContext<ContextOverride>, NewContext>;
-};
-
 type inferParserTypeIfNever<P, U = any> = IsNever<P> extends true
   ? U
   : inferParserType<P>;
 
 export interface UnresolvedRoute<
   Options,
-  Context,
-  ContextOverride,
+  SuccessContext,
+  ErrorContext,
   Method,
   Paths = [],
   Params = {},
@@ -354,8 +328,8 @@ export interface UnresolvedRoute<
         {
           dataTypes: $DataTypes;
         },
-        Context,
-        ContextOverride,
+        SuccessContext,
+        ErrorContext,
         Method,
         Paths,
         SearchParams,
@@ -367,8 +341,8 @@ export interface UnresolvedRoute<
     path: T,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     Method,
     Paths extends Array<string>
       ? [...Paths, ...inferPathArray<T>]
@@ -392,8 +366,8 @@ export interface UnresolvedRoute<
     arg: T,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     Method,
     Paths,
     Omit<Params, keyof T> & T,
@@ -407,8 +381,8 @@ export interface UnresolvedRoute<
     queries: T,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     Method,
     Paths,
     Params,
@@ -424,7 +398,7 @@ export interface UnresolvedRoute<
   >(
     fn: MiddlewareFunction<
       inferDataTypes<Options>,
-      inferSuccessContext<ContextOverride>,
+      SuccessContext,
       NewContext,
       Method,
       inferParamsType<Params>,
@@ -433,37 +407,10 @@ export interface UnresolvedRoute<
       inferParserTypeIfNever<OBody, any>,
       NewOData
     >,
-    // fn: {
-    //   (
-    //     req: Readonly<{
-    //       url: string;
-    //       method: Method;
-    //       headers: DredgeHeaders;
-    //       searchParam: ParamFunction<SearchParams>;
-    //       param: ParamFunction<Params>;
-    //       data: inferParserType<IBody>;
-    //     }>,
-    //     res: Readonly<{
-    //       ctx: inferSuccessContext<ContextOverride>;
-    //       headers: DredgeHeaders;
-    //       status?: number;
-    //       statusText?: string;
-    //       data: inferParserTypeIfNever<OBody, null>;
-    //       next: NextFunction<
-    //         inferDataTypes<Options>,
-    //         inferParserTypeIfNever<OBody, any>
-    //       >;
-    //       end: EndFunction<
-    //         inferDataTypes<Options>,
-    //         inferParserTypeIfNever<OBody, any>
-    //       >;
-    //     }>,
-    //   ): MaybePromise<MiddlewareResult<NewContext, NewOData>> | void;
-    // },
   ): UnresolvedRoute<
     Options,
-    Context,
-    OverwriteSuccessContext<ContextOverride, NewContext>,
+    Overwrite<SuccessContext, NewContext>,
+    ErrorContext,
     Method,
     Paths,
     Params,
@@ -483,53 +430,15 @@ export interface UnresolvedRoute<
   >(
     fn: ErrorMiddlewareFunction<
       inferDataTypes<Options>,
-      inferErrorContext<ContextOverride>,
+      ErrorContext,
       NewContext,
       inferParserTypeIfNever<EBody, null>,
       NewEData
     >,
-    // fn: {
-    //   (
-    //     error: any,
-    //     req: Readonly<{
-    //       method: string;
-    //       url: string;
-    //       param: {
-    //         <T extends string>(key: T): string | undefined;
-    //         (): Record<string, string>;
-    //       };
-    //       searchParam: {
-    //         <T extends string>(key: T): string | undefined;
-    //         (): Record<string, string>;
-    //       };
-    //       searchParams: {
-    //         <T extends string>(key: T): string[];
-    //         (): Record<string, string[]>;
-    //       };
-    //       headers: DredgeHeaders;
-    //       data: unknown;
-    //     }>,
-    //     res: Readonly<{
-    //       ctx: inferErrorContext<ContextOverride>;
-    //       headers: DredgeHeaders;
-    //       status?: number;
-    //       statusText?: string;
-    //       data: inferParserTypeIfNever<EBody, null>;
-    //       next: NextFunction<
-    //         inferDataTypes<Options>,
-    //         inferParserTypeIfNever<EBody, any>
-    //       >;
-    //       end: EndFunction<
-    //         inferDataTypes<Options>,
-    //         inferParserTypeIfNever<EBody, any>
-    //       >;
-    //     }>,
-    //   ): MaybePromise<NextResult<NewContext, NewEData>>;
-    // },
   ): UnresolvedRoute<
     Options,
-    Context,
-    OverwriteErrorContext<ContextOverride, NewContext>,
+    SuccessContext,
+    Overwrite<ErrorContext, NewContext>,
     Method,
     Paths,
     SearchParams,
@@ -544,8 +453,8 @@ export interface UnresolvedRoute<
 
   build(): Route<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     Method,
     Paths,
     Params,
@@ -559,8 +468,8 @@ export interface UnresolvedRoute<
     parser: P,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     Method,
     Paths,
     Params,
@@ -570,49 +479,13 @@ export interface UnresolvedRoute<
     EBody
   >;
 
-  // done<ST, ET>(
-  //   resolve: ResolverFunction<
-  //     inferDataTypes<Options>,
-  //     GetContextOverride<ContextOverride, "success">,
-  //     Method,
-  //     inferParamsType<Params>,
-  //     inferSearchParamsType<SearchParams>,
-  //     inferParserType<IBody>,
-  //     inferParserType<OBody>,
-  //     inferParserType<OBody>,
-  //     ST
-  //   >,
-  //   reject: RejectorFunction<
-  //     inferDataTypes<Options>,
-  //     GetContextOverride<ContextOverride, "error">,
-  //     Method,
-  //     inferParserType<EBody>,
-  //     ET
-  //   >,
-  // ): Route<
-  //   Options,
-  //   Context,
-  //   ContextOverride,
-  //   Method,
-  //   Paths,
-  //   Params,
-  //   SearchParams,
-  //   IBody,
-  //   inferParserType<OBody> extends never
-  //     ? UpdateCurrentDataType<ParserWithoutInput<ST>, ST>
-  //     : UpdateCurrentDataType<OBody, ST>,
-  //   inferParserType<EBody> extends never
-  //     ? UpdateCurrentDataType<ParserWithoutInput<ET>, ET>
-  //     : UpdateCurrentDataType<EBody, ET>
-  // >;
-
   method<M extends HTTPMethod, P extends Parser>(
     method: M,
     parser?: P,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     M,
     Paths,
     Params,
@@ -623,8 +496,8 @@ export interface UnresolvedRoute<
   >;
   get(): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     "get",
     Paths,
     Params,
@@ -637,8 +510,8 @@ export interface UnresolvedRoute<
     parser?: P,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     "post",
     Paths,
     Params,
@@ -651,8 +524,8 @@ export interface UnresolvedRoute<
     parser?: P,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     "put",
     Paths,
     Params,
@@ -663,8 +536,8 @@ export interface UnresolvedRoute<
   >;
   delete(): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     "delete",
     Paths,
     Params,
@@ -677,8 +550,8 @@ export interface UnresolvedRoute<
     parser?: P,
   ): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     "patch",
     Paths,
     Params,
@@ -689,8 +562,8 @@ export interface UnresolvedRoute<
   >;
   head(): UnresolvedRoute<
     Options,
-    Context,
-    ContextOverride,
+    SuccessContext,
+    ErrorContext,
     "head",
     Paths,
     Params,
@@ -703,6 +576,9 @@ export interface UnresolvedRoute<
 
 export type AnyRoute = Route<any, any, any, any, any, any, any, any, any, any>;
 export type AnyUnresolvedRoute = UnresolvedRoute<
+  any,
+  any,
+  any,
   any,
   any,
   any,

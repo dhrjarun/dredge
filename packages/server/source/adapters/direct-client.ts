@@ -1,7 +1,7 @@
 import {
   AnyRoute,
   DirectClientOptions,
-  inferRouteContext,
+  inferInitialRouteContext,
 } from "@dredge/common";
 import { DirectClient } from "@dredge/common";
 import { DredgeRouter } from "../router";
@@ -12,7 +12,7 @@ type inferRoutesContext<Routes, Context = {}> = Routes extends [
   infer First extends AnyRoute,
   ...infer Tail extends AnyRoute[],
 ]
-  ? inferRoutesContext<Tail, Context & inferRouteContext<First>>
+  ? inferRoutesContext<Tail, Context & inferInitialRouteContext<First>>
   : Context;
 
 export function createDirectClient<const Routes extends AnyRoute[]>(
@@ -67,7 +67,16 @@ export function createDirectClient<const Routes extends AnyRoute[]>(
 
       const responsePromise = new Promise((resolve, reject) => {
         result
-          .then((value) => resolve(value))
+          .then((value) => {
+            const response = {
+              ...value,
+              data() {
+                return Promise.resolve(value.data);
+              },
+            };
+
+            resolve(response);
+          })
           .catch((err) => {
             reject(err);
           });
