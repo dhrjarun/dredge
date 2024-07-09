@@ -3,9 +3,10 @@ import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 
-export type inferSingleSearchParamsType<SearchParams> = Simplify<{
+type inferSearchParamType<SearchParams> = Simplify<{
   [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
 }>;
+
 export type inferSearchParamsType<SearchParams> = Simplify<{
   [key in keyof SearchParams]:
     | inferParserType<SearchParams[key]>
@@ -23,17 +24,37 @@ export interface MiddlewareResult<C, Data> {
   headers: Record<string, string>; // Header names are lower-case
   status?: number;
   statusText?: string;
+
   data?: Data;
   dataType?: string;
   isEnd: boolean;
 }
 
-type Data<Shortcuts, T> =
+export interface NextMiddlewareResult<C, Data>
+  extends MiddlewareResult<C, Data> {
+  isEnd: false;
+}
+export interface EndMiddlewareResult<C, Data>
+  extends MiddlewareResult<C, Data> {
+  isEnd: true;
+}
+
+type OptionalData<Types, T> =
   | { data?: T }
-  | (Shortcuts extends string[]
-      ? Shortcuts[number] extends infer U
+  | (Types extends string[]
+      ? Types[number] extends infer U
         ? U extends string
           ? { [P in U]?: T }
+          : never
+        : never
+      : never);
+
+type Data<Types, T> =
+  | { data: T }
+  | (Types extends string[]
+      ? Types[number] extends infer U
+        ? U extends string
+          ? { [P in U]: T }
           : never
         : never
       : never);
@@ -103,7 +124,11 @@ export type MiddlewareFunction<
     req: {
       readonly url: string;
       readonly method: Method;
-      readonly data: IData;
+      readonly data: IsNever<IData> extends true
+        ? Method extends "get" | "delete" | "head"
+          ? undefined
+          : any
+        : IData;
       header: {
         (headerName: string): string | undefined;
         (): Record<string, string>;
@@ -129,7 +154,7 @@ export type MiddlewareFunction<
       readonly ctx: Context;
       readonly status?: number;
       readonly statusText?: string;
-      readonly data: OData;
+      readonly data: any;
       readonly dataType?: DataTypes extends string[]
         ? DataTypes[number]
         : undefined;
@@ -138,7 +163,10 @@ export type MiddlewareFunction<
         (): Record<string, string>;
       };
       next: NextFunction<DataTypes>;
-      end: EndFunction<DataTypes>;
+      end: OptionalEndFunction<
+        DataTypes,
+        IsNever<OData> extends true ? any : OData
+      >;
     },
   ): MaybePromise<MiddlewareResult<NewContext, NewOData> | void>;
 };
@@ -185,7 +213,7 @@ export type ErrorMiddlewareFunction<
       readonly ctx: Context;
       readonly status?: number;
       readonly statusText?: string;
-      readonly data: EData;
+      readonly data: any;
       readonly dataType?: DataTypes extends string[]
         ? DataTypes[number]
         : undefined;
@@ -195,25 +223,42 @@ export type ErrorMiddlewareFunction<
         (): Record<string, string>;
       };
       next: NextFunction<DataTypes>;
-      end: EndFunction<DataTypes>;
+      end: OptionalEndFunction<
+        DataTypes,
+        IsNever<EData> extends true ? any : EData
+      >;
     },
   ): MaybePromise<MiddlewareResult<NewContext, NewEData> | void> | void;
 };
 
-type NextFunction<DataTypes = [], DT = any> = {
-  (): MiddlewareResult<{}, any>;
-  <$ContextOverride, T extends DT>(
-    opts: Data<DataTypes, T> & {
+type NextFunction<DataTypes> = {
+  (): MiddlewareResult<{}, never>;
+
+  <$ContextOverride>(
+    opts: OptionalData<DataTypes, any> & {
       ctx?: $ContextOverride;
       headers?: Record<string, string>;
       status?: number;
       statusText?: string;
     },
-  ): MiddlewareResult<$ContextOverride, T>;
+  ): MiddlewareResult<$ContextOverride, never>;
 };
 
-type EndFunction<DataTypes = [], DT = any> = {
-  (): MiddlewareResult<{}, null>;
+type OptionalEndFunction<DataTypes, DT = any> = {
+  (): MiddlewareResult<{}, any>;
+
+  <T extends DT>(
+    opts: OptionalData<DataTypes, T> & {
+      headers?: Record<string, string>;
+      status?: number;
+      statusText?: string;
+    },
+  ): MiddlewareResult<{}, T>;
+};
+
+type EndFunction<DataTypes, DT> = {
+  (): MiddlewareResult<{}, any>;
+
   <T extends DT>(
     opts: Data<DataTypes, T> & {
       headers?: Record<string, string>;
@@ -310,11 +355,11 @@ export interface UnresolvedRoute<
   Options,
   SuccessContext,
   ErrorContext,
-  Method,
+  Method = never,
   Paths = [],
   Params = {},
   SearchParams = {},
-  IBody = ParserWithoutInput<unknown>,
+  IBody = never,
   OBody = never,
   EBody = never,
 > {
@@ -418,19 +463,16 @@ export interface UnresolvedRoute<
     EBody
   >;
 
-  use<
-    NewContext = {},
-    NewOData extends inferParserTypeIfNever<OBody, any> = never,
-  >(
+  use<NewContext, NewOData>(
     fn: MiddlewareFunction<
       inferDataTypes<Options>,
       SuccessContext,
       NewContext,
-      Method,
+      IsNever<Method> extends true ? string : Method,
       inferParamsType<Params>,
-      inferSingleSearchParamsType<SearchParams>,
+      inferSearchParamType<SearchParams>,
       inferParserType<IBody>,
-      inferParserTypeIfNever<OBody, any>,
+      inferParserType<OBody>,
       NewOData
     >,
   ): UnresolvedRoute<
@@ -442,11 +484,11 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    IsNever<OBody> extends true
-      ? IsNever<NewOData> extends false // not sure why never is not working, that's why going with undefined
+    IsNever<NewOData> extends true
+      ? OBody
+      : IsNever<OBody> extends true
         ? ParserWithoutInput<NewOData>
-        : OBody
-      : OBody,
+        : OBody,
     EBody
   >;
 
@@ -458,7 +500,7 @@ export interface UnresolvedRoute<
       inferDataTypes<Options>,
       ErrorContext,
       NewContext,
-      inferParserTypeIfNever<EBody, null>,
+      IsNever<EBody> extends true ? undefined : inferParserType<EBody>,
       NewEData
     >,
   ): UnresolvedRoute<
@@ -470,11 +512,11 @@ export interface UnresolvedRoute<
     SearchParams,
     IBody,
     OBody,
-    IsNever<EBody> extends true
-      ? IsNever<NewEData> extends false
+    IsNever<NewEData> extends true
+      ? EBody
+      : IsNever<EBody> extends true
         ? ParserWithoutInput<NewEData>
         : EBody
-      : EBody
   >;
 
   build(): Route<
@@ -614,7 +656,6 @@ export type AnyUnresolvedRoute = UnresolvedRoute<
   any
 >;
 
-// TODO: Fix when given other types
 type _inferPathType<
   Paths,
   Params extends Record<string, Parser>,
@@ -625,10 +666,15 @@ type _inferPathType<
         : string
       : First}${_inferPathType<Tail, Params>}`
   : "";
+
 export type inferPathType<
   Paths,
   Params extends Record<string, Parser>,
-> = Paths extends string[] ? _inferPathType<Paths, Params> : string;
+> = Paths extends []
+  ? never
+  : Paths extends string[]
+    ? _inferPathType<Paths, Params>
+    : never;
 
 export type inferRoutePath<R> = R extends Route<
   any,
