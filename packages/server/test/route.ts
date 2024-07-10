@@ -5,13 +5,24 @@ describe("route.options()", () => {
   test("dataType should be in route._def", () => {
     const route = dredgeRoute()
       .options({
-        dataTypes: ["json", "form"],
+        dataTypes: {
+          json: "application/json",
+          formData: "multipart/form-data",
+        },
       })
       .options({
-        dataTypes: ["xml", "yaml"],
+        dataTypes: {
+          xml: "application/xml",
+          yaml: "multipart/yaml",
+        },
       });
 
-    expect(route._def.dataTypes).toStrictEqual(["json", "form", "xml", "yaml"]);
+    expect(route._def.dataTypes).toStrictEqual({
+      json: "application/json",
+      formData: "multipart/form-data",
+      xml: "application/xml",
+      yaml: "multipart/yaml",
+    });
   });
 
   test("invalid dataTypes will throw error", () => {});
@@ -19,13 +30,25 @@ describe("route.options()", () => {
   test("if a dataType are provided more than once, the later ones are rejected", () => {
     const route = dredgeRoute()
       .options({
-        dataTypes: ["a", "b", "c", "d", "b", "d", "e"],
+        dataTypes: {
+          a: "a",
+          b: "b",
+        },
       })
       .options({
-        dataTypes: ["d", "e"],
+        dataTypes: {
+          a: "aaa",
+          c: "c",
+          d: "d",
+        },
       });
 
-    expect(route._def.dataTypes).toStrictEqual(["a", "b", "c", "d", "e"]);
+    expect(route._def.dataTypes).toStrictEqual({
+      a: "a",
+      b: "b",
+      c: "c",
+      d: "d",
+    });
   });
 
   test("defaultContext should be in route._def", () => {
@@ -35,7 +58,10 @@ describe("route.options()", () => {
       session: { username: string };
     }>()
       .options({
-        dataTypes: ["json", "form"],
+        dataTypes: {
+          json: "application/json",
+          formData: "multipart/form-data",
+        },
         defaultContext: {
           db: "fake-db",
           session: {
@@ -65,7 +91,10 @@ describe("route.options()", () => {
 
     const route = dredgeRoute()
       .options({
-        dataTypes: ["json", "form"],
+        dataTypes: {
+          json: "application/json",
+          formData: "multipart/form-data",
+        },
         dataTransformer: {
           json: {
             forRequest: json.forRequest,

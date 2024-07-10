@@ -413,6 +413,9 @@ describe("req", () => {
     const router = dredgeRouter([
       dredgeRoute()
         .options({
+          dataTypes: {
+            json: "application/json",
+          },
           dataTransformer: {
             json: {
               forRequest: (data) => {
@@ -613,7 +616,10 @@ describe("res object", () => {
     const router = dredgeRouter([
       dredgeRoute()
         .options({
-          dataTypes: ["json", "formData"],
+          dataTypes: {
+            json: "application/json",
+            formData: "multipart/form-data",
+          },
         })
         .path("/test")
         .get()

@@ -5,7 +5,7 @@ import type {
   MiddlewareResult,
   Parser,
 } from "@dredge/common";
-import { mergeDeep, mergeHeaders } from "./utils/merge";
+import { mergeDeep } from "./utils/merge";
 
 export class RoutePath {
   name: string;
@@ -352,41 +352,72 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
   } as DredgeRouter;
 }
 
+export function mergeHeaders(
+  target: Record<string, string>,
+  ...sources: Record<string, string | null>[]
+) {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  const headers = { ...target };
+  for (const header in source) {
+    // https://nodejs.org/api/http.html#messageheaders
+    if (!source[header]) {
+      delete headers[header];
+    } else {
+      headers[header.toLowerCase()] = source[header]!;
+    }
+  }
+
+  return mergeHeaders(headers, ...sources);
+}
+
 function nextEndFunction(
-  options?: any,
-  previousOptions: {
+  res?: {
     ctx?: any;
     headers?: any;
     status?: number;
     statusText?: string;
     data?: any;
+  } & { [key: string]: any },
+  previousRes: {
+    ctx?: any;
+    headers?: any;
+    status?: number;
+    statusText?: string;
+    data?: any;
+    dataType?: string;
   } = {
     ctx: {},
     headers: {},
   },
-  dataTypes: string[] = [],
+  dataTypes: Record<string, string> = {},
 ) {
-  if (!options) {
-    return previousOptions;
+  const generatedHeaders = {};
+
+  if (!res) {
+    return previousRes;
   }
 
-  const _dataTypes = ["data", ...dataTypes];
-  let data: any = previousOptions?.data;
-  let dataType = undefined;
+  const dataTypeKeys = ["data", ...Object.keys(dataTypes)];
+  let data: any = previousRes?.data;
+  let dataType = previousRes?.dataType;
 
-  for (const item of _dataTypes) {
-    if (typeof options[item] !== "undefined") {
-      data = options[item];
-      dataType = item === "data" ? undefined : item;
+  for (const item of dataTypeKeys) {
+    if (typeof res[item] !== "undefined") {
+      data = res[item];
+      dataType = item === "data" ? dataType : item;
       break;
     }
   }
 
+  const mime = dataType ? dataTypes[dataType] : undefined;
+
   return {
-    ctx: mergeDeep(previousOptions.ctx, options?.ctx),
-    headers: mergeHeaders(previousOptions.headers, options?.headers),
-    status: options?.status || previousOptions?.status,
-    statusText: options?.statusText || previousOptions?.statusText,
+    ctx: mergeDeep(previousRes.ctx, res?.ctx),
+    headers: mergeHeaders(previousRes.headers, res?.headers, generatedHeaders),
+    status: res?.status || previousRes?.status,
+    statusText: res?.statusText || previousRes?.statusText,
     data,
     dataType,
   };
@@ -438,7 +469,7 @@ async function handleMiddleware(
     };
     ctx: any;
   },
-  dataTypes: string[] = [],
+  dataTypes: Record<string, string> = {},
 ): Promise<MiddlewareResult<any, any> | void> {
   const { request, response, ctx, error, isError = false } = payload;
 

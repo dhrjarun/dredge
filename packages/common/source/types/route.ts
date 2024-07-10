@@ -39,23 +39,27 @@ export interface EndMiddlewareResult<C, Data>
   isEnd: true;
 }
 
-type OptionalData<Types, T> =
-  | { data?: T }
-  | (Types extends string[]
-      ? Types[number] extends infer U
-        ? U extends string
-          ? { [P in U]?: T }
-          : never
-        : never
-      : never);
+// type OptionalData<Types, T> = { data?: T } & (IsNever<Types> extends false
+//   ? Types extends string
+//     ? {
+//         [P in Types]?: T;
+//       }
+//     : {}
+//   : {});
 
 type Data<Types, T> =
   | { data: T }
-  | (Types extends string[]
-      ? Types[number] extends infer U
-        ? U extends string
-          ? { [P in U]: T }
-          : never
+  | (Types extends infer U
+      ? U extends string
+        ? { [P in U]: T }
+        : never
+      : never);
+
+type OptionalData<Types, T> =
+  | { data?: T }
+  | (Types extends infer U
+      ? U extends string
+        ? { [P in U]?: T }
         : never
       : never);
 
@@ -86,8 +90,8 @@ export type isAnyRoute<R> = R extends Route<
   : false;
 
 type inferDataTypes<Options> = Options extends { dataTypes?: any }
-  ? Options["dataTypes"]
-  : [];
+  ? keyof Options["dataTypes"]
+  : never;
 
 type ParamFunction<P> = {
   <T extends keyof P>(
@@ -274,7 +278,7 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
   paths: string[];
   params: Record<string, Parser>;
   searchParams: Record<string, Parser>;
-  dataTypes: string[];
+  dataTypes: Record<string, string>;
   defaultContext?: any;
   dataTransformer: Record<
     string,
@@ -347,6 +351,18 @@ type NotAllowedDataShortcuts =
   | "data"
   | "headers";
 
+type IsNotAllowedDataTypes<T> = (
+  keyof T extends infer U
+    ? U extends string
+      ? U extends NotAllowedDataShortcuts
+        ? true
+        : false
+      : false
+    : false
+) extends false
+  ? false
+  : true;
+
 type inferParserTypeIfNever<P, U = any> = IsNever<P> extends true
   ? U
   : inferParserType<P>;
@@ -366,31 +382,29 @@ export interface UnresolvedRoute<
   _def: RouteBuilderDef<false>;
 
   options<
-    const $DataTypes extends string[],
+    const DataTypes extends Record<string, string> = {},
     const DefaultContext extends Partial<
       Options extends { initialContext: any } ? Options["initialContext"] : {}
-    >,
+    > = {},
   >(options?: {
-    dataTypes?: $DataTypes;
+    dataTypes?: DataTypes;
     dataTransformer?: {
-      [key in $DataTypes[number]]?: {
+      [key in keyof DataTypes]?: {
         forRequest?: (data: any) => any;
         forResponse?: (data: any) => any;
       };
     };
     defaultContext?: DefaultContext;
-  }): $DataTypes extends NotAllowedDataShortcuts
+  }): IsNotAllowedDataTypes<DataTypes> extends true
     ? "One or more of dataType is invalid!"
     : UnresolvedRoute<
         Merge<
           Options,
           {
-            dataTypes: [
-              ...(Options extends { dataTypes: string[] }
-                ? Options["dataTypes"]
-                : []),
-              ...$DataTypes,
-            ];
+            dataTypes: Merge<
+              Options extends { dataTypes: any } ? Options["dataTypes"] : {},
+              DataTypes
+            >;
             modifiedInitialContext: MarkOptional<
               Options extends { modifiedInitialContext: any }
                 ? Options["modifiedInitialContext"]

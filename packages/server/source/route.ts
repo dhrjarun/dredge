@@ -29,7 +29,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     paths = [],
     params = {},
     searchParams = {},
-    dataTypes = [],
+    dataTypes = {},
     dataTransformer = {},
     ...rest
   } = initDef;
@@ -51,15 +51,16 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     _def,
 
     options: (options = {}) => {
-      const _dataTypes = _def.dataTypes || [];
+      const _dataTypes = _def.dataTypes || {};
       const _defaultContext = _def.defaultContext || {};
       const _dataTransformer = _def.dataTransformer;
 
       const {
-        dataTypes = [],
+        dataTypes = {},
         dataTransformer = {},
         defaultContext = {},
       } = options;
+
       const notAllowedDataTypes = [
         "default",
         "data",
@@ -79,7 +80,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         "use",
       ];
 
-      dataTypes?.forEach((item) => {
+      Object.keys(notAllowedDataTypes)?.forEach((item) => {
         if (notAllowedDataTypes.includes(item)) {
           throw `Invalid DataType: ${item}`;
         }
@@ -98,12 +99,13 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
       return createRouteBuilder({
         ..._def,
-        dataTypes: Array.from(
-          new Set([..._dataTypes, ...Array.from(new Set(dataTypes))]),
-        ),
         defaultContext: {
           ..._defaultContext,
           ...defaultContext,
+        },
+        dataTypes: {
+          ...dataTypes,
+          ..._dataTypes,
         },
         dataTransformer: newDataTransformer,
       });
