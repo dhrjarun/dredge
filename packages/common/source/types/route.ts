@@ -3,22 +3,6 @@ import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
 
-type inferSearchParamType<SearchParams> = Simplify<{
-  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
-}>;
-
-export type inferSearchParamsType<SearchParams> = Simplify<{
-  [key in keyof SearchParams]:
-    | inferParserType<SearchParams[key]>
-    | inferParserType<SearchParams[key]>[];
-}>;
-
-type inferParamsType<Params> = Simplify<{
-  [key in keyof Params]: Params[key] extends null
-    ? string
-    : inferParserType<Params[key]>;
-}>;
-
 export interface MiddlewareResult<C, Data> {
   ctx: C;
   headers: Record<string, string>; // Header names are lower-case
@@ -89,18 +73,6 @@ export type isAnyRoute<R> = R extends Route<
     : false
   : false;
 
-type inferDataTypes<Options> = Options extends { dataTypes?: any }
-  ? keyof Options["dataTypes"]
-  : never;
-
-type ParamFunction<P> = {
-  <T extends keyof P>(
-    key: T,
-  ): P extends { [key in T]: any } ? P[T] : string | undefined;
-  <T extends string>(key: T): string | undefined;
-  (): Simplify<P & Record<string, any>>;
-};
-
 export type AnyMiddlewareFunction = MiddlewareFunction<
   any,
   any,
@@ -137,21 +109,31 @@ export type MiddlewareFunction<
         (headerName: string): string | undefined;
         (): Record<string, string>;
       };
-      param: ParamFunction<Params>;
-      searchParam: ParamFunction<SearchParams>;
-      searchParams: {
+      param: {
+        (): Simplify<Params & Record<string, string>>;
+        <T extends keyof Params>(
+          key: T,
+        ): Params extends { [key in T]: any } ? Params[T] : string | undefined;
+        <T extends string>(key: T): string | undefined;
+      };
+      searchParam: {
+        (): Simplify<SearchParams & Record<string, any>>;
         <T extends keyof SearchParams>(
           key: T,
-        ): SearchParams extends { [key in T]: any }
-          ? SearchParams[T][]
-          : string[];
-        <T extends string>(key: T): string[];
+        ): SearchParams extends { [key in T]: any } ? SearchParams[T] : any;
+        <T extends string>(key: T): any;
+      };
+      searchParams: {
         (): Simplify<
           { [key in keyof SearchParams]: SearchParams[key][] } & Record<
             string,
             any[]
           >
         >;
+        <T extends keyof SearchParams>(
+          key: T,
+        ): SearchParams extends { [key in T]: any } ? SearchParams[T][] : any[];
+        <T extends string>(key: T): any[];
       };
     },
     res: {
@@ -372,10 +354,6 @@ type IsNotAllowedDataTypes<T> = (
   ? false
   : true;
 
-type inferParserTypeIfNever<P, U = any> = IsNever<P> extends true
-  ? U
-  : inferParserType<P>;
-
 export interface UnresolvedRoute<
   Options,
   SuccessContext,
@@ -411,8 +389,8 @@ export interface UnresolvedRoute<
           Options,
           {
             dataTypes: Merge<
-              Options extends { dataTypes: any } ? Options["dataTypes"] : {},
-              DataTypes
+              DataTypes,
+              Options extends { dataTypes: any } ? Options["dataTypes"] : {}
             >;
             modifiedInitialContext: MarkOptional<
               Options extends { modifiedInitialContext: any }
@@ -515,10 +493,7 @@ export interface UnresolvedRoute<
     EBody
   >;
 
-  error<
-    NewContext,
-    NewEData extends inferParserTypeIfNever<EBody, any> = never,
-  >(
+  error<NewContext, NewEData>(
     fn: ErrorMiddlewareFunction<
       inferDataTypes<Options>,
       ErrorContext,
@@ -769,8 +744,8 @@ export type inferModifiedInitialRouteContext<R> = R extends Route<
   ? Options["modifiedInitialContext"]
   : never;
 
-export type inferRouteDataShortcut<R> = R extends Route<
-  infer Options extends { dataShortcuts: string[] },
+export type inferRouteOptions<R> = R extends Route<
+  infer Options,
   any,
   any,
   any,
@@ -781,7 +756,22 @@ export type inferRouteDataShortcut<R> = R extends Route<
   any,
   any
 >
-  ? Options["dataShortcuts"][number]
+  ? Options
+  : never;
+
+export type inferRouteDataTypes<R> = R extends Route<
+  infer Options extends { dataTypes: any },
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? Options["dataTypes"]
   : never;
 
 export type inferRouteMethod<R> = R extends Route<
@@ -797,4 +787,24 @@ export type inferRouteMethod<R> = R extends Route<
   any
 >
   ? Method
+  : never;
+
+type inferSearchParamType<SearchParams> = Simplify<{
+  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+}>;
+
+export type inferSearchParamsType<SearchParams> = Simplify<{
+  [key in keyof SearchParams]:
+    | inferParserType<SearchParams[key]>
+    | inferParserType<SearchParams[key]>[];
+}>;
+
+type inferParamsType<Params> = Simplify<{
+  [key in keyof Params]: Params[key] extends null
+    ? string
+    : inferParserType<Params[key]>;
+}>;
+
+type inferDataTypes<Options> = Options extends { dataTypes?: any }
+  ? keyof Options["dataTypes"]
   : never;
