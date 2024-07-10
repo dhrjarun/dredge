@@ -62,22 +62,33 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       } = options;
 
       const notAllowedDataTypes = [
-        "default",
+        "url",
+        "method",
+        "headers",
+        "body",
+        "baseUrl",
+
+        "status",
+        "statusText",
         "data",
+
         "params",
         "param",
         "searchParams",
         "searchParam",
-        "method",
+
         "get",
         "post",
         "put",
         "delete",
         "patch",
         "head",
-        "headers",
-        "resolve",
-        "use",
+
+        "dataType",
+        "responseDataType",
+
+        "context",
+        "ctx",
       ];
 
       Object.keys(notAllowedDataTypes)?.forEach((item) => {

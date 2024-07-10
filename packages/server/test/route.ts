@@ -25,7 +25,31 @@ describe("route.options()", () => {
     });
   });
 
-  test("invalid dataTypes will throw error", () => {});
+  test("invalid dataTypes will throw error", () => {
+    expect(() => {
+      dredgeRoute().options({
+        dataTypes: {
+          status: "any/any",
+        },
+      });
+    });
+
+    expect(() => {
+      dredgeRoute().options({
+        dataTypes: {
+          data: "any/any",
+        },
+      });
+    });
+
+    expect(() => {
+      dredgeRoute().options({
+        dataTypes: {
+          statusText: "any/any",
+        },
+      });
+    });
+  });
 
   test("if a dataType are provided more than once, the later ones are rejected", () => {
     const route = dredgeRoute()

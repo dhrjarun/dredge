@@ -337,19 +337,28 @@ type TrimSlashes<T> = T extends `/${infer U}/`
 type inferPathArray<T> = _inferPathArray<TrimSlashes<T>>;
 
 type NotAllowedDataShortcuts =
-  | "default"
+  | "url"
   | "method"
-  | HTTPMethod
-  | "paths"
-  | "path"
+  | "headers"
+  | "body"
+  | "baseUrl"
+  | "status"
+  | "statusText"
+  | "data"
+  | "params"
+  | "param"
   | "searchParams"
   | "searchParam"
-  | "params"
-  | "use"
-  | "resolve"
-  | "output"
-  | "data"
-  | "headers";
+  | "get"
+  | "post"
+  | "put"
+  | "delete"
+  | "patch"
+  | "head"
+  | "dataType"
+  | "responseDataType"
+  | "context"
+  | "ctx";
 
 type IsNotAllowedDataTypes<T> = (
   keyof T extends infer U
