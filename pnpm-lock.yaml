@@ -39,6 +39,28 @@ importers:
       needle:
         specifier: ^3.3.1
         version: 3.3.1
+    devDependencies:
+      '@dredge/server':
+        specifier: workspace:*
+        version: link:../server
+      '@types/body-parser':
+        specifier: ^1.19.5
+        version: 1.19.5
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.21
+      '@types/node':
+        specifier: ^20.12.4
+        version: 20.12.4
+      body-parser:
+        specifier: ^1.20.2
+        version: 1.20.2
+      express:
+        specifier: ^4.19.2
+        version: 4.19.2
+      pify:
+        specifier: ^6.1.0
+        version: 6.1.0
 
   packages/common:
     devDependencies:
@@ -60,13 +82,13 @@ importers:
       formdata-node:
         specifier: ^6.0.3
         version: 6.0.3
+      parse-path:
+        specifier: ^7.0.0
+        version: 7.0.0
       parseurl:
         specifier: ^1.3.3
         version: 1.3.3
     devDependencies:
-      '@dredge/client':
-        specifier: workspace:*
-        version: link:../client
       '@types/busboy':
         specifier: ^1.5.3
         version: 1.5.3
@@ -79,6 +101,9 @@ importers:
       '@types/node-fetch':
         specifier: ^2.6.11
         version: 2.6.11
+      '@types/parse-path':
+        specifier: ^7.0.3
+        version: 7.0.3
       '@types/parseurl':
         specifier: ^1.3.3
         version: 1.3.3
@@ -487,6 +512,9 @@ packages:
 
   '@types/node@20.12.4':
     resolution: {integrity: sha512-E+Fa9z3wSQpzgYQdYmme5X3OTuejnnTx88A6p6vkkJosR3KBz+HpE3kqNm98VE6cfLFcISx7zW7MsJkH6KwbTw==}
+
+  '@types/parse-path@7.0.3':
+    resolution: {integrity: sha512-LriObC2+KYZD3FzCrgWGv/qufdUy4eXrxcLgQMfYXgPbLIecKIsVBaQgUPmxSSLcjmYbDTQbMgr6qr6l/eb7Bg==}
 
   '@types/parseurl@1.3.3':
     resolution: {integrity: sha512-eamlh+uXpNIG2yVdl6UdBTR3B6jtmJl/JWTNTQAN1K3VH1s5F6UPOhgLwCnU9FJ7R/PnUsRN9zFSpMcxwa2Ndg==}
@@ -1121,6 +1149,9 @@ packages:
     resolution: {integrity: sha512-/Eaoq+QyLSiXQ4lyYV23f14mZRQcXnxfHrN0vCai+ak9G0pp9iEQukIIZq5NccEvwRB8PUnZT0KsOoDCINS1qQ==}
     engines: {node: '>=18'}
 
+  parse-path@7.0.0:
+    resolution: {integrity: sha512-Euf9GG8WT9CdqwuWJGdf3RkUcTBArppHABkO7Lm8IzRQp0e2r/kkFnmhu4TSK30Wcu5rVAZLmfPKSBBi9tWFog==}
+
   parseurl@1.3.3:
     resolution: {integrity: sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==}
     engines: {node: '>= 0.8'}
@@ -1157,6 +1188,10 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
 
+  pify@6.1.0:
+    resolution: {integrity: sha512-KocF8ve28eFjjuBKKGvzOBGzG8ew2OqOOSxTTZhirkzH7h3BI1vyzqlR0qbfcDBve1Yzo3FVlWUAtCRrbVN8Fw==}
+    engines: {node: '>=14.16'}
+
   pirates@4.0.6:
     resolution: {integrity: sha512-saLsH7WeYYPiD25LDuLRRY/i+6HaPYr6G1OUlN39otzkSTxKnubR9RTxS3/Kk50s1g2JTgFwWQDQyplC5/SHZg==}
     engines: {node: '>= 6'}
@@ -1187,6 +1222,9 @@ packages:
   pretty-format@29.7.0:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
+
+  protocols@2.0.1:
+    resolution: {integrity: sha512-/XJ368cyBJ7fzLMwLKv1e4vLxOju2MNAIokcr7meSaNcVbWz/CPcW22cP04mwxOErdA5mwjA8Q6w/cdAQxVn7Q==}
 
   proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
@@ -1834,6 +1872,8 @@ snapshots:
   '@types/node@20.12.4':
     dependencies:
       undici-types: 5.26.5
+
+  '@types/parse-path@7.0.3': {}
 
   '@types/parseurl@1.3.3':
     dependencies:
@@ -2491,6 +2531,10 @@ snapshots:
     dependencies:
       yocto-queue: 1.0.0
 
+  parse-path@7.0.0:
+    dependencies:
+      protocols: 2.0.1
+
   parseurl@1.3.3: {}
 
   path-key@3.1.1: {}
@@ -2513,6 +2557,8 @@ snapshots:
   picocolors@1.0.0: {}
 
   picomatch@2.3.1: {}
+
+  pify@6.1.0: {}
 
   pirates@4.0.6: {}
 
@@ -2546,6 +2592,8 @@ snapshots:
       '@jest/schemas': 29.6.3
       ansi-styles: 5.2.0
       react-is: 18.2.0
+
+  protocols@2.0.1: {}
 
   proxy-addr@2.0.7:
     dependencies:

@@ -3,6 +3,8 @@ import {
   inferInitialRouteContext,
   inferModifiedInitialRouteContext,
   inferRouteDataTypes,
+  inferRouteEData,
+  inferRouteOData,
 } from "@dredge/common";
 import { describe, expectTypeOf, test } from "vitest";
 import { z } from "zod";
@@ -98,12 +100,18 @@ describe("req", () => {
       .get()
       .use((req) => {
         expectTypeOf(req.data).toBeUndefined();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeUndefined();
       });
 
     dredgeRoute()
       .path("/test")
       .delete()
       .use((req) => {
+        expectTypeOf(req.data).toBeUndefined();
+      })
+      .error((err, req) => {
         expectTypeOf(req.data).toBeUndefined();
       });
 
@@ -112,10 +120,45 @@ describe("req", () => {
       .head()
       .use((req) => {
         expectTypeOf(req.data).toBeUndefined();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeUndefined();
       });
   });
 
-  test("req.data for post, put and patch should be any, if not parser is given", () => {
+  test("req.data should always be any in error for method which takes data", () => {
+    dredgeRoute()
+      .path("/test")
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeAny();
+      })
+      .post(z.string())
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeAny();
+      });
+
+    dredgeRoute()
+      .path("/test")
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeAny();
+      })
+      .put(z.number())
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeAny();
+      });
+
+    dredgeRoute()
+      .path("/test")
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeAny();
+      })
+      .patch(z.null())
+      .error((err, req) => {
+        expectTypeOf(req.data).toBeAny();
+      });
+  });
+
+  test("req.data for post, put and patch should be any, if parser is not given", () => {
     dredgeRoute()
       .path("/test")
       .post()
@@ -188,6 +231,12 @@ describe("req", () => {
           readonly paramII: "a" | "b";
           [x: string]: string;
         }>();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.param("x")).toEqualTypeOf<string | undefined>();
+        expectTypeOf(req.param()).toEqualTypeOf<{
+          [x: string]: string;
+        }>();
       });
   });
 
@@ -228,21 +277,43 @@ describe("req", () => {
           readonly queryII: ("a" | "b")[];
           [x: string]: any[];
         }>();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.searchParam("x")).toBeAny();
+        expectTypeOf(req.searchParams("x")).toEqualTypeOf<any[]>();
+
+        expectTypeOf(req.searchParam()).toEqualTypeOf<{
+          [x: string]: any;
+        }>();
+        expectTypeOf(req.searchParams()).toEqualTypeOf<{
+          [x: string]: any[];
+        }>();
       });
   });
 
   test("req.header()", () => {
-    dredgeRoute().use((req) => {
-      expectTypeOf(req.header()).toEqualTypeOf<Record<string, string>>();
-      expectTypeOf(req.header("content-type")).toEqualTypeOf<
-        string | undefined
-      >();
-    });
+    dredgeRoute()
+      .use((req) => {
+        expectTypeOf(req.header()).toEqualTypeOf<Record<string, string>>();
+        expectTypeOf(req.header("content-type")).toEqualTypeOf<
+          string | undefined
+        >();
+      })
+      .error((err, req, res) => {
+        expectTypeOf(req.header()).toEqualTypeOf<Record<string, string>>();
+        expectTypeOf(req.header("content-type")).toEqualTypeOf<
+          string | undefined
+        >();
+      });
   });
 
   test("req.method should be string in middlewares which are defined before defining method", () => {
     dredgeRoute()
       .use((req) => {
+        expectTypeOf(req.method).not.toEqualTypeOf<"get">();
+        expectTypeOf(req.method).toBeString();
+      })
+      .error((err, req) => {
         expectTypeOf(req.method).not.toEqualTypeOf<"get">();
         expectTypeOf(req.method).toBeString();
       })
@@ -271,11 +342,17 @@ describe("req", () => {
       .get()
       .use((req) => {
         expectTypeOf(req.method).toEqualTypeOf<"get">();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.method).toEqualTypeOf<"get">();
       });
 
     dredgeRoute()
       .post()
       .use((req) => {
+        expectTypeOf(req.method).toEqualTypeOf<"post">();
+      })
+      .error((err, req) => {
         expectTypeOf(req.method).toEqualTypeOf<"post">();
       });
 
@@ -283,19 +360,84 @@ describe("req", () => {
       .put()
       .use((req) => {
         expectTypeOf(req.method).toEqualTypeOf<"put">();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.method).toEqualTypeOf<"put">();
       });
 
     dredgeRoute()
       .delete()
       .use((req) => {
         expectTypeOf(req.method).toEqualTypeOf<"delete">();
+      })
+      .error((err, req) => {
+        expectTypeOf(req.method).toEqualTypeOf<"delete">();
       });
   });
 });
 
 describe("res", () => {
-  test("", () => {
+  test("res.headers", () => {
     dredgeRoute()
+      .use((req, res) => {
+        expectTypeOf(res.header()).toEqualTypeOf<Record<string, string>>();
+        expectTypeOf(res.header("content-type")).toEqualTypeOf<
+          string | undefined
+        >();
+      })
+      .error((err, req, res) => {
+        expectTypeOf(res.header()).toEqualTypeOf<Record<string, string>>();
+        expectTypeOf(res.header("content-type")).toEqualTypeOf<
+          string | undefined
+        >();
+      });
+  });
+
+  test("data in res.next option parameter", () => {
+    type ExpectedNextTypes =
+      | {
+          data?: any;
+          ctx?: unknown;
+          headers?: Record<string, string> | undefined;
+          status?: number | undefined;
+          statusText?: string | undefined;
+        }
+      | {
+          json?: any;
+          ctx?: unknown;
+          headers?: Record<string, string> | undefined;
+          status?: number | undefined;
+          statusText?: string | undefined;
+        }
+      | {
+          form?: any;
+          ctx?: unknown;
+          headers?: Record<string, string> | undefined;
+          status?: number | undefined;
+          statusText?: string | undefined;
+        };
+
+    type ExpectedEndTypes<T = any> =
+      | {
+          data?: T;
+          headers?: Record<string, string> | undefined;
+          status?: number | undefined;
+          statusText?: string | undefined;
+        }
+      | {
+          json?: T;
+          headers?: Record<string, string> | undefined;
+          status?: number | undefined;
+          statusText?: string | undefined;
+        }
+      | {
+          form?: T;
+          headers?: Record<string, string> | undefined;
+          status?: number | undefined;
+          statusText?: string | undefined;
+        };
+
+    const x = dredgeRoute()
       .options({
         dataTypes: {
           json: "application/json",
@@ -306,108 +448,170 @@ describe("res", () => {
         type NextParameter = Simplify<Parameters<typeof res.next>[0]>;
         type EndParameter = Simplify<Parameters<typeof res.end>[0]>;
 
-        expectTypeOf<NextParameter>().toEqualTypeOf<
-          | {
-              data?: any;
-              ctx?: unknown;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              json?: any;
-              ctx?: unknown;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              form?: any;
-              ctx?: unknown;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-        >();
+        expectTypeOf<NextParameter>().toEqualTypeOf<ExpectedNextTypes>();
+        expectTypeOf<EndParameter>().toEqualTypeOf<ExpectedEndTypes>();
+      })
+      .error((err, req, res) => {
+        type NextParameter = Simplify<Parameters<typeof res.next>[0]>;
+        type EndParameter = Simplify<Parameters<typeof res.end>[0]>;
 
-        expectTypeOf<EndParameter>().toEqualTypeOf<
-          | {
-              data?: any;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              json?: any;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              form?: any;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-        >();
-      });
-
-    dredgeRoute()
-      .options({
-        dataTypes: {
-          json: "application/json",
-          form: "application/form-data",
-        },
+        expectTypeOf<NextParameter>().toEqualTypeOf<ExpectedNextTypes>();
+        expectTypeOf<EndParameter>().toEqualTypeOf<ExpectedEndTypes>();
       })
       .output(z.string())
       .use((req, res) => {
         type NextParameter = Simplify<Parameters<typeof res.next>[0]>;
         type EndParameter = Simplify<Parameters<typeof res.end>[0]>;
 
-        expectTypeOf<NextParameter>().toEqualTypeOf<
-          | {
-              data?: any;
-              ctx?: unknown;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              json?: any;
-              ctx?: unknown;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              form?: any;
-              ctx?: unknown;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-        >();
-
-        expectTypeOf<EndParameter>().toEqualTypeOf<
-          | {
-              data?: string;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              json?: string;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-          | {
-              form?: string;
-              headers?: Record<string, string> | undefined;
-              status?: number | undefined;
-              statusText?: string | undefined;
-            }
-        >();
+        expectTypeOf<NextParameter>().toEqualTypeOf<ExpectedNextTypes>();
+        expectTypeOf<EndParameter>().toEqualTypeOf<ExpectedEndTypes<string>>();
       });
+  });
+
+  test("res.ctx in use", () => {
+    dredgeRoute<{ db: "fake-db"; session: { username: string } }>()
+      .use((req, res) => {
+        expectTypeOf(res.ctx).toEqualTypeOf<{
+          db: "fake-db";
+          session: { username: string };
+        }>();
+
+        return res.next({
+          ctx: {
+            meta: { info: "...." },
+            session: {
+              userId: 1,
+            },
+          },
+        });
+      })
+      .use((req, res) => {
+        expectTypeOf(res.ctx).toEqualTypeOf<{
+          meta: { info: string };
+          session: { userId: number };
+          db: "fake-db";
+        }>();
+      })
+      .use(() => {})
+      .use((req, res) => {
+        return res.next({
+          ctx: {
+            session: {
+              userId: "1",
+            },
+          },
+        });
+      })
+      .use((req, res) => {
+        expectTypeOf(res.ctx).toEqualTypeOf<{
+          meta: { info: string };
+          session: { userId: string };
+          db: "fake-db";
+        }>();
+      });
+  });
+
+  test("res.ctx in error", () => {
+    dredgeRoute<{ db: "fake-db"; session: { username: string } }>()
+      .error((err, req, res) => {
+        expectTypeOf(res.ctx).toEqualTypeOf<{
+          db: "fake-db";
+          session: { username: string };
+        }>();
+
+        return res.next({
+          ctx: {
+            meta: { info: "...." },
+            session: {
+              userId: 1,
+            },
+          },
+        });
+      })
+      .error((err, req, res) => {
+        expectTypeOf(res.ctx).toEqualTypeOf<{
+          meta: { info: string };
+          session: { userId: number };
+          db: "fake-db";
+        }>();
+      })
+      .error(() => {})
+      .error((err, req, res) => {
+        return res.next({
+          ctx: {
+            session: {
+              userId: "1",
+            },
+          },
+        });
+      })
+      .error((err, req, res) => {
+        expectTypeOf(res.ctx).toEqualTypeOf<{
+          meta: { info: string };
+          session: { userId: string };
+          db: "fake-db";
+        }>();
+      });
+  });
+
+  test("responseData will be `any` if data is not passed to res.end function or res.end function is never called", () => {
+    const routeI = dredgeRoute()
+      .path("/test")
+      .get()
+      .use((req, res) => {
+        return res.end({ status: 200 });
+      })
+      .build();
+
+    type ODataI = inferRouteOData<typeof routeI>;
+
+    expectTypeOf<ODataI>().toBeAny();
+
+    // TODO: fix this
+    const routeII = dredgeRoute()
+      .path("/test")
+      .get()
+      .use((req, res) => {})
+      .use((req, res) => {
+        return res.end({
+          data: "sss",
+        });
+      });
+    // .build();
+
+    type ODataII = inferRouteOData<typeof routeII>;
+
+    expectTypeOf<ODataII>().toBeAny();
+  });
+
+  test("res.end and responseData", () => {
+    const route = dredgeRoute()
+      .path("/test")
+      .get()
+      .use((req, res) => {
+        return res.end({
+          data: "this is string" as const,
+        });
+      })
+      .build();
+
+    type OData = inferRouteOData<typeof route>;
+    expectTypeOf<OData>().toEqualTypeOf<"this is string">();
+  });
+
+  test("res.output and responseData", () => {
+    const route = dredgeRoute()
+      .path("/test")
+      .get()
+      .output(z.enum(["a", "b", "c"]))
+      .use((req, res) => {
+        return res.end({
+          data: "a",
+        });
+      })
+      .build();
+
+    type OData = inferRouteOData<typeof route>;
+    expectTypeOf<OData>().toEqualTypeOf<"a" | "b" | "c">();
   });
 });

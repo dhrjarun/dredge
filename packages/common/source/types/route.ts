@@ -84,6 +84,14 @@ export type AnyMiddlewareFunction = MiddlewareFunction<
   any,
   any
 >;
+export type AnyErrorMiddlewareFunction = ErrorMiddlewareFunction<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
 
 export type MiddlewareFunction<
   DataTypes,
@@ -157,38 +165,32 @@ export type MiddlewareFunction<
   ): MaybePromise<MiddlewareResult<NewContext, NewOData> | void>;
 };
 
-export type AnyErrorMiddlewareFunction = ErrorMiddlewareFunction<
-  any,
-  any,
-  any,
-  any,
-  any
->;
 export type ErrorMiddlewareFunction<
   DataTypes,
   Context,
   NewContext,
+  Method,
   EData,
   NewEData,
 > = {
   (
     error: any,
     req: {
-      readonly method: string;
+      readonly method: Method;
       readonly url: string;
-      readonly data: unknown;
+      readonly data: Method extends "get" | "delete" | "head" ? undefined : any;
 
       param: {
         <T extends string>(key: T): string | undefined;
         (): Record<string, string>;
       };
       searchParam: {
-        <T extends string>(key: T): string | undefined;
-        (): Record<string, string>;
+        <T extends string>(key: T): any;
+        (): Record<string, any>;
       };
       searchParams: {
-        <T extends string>(key: T): string[];
-        (): Record<string, string[]>;
+        <T extends string>(key: T): any[];
+        (): Record<string, any[]>;
       };
       header: {
         (headerName: string): string | undefined;
@@ -284,7 +286,7 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
     any,
     any
   >[];
-  errorMiddlewares: ErrorMiddlewareFunction<any, any, any, any, any>[];
+  errorMiddlewares: ErrorMiddlewareFunction<any, any, any, any, any, any>[];
 };
 
 export interface Route<
@@ -406,7 +408,8 @@ export interface UnresolvedRoute<
         Paths,
         SearchParams,
         IBody,
-        OBody
+        OBody,
+        EBody
       >;
 
   path<const T extends string>(
@@ -498,7 +501,8 @@ export interface UnresolvedRoute<
       inferDataTypes<Options>,
       ErrorContext,
       NewContext,
-      IsNever<EBody> extends true ? undefined : inferParserType<EBody>,
+      IsNever<Method> extends true ? string : Method,
+      inferParserType<EBody>,
       NewEData
     >,
   ): UnresolvedRoute<
@@ -526,8 +530,8 @@ export interface UnresolvedRoute<
     Params,
     SearchParams,
     IBody,
-    OBody,
-    EBody
+    IsNever<OBody> extends true ? ParserWithoutInput<any> : OBody,
+    IsNever<EBody> extends true ? ParserWithoutInput<any> : EBody
   >;
 
   output<P extends Parser>(
@@ -787,6 +791,36 @@ export type inferRouteMethod<R> = R extends Route<
   any
 >
   ? Method
+  : never;
+
+export type inferRouteEData<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer EData extends Parser
+>
+  ? inferParserType<EData>
+  : never;
+
+export type inferRouteOData<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer OData extends Parser,
+  any
+>
+  ? inferParserType<OData>
   : never;
 
 type inferSearchParamType<SearchParams> = Simplify<{
