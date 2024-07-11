@@ -60,24 +60,31 @@ type inferDirectClientOption<R> = R extends Route<
   infer Method,
   any,
   any,
-  infer SearchParams extends Record<string, Parser>,
+  infer SearchParams,
   infer IBody,
   any,
   any
 >
-  ? Omit<DirectClientOptions, "method" | "searchParams" | "data" | "ctx"> & {
+  ? Omit<
+      DirectClientOptions,
+      "method" | "searchParams" | "data" | "ctx" | "dataType"
+    > & {
       method: Method;
+      ctx?: Options["modifiedInitialContext"];
+      dataType?: keyof Options["dataTypes"];
     } & ([Method] extends ["post" | "put" | "patch"]
         ? IBody extends Parser
           ? Data<keyof Options["dataTypes"], inferParserType<IBody>>
           : {}
         : {}) &
-      (keyof SearchParams extends never
+      (IsNever<keyof SearchParams> extends true
         ? {}
-        : { searchParams: inferSearchParamsType<SearchParams> }) & {
-        ctx?: Options["modifiedInitialContext"];
-      }
+        : { searchParams: inferSearchParamsType<SearchParams> })
   : DirectClientOptions;
+
+type _inferDirectClientOption<R> = IsNever<R> extends true
+  ? DirectClientOptions
+  : inferDirectClientOption<R>;
 
 type inferDirectResponsePromise<R> = R extends Route<
   infer Options extends AnyRouteOptions,
@@ -100,32 +107,54 @@ type inferDirectResponsePromise<R> = R extends Route<
 type ResolveRouteShortcutFunction<
   Routes extends AnyRoute[],
   Method extends HTTPMethod,
-> = <
-  P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
-  R extends ExtractRoute<Routes[number], Method, P>,
->(
-  ...args: RequiredKeys<
-    Omit<inferDirectClientOption<R>, "method">
-  > extends never
-    ? [
-        path: P,
-        options?: Simplify<
-          DistributiveOmit<inferDirectClientOption<R>, "method">
-        >,
-      ]
-    : [
-        path: P,
-        options: Simplify<
-          DistributiveOmit<inferDirectClientOption<R>, "method">
-        >,
-      ]
-) => inferDirectResponsePromise<R>;
+> = {
+  <
+    P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
+    R extends ExtractRoute<Routes[number], Method, P>,
+  >(
+    ...args: RequiredKeys<
+      Omit<inferDirectClientOption<R>, "method">
+    > extends never
+      ? [
+          path: P,
+          options?: Simplify<
+            DistributiveOmit<_inferDirectClientOption<R>, "method">
+          >,
+        ]
+      : [
+          path: IsNever<P> extends true ? string : P,
+          options: Simplify<
+            DistributiveOmit<_inferDirectClientOption<R>, "method">
+          >,
+        ]
+  ): inferDirectResponsePromise<R>;
+};
 
 type DistributiveOmit<T, K extends string | number | symbol> = T extends any
   ? Omit<T, K>
   : never;
 
-export interface DirectClient<Routes extends AnyRoute[]> {
+// export interface DirectClient<Routes extends AnyRoute[]> {
+//   <
+//     P extends inferRoutePath<Routes[number]>,
+//     M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
+//     R extends ExtractRoute<Routes[number], M, P>,
+//   >(
+//     path: P,
+//     options: Simplify<
+//       { method: M } & DistributiveOmit<inferDirectClientOption<R>, "method">
+//     >,
+//   ): inferDirectResponsePromise<R>;
+
+//   get: ResolveRouteShortcutFunction<Routes, "get">;
+//   post: ResolveRouteShortcutFunction<Routes, "post">;
+//   put: ResolveRouteShortcutFunction<Routes, "put">;
+//   delete: ResolveRouteShortcutFunction<Routes, "delete">;
+//   patch: ResolveRouteShortcutFunction<Routes, "patch">;
+//   head: ResolveRouteShortcutFunction<Routes, "head">;
+// }
+
+export type DirectClient<Routes extends AnyRoute[]> = {
   <
     P extends inferRoutePath<Routes[number]>,
     M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
@@ -133,12 +162,14 @@ export interface DirectClient<Routes extends AnyRoute[]> {
   >(
     path: P,
     options: Simplify<
-      { method: M } & (IsNever<R> extends true
-        ? {}
-        : DistributiveOmit<inferDirectClientOption<R>, "method">)
+      { method: M } & DistributiveOmit<inferDirectClientOption<R>, "method">
     >,
   ): inferDirectResponsePromise<R>;
 
+  extends(defaultOptions: DefaultDirectClientOptions): DirectClient<Routes>;
+} & Pick<MethodClient<Routes>, inferRouteMethod<Routes[number]>>;
+
+interface MethodClient<Routes extends AnyRoute[]> {
   get: ResolveRouteShortcutFunction<Routes, "get">;
   post: ResolveRouteShortcutFunction<Routes, "post">;
   put: ResolveRouteShortcutFunction<Routes, "put">;

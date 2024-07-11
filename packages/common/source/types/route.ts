@@ -406,6 +406,7 @@ export interface UnresolvedRoute<
         ErrorContext,
         Method,
         Paths,
+        Params,
         SearchParams,
         IBody,
         OBody,
@@ -710,7 +711,7 @@ export type ExtractRoute<
   any,
   any
 >
-  ? [Method, Path] extends [M, inferPathType<PathArray, Params>]
+  ? [M, inferPathType<PathArray, Params>] extends [Method, Path]
     ? R
     : never
   : never;
