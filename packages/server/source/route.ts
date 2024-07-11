@@ -6,7 +6,7 @@ import {
   trimSlashes,
 } from "@dredge/common";
 
-export function dredgeRoute<Context extends object>() {
+export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as UnresolvedRoute<
     {
       initialContext: Context;

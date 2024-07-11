@@ -866,6 +866,28 @@ type inferParamsType<Params> = Simplify<{
     : inferParserType<Params[key]>;
 }>;
 
-type inferDataTypes<Options> = Options extends { dataTypes?: any }
+export type inferDataTypes<Options> = Options extends {
+  dataTypes?: any;
+}
   ? keyof Options["dataTypes"]
   : never;
+
+export type inferModifiedInitialContext<Options> = Options extends {
+  modifiedInitialContext: any;
+}
+  ? Options["modifiedInitialContext"]
+  : never;
+
+export type inferInitialContext<Options> = Options extends {
+  initialContext: any;
+}
+  ? Options["initialContext"]
+  : never;
+
+export interface AnyRouteOptions {
+  initialContext: any;
+  modifiedInitialContext: any;
+  dataTypes: {
+    [key: string]: string;
+  };
+}
