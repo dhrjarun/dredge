@@ -153,8 +153,8 @@ export type MiddlewareFunction<
         ? DataTypes[number]
         : undefined;
       header: {
-        (headerName: string): string | undefined;
         (): Record<string, string>;
+        (headerName: string): string | undefined;
       };
       next: NextFunction<DataTypes>;
       end: OptionalEndFunction<
@@ -207,8 +207,8 @@ export type ErrorMiddlewareFunction<
         : undefined;
 
       header: {
-        (headerName: string): string | undefined;
         (): Record<string, string>;
+        (headerName: string): string | undefined;
       };
       next: NextFunction<DataTypes>;
       end: OptionalEndFunction<
@@ -216,7 +216,7 @@ export type ErrorMiddlewareFunction<
         IsNever<EData> extends true ? any : EData
       >;
     },
-  ): MaybePromise<MiddlewareResult<NewContext, NewEData> | void> | void;
+  ): MaybePromise<MiddlewareResult<NewContext, NewEData> | void>;
 };
 
 type NextFunction<DataTypes> = {
@@ -467,7 +467,7 @@ export interface UnresolvedRoute<
     EBody
   >;
 
-  use<NewContext, NewOData>(
+  use<NewContext = {}, NewOData = never>(
     fn: MiddlewareFunction<
       inferDataTypes<Options>,
       SuccessContext,
@@ -496,7 +496,7 @@ export interface UnresolvedRoute<
     EBody
   >;
 
-  error<NewContext, NewEData>(
+  error<NewContext = {}, NewEData = never>(
     fn: ErrorMiddlewareFunction<
       inferDataTypes<Options>,
       ErrorContext,
@@ -511,6 +511,7 @@ export interface UnresolvedRoute<
     Overwrite<ErrorContext, NewContext>,
     Method,
     Paths,
+    Params,
     SearchParams,
     IBody,
     OBody,
@@ -806,7 +807,20 @@ export type inferRouteEData<R> = R extends Route<
   infer EData extends Parser
 >
   ? inferParserType<EData>
-  : never;
+  : R extends UnresolvedRoute<
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        infer EData extends Parser
+      >
+    ? inferParserType<EData>
+    : never;
 
 export type inferRouteOData<R> = R extends Route<
   any,
@@ -821,7 +835,20 @@ export type inferRouteOData<R> = R extends Route<
   any
 >
   ? inferParserType<OData>
-  : never;
+  : R extends UnresolvedRoute<
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        infer OData extends Parser,
+        any
+      >
+    ? inferParserType<OData>
+    : never;
 
 type inferSearchParamType<SearchParams> = Simplify<{
   [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
