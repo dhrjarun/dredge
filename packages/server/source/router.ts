@@ -5,6 +5,7 @@ import type {
   MiddlewareResult,
   Parser,
 } from "@dredge/common";
+import { mergeHeaders } from "./utils/headers";
 import { mergeDeep } from "./utils/merge";
 
 export class RoutePath {
@@ -350,26 +351,6 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       return response;
     },
   } as DredgeRouter;
-}
-
-export function mergeHeaders(
-  target: Record<string, string>,
-  ...sources: Record<string, string | null>[]
-) {
-  if (!sources.length) return target;
-  const source = sources.shift();
-
-  const headers = { ...target };
-  for (const header in source) {
-    // https://nodejs.org/api/http.html#messageheaders
-    if (!source[header]) {
-      delete headers[header];
-    } else {
-      headers[header.toLowerCase()] = source[header]!;
-    }
-  }
-
-  return mergeHeaders(headers, ...sources);
 }
 
 function nextEndFunction(

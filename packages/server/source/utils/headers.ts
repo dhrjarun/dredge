@@ -45,3 +45,23 @@ export function joinDuplicateHeaders(
 
   return newHeaders;
 }
+
+export function mergeHeaders(
+  target: Record<string, string>,
+  ...sources: Record<string, string | null>[]
+) {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  const headers = { ...target };
+  for (const header in source) {
+    // https://nodejs.org/api/http.html#messageheaders
+    if (!source[header]) {
+      delete headers[header];
+    } else {
+      headers[header.toLowerCase()] = source[header]!;
+    }
+  }
+
+  return mergeHeaders(headers, ...sources);
+}

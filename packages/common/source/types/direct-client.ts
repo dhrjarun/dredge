@@ -112,9 +112,9 @@ type ResolveRouteShortcutFunction<
     P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
     R extends ExtractRoute<Routes[number], Method, P>,
   >(
-    ...args: RequiredKeys<
-      Omit<inferDirectClientOption<R>, "method">
-    > extends never
+    ...args: IsNever<
+      RequiredKeys<Omit<inferDirectClientOption<R>, "method">>
+    > extends true
       ? [
           path: P,
           options?: Simplify<

@@ -1,25 +1,20 @@
-import {
-  AnyRoute,
-  DefaultDirectClientOptions,
-  DirectClientOptions,
-  inferModifiedInitialRouteContext,
-} from "@dredge/common";
-import { DirectClient } from "@dredge/common";
+import { AnyRoute } from "@dredge/common";
 import { IsNever } from "ts-essentials";
 import { dredgeRouter } from "../router";
-import { joinDuplicateHeaders } from "../utils/headers";
-import { mergeDeep, mergeHeaders } from "../utils/merge";
+import { inferRouteArrayContext } from "../types/dredge-client-option";
+import {
+  DefaultDirectClientOptions,
+  DirectClient,
+  DirectClientOptions,
+} from "../types/dredge-direct-client";
 
-type inferRoutesContext<Routes, Context = {}> = Routes extends [
-  infer First extends AnyRoute,
-  ...infer Tail extends AnyRoute[],
-]
-  ? inferRoutesContext<Tail, Context & inferModifiedInitialRouteContext<First>>
-  : Context;
+import { joinDuplicateHeaders } from "../utils/headers";
+import { mergeHeaders } from "../utils/headers";
+import { mergeDeep } from "../utils/merge";
 
 export function directClient<const Routes extends AnyRoute[]>(
   routes: Routes,
-): IsNever<inferRoutesContext<Routes>> extends false
+): IsNever<inferRouteArrayContext<Routes>> extends false
   ? DirectClient<Routes>
   : "Routes's Context do not match" {
   return createDirectClient(routes, {}) as any;
@@ -27,7 +22,7 @@ export function directClient<const Routes extends AnyRoute[]>(
 
 function createDirectClient(
   routes: AnyRoute[],
-  defaultOptions: DefaultDirectClientOptions,
+  options: DefaultDirectClientOptions,
 ): DirectClient<any> {
   const router = dredgeRouter(routes);
 
@@ -41,10 +36,10 @@ function createDirectClient(
     } = options || {};
 
     const result = router.call(path, {
-      ctx: mergeDeep(defaultOptions?.ctx || {}, ctx),
+      ctx: mergeDeep(options?.ctx || {}, ctx),
       data,
       method,
-      headers: mergeHeaders(defaultOptions?.headers || {}, headers),
+      headers: mergeHeaders(options?.headers || {}, headers),
       searchParams,
     });
 
@@ -81,7 +76,7 @@ function createDirectClient(
       } = options || {};
 
       const result = router.call(path, {
-        ctx: mergeDeep(defaultOptions?.ctx || {}, ctx),
+        ctx: mergeDeep(options?.ctx || {}, ctx),
         data,
         method,
         headers: joinDuplicateHeaders(headers),
@@ -110,10 +105,21 @@ function createDirectClient(
     };
   });
 
-  client.extend = (options: {
-    headers?: Record<string, string>;
-    ctx?: any;
-  }) => {};
+  client.extend = (extendOptions: DefaultDirectClientOptions) => {
+    return createDirectClient(routes, {
+      ctx: extendOptions.ctx || options.ctx,
+      headers: mergeHeaders(options.headers || {}, extendOptions.headers || {}),
+      prefixUrl: extendOptions.prefixUrl ?? options.prefixUrl,
+      dataType: extendOptions.dataType ?? options.dataType,
+      responseDataType: extendOptions.dataType ?? options.dataType,
+      throwHttpErrors:
+        extendOptions.throwHttpErrors ?? extendOptions.throwHttpErrors,
+      dataTypes: {
+        ...options.dataTypes,
+        ...extendOptions.dataTypes,
+      },
+    });
+  };
 
   return client;
 }

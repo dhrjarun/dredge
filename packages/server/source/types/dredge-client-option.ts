@@ -52,9 +52,7 @@ export type inferDredgeClientOption<R> = R extends Route<
       dataType?: keyof Options["dataTypes"];
       responseDataTypes?: keyof Options["dataTypes"];
       dataTypes?: {
-        [key in Options["dataTypes"] extends string
-          ? Options["dataTypes"]
-          : never]?: string;
+        [key in keyof Options["dataTypes"]]?: string;
       };
     } & ([Method] extends ["post" | "put" | "patch"]
         ? IBody extends Parser
@@ -81,11 +79,14 @@ export type DefaultDredgeClientOptions = Pick<
   | "responseDataType"
 >;
 
-type inferRoutesContext<Routes, Context = {}> = Routes extends [
+export type inferRouteArrayContext<Routes, Context = {}> = Routes extends [
   infer First extends AnyRoute,
   ...infer Tail extends AnyRoute[],
 ]
-  ? inferRoutesContext<Tail, Context & inferModifiedInitialRouteContext<First>>
+  ? inferRouteArrayContext<
+      Tail,
+      Context & inferModifiedInitialRouteContext<First>
+    >
   : Context;
 
 export type inferDefaultDredgeClientOptions<
@@ -94,11 +95,11 @@ export type inferDefaultDredgeClientOptions<
 > = Merge<
   DefaultDredgeClientOptions,
   {
-    ctx?: inferRoutesContext<Routes>;
-    dataType?: DT;
-    responseDataTypes?: DT;
+    ctx?: inferRouteArrayContext<Routes>;
+    dataType?: keyof DT;
+    responseDataType?: keyof DT;
     dataTypes?: {
-      [key in DT extends string ? DT : never]?: string;
+      [key in keyof DT]?: string;
     };
   }
 >;

@@ -7,12 +7,17 @@ import {
 } from "@dredge/common";
 import { IsNever } from "ts-essentials";
 import {
+  DefaultDredgeClientOptions,
+  DredgeClientOptions,
   _inferDredgeClientOption,
   inferDefaultDredgeClientOptions,
   inferDredgeClientOption,
 } from "./dredge-client-option";
 import { inferDredgeResponsePromise } from "./dredge-client.response";
 import { DistributiveOmit, RequiredKeys, Simplify } from "./utils";
+
+export type DirectClientOptions = DredgeClientOptions;
+export type DefaultDirectClientOptions = DefaultDredgeClientOptions;
 
 type ResolveRouteShortcutFunction<
   Routes extends AnyRoute[],
