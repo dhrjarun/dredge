@@ -550,7 +550,7 @@ describe("res object", () => {
       expect(res.header()).toStrictEqual({});
     }
 
-    function afterModificationCheck(res) {
+    function afterModificationCheck(res: any) {
       expect(res.status).toBe(200);
       expect(res.statusText).toBe("ok");
       expect(res.ctx).toStrictEqual({

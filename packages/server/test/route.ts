@@ -109,8 +109,8 @@ describe("route.options()", () => {
 
   test("dataTransformer should be in route._def", () => {
     const json = {
-      forRequest: (data) => data,
-      forResponse: (data) => data,
+      forRequest: (data: any) => data,
+      forResponse: (data: any) => data,
     };
 
     const route = dredgeRoute()
@@ -192,7 +192,7 @@ describe("route.params()", () => {
     expect(() =>
       dredgeRoute()
         .path("/test")
-        .params({ noParam: (p) => p }),
+        .params({ noParam: (p: any) => p }),
     ).toThrowError("noParam");
   });
 
@@ -202,7 +202,7 @@ describe("route.params()", () => {
         .path("/test/:para")
         .params({ para: (p) => p })
         .params({
-          para: (p) => p,
+          para: (p: any) => p,
         }),
     ).toThrowError("para");
   });
@@ -237,14 +237,14 @@ describe("route.searchParams()", () => {
 
 describe("route.<method>()", () => {
   test("should register both method and body parser in _def", () => {
-    const methodsWithoutBody = ["get", "delete", "head"];
+    const methodsWithoutBody = ["get", "delete", "head"] as const;
     methodsWithoutBody.forEach((method) => {
       const getRoute = dredgeRoute().path("/test")[method]();
       expect(getRoute._def.method).toBe(method);
     });
 
-    const methodWithBody = ["post", "patch", "put"];
-    const parser = (v) => v;
+    const methodWithBody = ["post", "patch", "put"] as const;
+    const parser = (v: any) => v;
     methodWithBody.forEach((method) => {
       const postRoute = dredgeRoute().path("/test")[method](parser);
       expect(postRoute._def.method).toBe(method);
