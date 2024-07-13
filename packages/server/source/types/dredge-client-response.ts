@@ -7,9 +7,10 @@ import {
 
 export interface DredgeClientResponse<T = any> {
   headers: Record<string, string>;
-  status: number;
-  statusText: string;
+  status?: number;
+  statusText?: string;
   data(): Promise<T>;
+  dataType?: string;
 }
 
 export type DredgeResponsePromise<

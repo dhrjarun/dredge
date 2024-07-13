@@ -128,3 +128,11 @@ export type DistributiveOmit<
   T,
   K extends string | number | symbol,
 > = T extends any ? Omit<T, K> : never;
+
+type FilterUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? K : never]: T[K];
+};
+export type MarkOptionalToUndefined<T> = MarkOptional<
+  T,
+  keyof FilterUndefined<T>
+>;
