@@ -23,14 +23,6 @@ export interface EndMiddlewareResult<C, Data>
   isEnd: true;
 }
 
-// type OptionalData<Types, T> = { data?: T } & (IsNever<Types> extends false
-//   ? Types extends string
-//     ? {
-//         [P in Types]?: T;
-//       }
-//     : {}
-//   : {});
-
 type Data<Types, T> =
   | { data: T }
   | (Types extends infer U
@@ -659,62 +651,6 @@ export type AnyUnresolvedRoute = UnresolvedRoute<
   any,
   any
 >;
-
-type _inferPathType<
-  Paths,
-  Params extends Record<string, Parser>,
-> = Paths extends [infer First extends string, ...infer Tail extends string[]]
-  ? `/${First extends `:${infer N}`
-      ? Params[N] extends Parser
-        ? inferParserType<Params[N]>
-        : string
-      : First}${_inferPathType<Tail, Params>}`
-  : "";
-
-export type inferPathType<
-  Paths,
-  Params extends Record<string, Parser>,
-> = Paths extends []
-  ? never
-  : Paths extends string[]
-    ? _inferPathType<Paths, Params>
-    : never;
-
-export type inferRoutePath<R> = R extends Route<
-  any,
-  any,
-  any,
-  any,
-  infer Path,
-  infer Params extends Record<string, Parser>,
-  any,
-  any,
-  any,
-  any
->
-  ? inferPathType<Path, Params>
-  : never;
-
-export type ExtractRoute<
-  R,
-  Method extends HTTPMethod,
-  Path extends string = any,
-> = R extends Route<
-  any,
-  any,
-  any,
-  infer M,
-  infer PathArray,
-  infer Params extends Record<string, Parser>,
-  any,
-  any,
-  any,
-  any
->
-  ? [M, inferPathType<PathArray, Params>] extends [Method, Path]
-    ? R
-    : never
-  : never;
 
 export type inferInitialRouteContext<R> = R extends Route<
   infer Options extends {

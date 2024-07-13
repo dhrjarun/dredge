@@ -13,11 +13,13 @@ import {
   inferDefaultDredgeClientOptions,
   inferDredgeClientOption,
 } from "./dredge-client-option";
-import { inferDredgeResponsePromise } from "./dredge-client.response";
+import { inferDredgeResponsePromise } from "./dredge-client-response";
 import { DistributiveOmit, RequiredKeys, Simplify } from "./utils";
 
 export type DirectClientOptions = DredgeClientOptions;
 export type DefaultDirectClientOptions = DefaultDredgeClientOptions;
+
+type ParamsForOmit<P> = P extends `:${string}` ? never : "params";
 
 type ResolveRouteShortcutFunction<
   Routes extends AnyRoute[],
@@ -28,18 +30,26 @@ type ResolveRouteShortcutFunction<
     R extends ExtractRoute<Routes[number], Method, P>,
   >(
     ...args: IsNever<
-      RequiredKeys<Omit<inferDredgeClientOption<R>, "method">>
+      RequiredKeys<
+        Omit<inferDredgeClientOption<R>, "method" | ParamsForOmit<P>>
+      >
     > extends true
       ? [
           path: P,
           options?: Simplify<
-            DistributiveOmit<_inferDredgeClientOption<R>, "method">
+            DistributiveOmit<
+              _inferDredgeClientOption<R>,
+              "method" | ParamsForOmit<P>
+            >
           >,
         ]
       : [
           path: IsNever<P> extends true ? string : P,
           options: Simplify<
-            DistributiveOmit<_inferDredgeClientOption<R>, "method">
+            DistributiveOmit<
+              _inferDredgeClientOption<R>,
+              "method" | ParamsForOmit<P>
+            >
           >,
         ]
   ): inferDredgeResponsePromise<R>;

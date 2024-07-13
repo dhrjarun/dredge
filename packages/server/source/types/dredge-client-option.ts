@@ -9,8 +9,9 @@ import {
   inferRouteDataTypes,
   inferSearchParamsType,
 } from "@dredge/common";
-import { IsNever, Merge } from "ts-essentials";
-import { Data } from "./data";
+import { IsNever, Merge, RequiredKeys } from "ts-essentials";
+import { Data } from "./route-data";
+import { inferParamsType } from "./route-parameters";
 
 export interface DredgeClientOptions {
   ctx?: Record<string, any>;
@@ -20,7 +21,8 @@ export interface DredgeClientOptions {
   dataTypes?: Record<string, string>;
   responseDataType?: string;
   headers?: Record<string, string>;
-  searchParams?: Record<string, any>;
+  params?: Record<string, string>;
+  searchParams?: Record<string, any | any[]>;
   prefixUrl?: URL | string;
   throwHttpErrors?: boolean;
 }
@@ -31,7 +33,7 @@ export type inferDredgeClientOption<R> = R extends Route<
   any,
   infer Method,
   any,
-  any,
+  infer Params,
   infer SearchParams,
   infer IBody,
   any,
@@ -61,7 +63,14 @@ export type inferDredgeClientOption<R> = R extends Route<
         : {}) &
       (IsNever<keyof SearchParams> extends true
         ? {}
-        : { searchParams: inferSearchParamsType<SearchParams> })
+        : IsNever<
+              RequiredKeys<inferSearchParamsType<SearchParams>>
+            > extends true
+          ? { searchParams?: inferSearchParamsType<SearchParams> }
+          : { searchParams: inferSearchParamsType<SearchParams> }) &
+      (IsNever<keyof Params> extends true
+        ? {}
+        : { params: inferParamsType<Params> })
   : DredgeClientOptions;
 
 export type _inferDredgeClientOption<R> = IsNever<R> extends true
