@@ -1,0 +1,33 @@
+{
+  "name": "@dredge/route",
+  "version": "1.0.0",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "default": "./dist/index.cjs.js",
+        "types": "./dist/index.d.ts"
+      },
+      "import": {
+        "default": "./dist/index.esm.js",
+        "types": "./dist/index.d.mts"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest --typecheck",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "pnpm biome format ./source",
+    "lint:fix": "pnpm biome format --write ./source",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.12.4"
+  }
+}
