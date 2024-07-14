@@ -1,10 +1,4 @@
-import { getParseFn } from "@dredge/common";
-import type {
-  AnyRoute,
-  DredgeHeaders,
-  MiddlewareResult,
-  Parser,
-} from "@dredge/common";
+import { AnyRoute, MiddlewareResult, Parser, getParseFn } from "@dredge/route";
 import { mergeHeaders } from "./utils/headers";
 import { mergeDeep } from "./utils/merge";
 
@@ -104,10 +98,11 @@ export interface DredgeRouter {
   call(
     path: string,
     options: {
-      headers?: DredgeHeaders;
+      headers?: Record<string, string>;
       method?: string;
       data?: any;
       dataType?: string;
+      responseDataType?: string;
       searchParams?: Record<string, any>;
       ctx?: any;
       prefixUrl?: string;

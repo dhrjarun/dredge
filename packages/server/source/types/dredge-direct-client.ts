@@ -4,7 +4,7 @@ import {
   HTTPMethod,
   inferRouteMethod,
   inferRoutePath,
-} from "@dredge/common";
+} from "@dredge/route";
 import { IsNever } from "ts-essentials";
 import {
   DefaultDredgeClientOptions,

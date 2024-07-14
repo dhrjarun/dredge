@@ -1,17 +1,17 @@
 import {
   AnyRoute,
   AnyRouteOptions,
+  Data,
   HTTPMethod,
   Parser,
   Route,
   inferModifiedInitialRouteContext,
+  inferParamsType,
   inferParserType,
   inferRouteDataTypes,
   inferSearchParamsType,
-} from "@dredge/common";
+} from "@dredge/route";
 import { IsNever, Merge, RequiredKeys } from "ts-essentials";
-import { Data } from "./route-data";
-import { inferParamsType } from "./route-parameters";
 
 export interface DredgeClientOptions {
   ctx?: Record<string, any>;

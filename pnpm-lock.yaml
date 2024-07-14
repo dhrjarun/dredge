@@ -71,11 +71,17 @@ importers:
         specifier: ^9.4.2
         version: 9.4.2(typescript@5.4.2)
 
+  packages/route:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.4
+        version: 20.12.4
+
   packages/server:
     dependencies:
-      '@dredge/common':
+      '@dredge/route':
         specifier: workspace:*
-        version: link:../common
+        version: link:../route
       busboy:
         specifier: ^1.6.0
         version: 1.6.0

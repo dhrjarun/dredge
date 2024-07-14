@@ -1,9 +1,4 @@
-import {
-  AnyRouteOptions,
-  Parser,
-  Route,
-  inferParserType,
-} from "@dredge/common";
+import { AnyRouteOptions, Parser, Route, inferParserType } from "@dredge/route";
 
 export interface DredgeClientResponse<T = any> {
   headers: Record<string, string>;
@@ -13,10 +8,9 @@ export interface DredgeClientResponse<T = any> {
   dataType?: string;
 }
 
-export type DredgeResponsePromise<
-  DataTypes,
-  Data = any,
-> = Promise<DredgeClientResponse> & {
+export type DredgeResponsePromise<DataTypes, Data = any> = Promise<
+  DredgeClientResponse<Data>
+> & {
   [key in DataTypes extends string ? DataTypes : never]: () => Promise<Data>;
 } & { data: () => Promise<Data> };
 

@@ -29,7 +29,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dredge/common": "workspace:*",
+    "@dredge/route": "workspace:*",
     "busboy": "^1.6.0",
     "form-data-encoder": "^4.0.2",
     "formdata-node": "^6.0.3",

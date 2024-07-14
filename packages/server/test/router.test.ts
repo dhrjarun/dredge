@@ -1,6 +1,6 @@
+import { dredgeRoute } from "@dredge/route";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { dredgeRoute } from "../source/route";
 import { ValidationError, dredgeRouter } from "../source/router";
 
 const prefixUrl = "https://life.com";
