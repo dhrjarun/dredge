@@ -72,6 +72,10 @@ export function createDirectClient(
         headers: _options.headers,
         searchParams: _options.searchParams,
         transformData: false,
+        prefixUrl:
+          _options.prefixUrl instanceof URL
+            ? _options.prefixUrl.toString()
+            : _options.prefixUrl,
       });
 
       const data = result.data;
@@ -128,7 +132,7 @@ function mergeDefaultOptions(
   options: DefaultDirectClientOptions,
 ) {
   return {
-    ctx: options.ctx || defaultOptions.ctx || {},
+    ctx: options.ctx ?? defaultOptions.ctx ?? {},
     headers: mergeHeaders(
       defaultOptions?.headers ?? {},
       options?.headers ?? {},
