@@ -1,5 +1,5 @@
 import { AnyRoute, MiddlewareResult, Parser, getParseFn } from "@dredge/route";
-import { mergeHeaders } from "./utils/headers";
+import { mergeHeaders, normalizeHeaders } from "./utils/headers";
 import { mergeDeep } from "./utils/merge";
 
 export class RoutePath {
@@ -101,8 +101,6 @@ export interface DredgeRouter {
       headers?: Record<string, string>;
       method?: string;
       data?: any;
-      dataType?: string;
-      responseDataType?: string;
       searchParams?: Record<string, any>;
       ctx?: any;
       prefixUrl?: string;
@@ -148,11 +146,10 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       const {
         method = "get",
         headers = {},
-        data: _data = null,
+        data,
         searchParams = {},
         ctx: _ctx = {},
         prefixUrl = "/",
-        dataType,
         transformData = true,
       } = options;
 
@@ -187,17 +184,6 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         ..._ctx,
       };
 
-      // transformRequestData
-      const shouldTransformRequestData =
-        transformData == true || transformData == "onlyRequest";
-      const requestDataTransformer = dataType
-        ? routeDef.dataTransformer?.[dataType]?.forRequest ||
-          ((data: any) => data)
-        : (data: any) => data;
-      const data = shouldTransformRequestData
-        ? requestDataTransformer(_data)
-        : _data;
-
       const params: Record<string, string> = routeDef.paths.reduce(
         (acc: any, item, index) => {
           if (item.startsWith(":")) {
@@ -208,14 +194,37 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         {},
       );
 
+      const _headers = normalizeHeaders(headers);
+      const dataType = extractDataType({ dataTypes: routeDef.dataTypes })(
+        _headers["content-type"],
+      );
       const unValidatedRequest = {
         url,
         method,
-        headers: normalizeHeaders(headers),
+        headers: _headers,
         params,
         searchParams,
         data,
+        dataType,
       };
+
+      function transformRequestDataIfNeeded() {
+        const shouldTransform =
+          transformData === true || transformData == "onlyRequest";
+        if (!shouldTransform) return;
+
+        const dataType = unValidatedRequest.dataType;
+
+        if (!dataType) return;
+
+        const transformer = routeDef.dataTransformer?.[dataType]?.forResponse;
+
+        if (!transformer) return;
+
+        unValidatedRequest.data = transformer(unValidatedRequest.data);
+      }
+
+      transformRequestDataIfNeeded();
 
       for (const [key, value] of Object.entries(
         unValidatedRequest.searchParams,
@@ -269,6 +278,9 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
           let currentCtx = ctx;
           let response: any = {
             headers: {},
+            dataType: extractDataType({ dataTypes: routeDef.dataTypes })(
+              validatedRequest.headers["accept"],
+            ),
           };
 
           for (const fn of routeDef.middlewares) {
@@ -297,7 +309,12 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
           return response;
         } catch (error) {
-          let response = { headers: {} };
+          let response: any = {
+            headers: {},
+            dataType: extractDataType({ dataTypes: routeDef.dataTypes })(
+              unValidatedRequest.headers["accept"],
+            ),
+          };
           let currentCtx = ctx;
 
           for (const fn of routeDef.errorMiddlewares) {
@@ -332,16 +349,31 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
       let response = await fn();
 
-      // transformResponseData
-      const shouldTransformResponseData =
-        transformData == true || transformData == "onlyRequest";
-      const responseDataTransformer = dataType
-        ? routeDef.dataTransformer?.[dataType]?.forResponse ||
-          ((data: any) => data)
-        : (data: any) => data;
-      response.data = shouldTransformResponseData
-        ? responseDataTransformer(response.data)
-        : _data;
+      function transformResponseDataIfNeeded() {
+        const shouldTransform =
+          transformData === true || transformData == "onlyResponse";
+        if (!shouldTransform) return;
+
+        const dataType = response.dataType;
+
+        if (!response.dataType) return;
+
+        const transformer = routeDef.dataTransformer?.[dataType]?.forResponse;
+
+        if (!transformer) return;
+
+        response.data = transformer(response.data);
+      }
+
+      transformResponseDataIfNeeded();
+
+      const contentTypeHeader = extractContentTypeHeader({
+        dataTypes: routeDef.dataTypes,
+        boundary: "--DredgeBoundary",
+      })(response.dataType);
+      if (!response.headers["content-type"] && !!contentTypeHeader) {
+        response.headers["content-type"] = contentTypeHeader;
+      }
 
       return response;
     },
@@ -355,6 +387,7 @@ function nextEndFunction(
     status?: number;
     statusText?: string;
     data?: any;
+    dataType?: string;
   } & { [key: string]: any },
   previousRes: {
     ctx?: any;
@@ -377,17 +410,17 @@ function nextEndFunction(
 
   const dataTypeKeys = ["data", ...Object.keys(dataTypes)];
   let data: any = previousRes?.data;
-  let dataType = previousRes?.dataType;
+  let dataType = res.dataType ?? previousRes?.dataType;
 
-  for (const item of dataTypeKeys) {
-    if (typeof res[item] !== "undefined") {
-      data = res[item];
-      dataType = item === "data" ? dataType : item;
-      break;
+  if (!res.dataType) {
+    for (const item of dataTypeKeys) {
+      if (typeof res[item] !== "undefined") {
+        data = res[item];
+        dataType = item === "data" ? dataType : item;
+        break;
+      }
     }
   }
-
-  const mime = dataType ? dataTypes[dataType] : undefined;
 
   return {
     ctx: mergeDeep(previousRes.ctx, res?.ctx),
@@ -432,6 +465,7 @@ async function handleMiddleware(
       headers: Record<string, string>;
       method: string;
       data: any;
+      dataType?: string;
       url: string;
       params: Record<string, unknown>;
       searchParams: Record<string, unknown[]>;
@@ -460,6 +494,7 @@ async function handleMiddleware(
     method: request.method,
     data: request.data,
     url: request.url,
+    dataType: request.dataType,
     param(key?: string) {
       return paramFn(request.params)(key);
     },
@@ -553,12 +588,44 @@ function getValidatorFn(parser: Parser, step: ValidationType) {
 
 type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
 
-function normalizeHeaders(headers: Record<string, string>) {
-  const newHeaders: Record<string, string> = {};
+function extractDataType(options: { dataTypes: Record<string, string> }) {
+  return (acceptOrContentTypeHeader?: string) => {
+    if (!acceptOrContentTypeHeader) return;
 
-  for (const [key, value] of Object.entries(headers)) {
-    newHeaders[key.toLowerCase()] = value;
-  }
+    const mime = acceptOrContentTypeHeader.trim().split(";")[0];
+    if (!mime) return;
+    // const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
+    // if(mimeRegex.test(mime)) return;
 
-  return newHeaders;
+    for (const [key, value] of Object.entries(options.dataTypes)) {
+      if (value == mime) {
+        return key;
+      }
+    }
+  };
+}
+
+function extractContentTypeHeader(options: {
+  dataTypes: Record<string, string>;
+  boundary?: string;
+}) {
+  const { dataTypes = {}, boundary } = options;
+  return (dataType?: string) => {
+    if (!dataType) return;
+    if (!(dataType in dataTypes)) return;
+
+    const mime = dataTypes[dataType]?.trim().toLowerCase();
+
+    if (!mime) return;
+    const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
+    if (!mimeRegex.test(mime)) return;
+
+    const [mimeType] = mime.split("/");
+
+    if (mimeType?.includes("multipart")) {
+      return boundary ? `${mime};boundary=${boundary}` : undefined;
+    }
+
+    return mime;
+  };
 }

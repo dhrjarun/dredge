@@ -65,3 +65,13 @@ export function mergeHeaders(
 
   return mergeHeaders(headers, ...sources);
 }
+
+export function normalizeHeaders(headers: Record<string, string>) {
+  const newHeaders: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(headers)) {
+    newHeaders[key.toLowerCase()] = value;
+  }
+
+  return newHeaders;
+}
