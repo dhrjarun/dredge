@@ -31,7 +31,10 @@ type ResolveRouteShortcutFunction<
   >(
     ...args: IsNever<
       RequiredKeys<
-        Omit<inferDredgeClientOption<R>, "method" | ParamsForOmit<P>>
+        DistributiveOmit<
+          inferDredgeClientOption<R>,
+          "method" | ParamsForOmit<P>
+        >
       >
     > extends true
       ? [
@@ -63,7 +66,10 @@ export type DirectClient<Routes extends AnyRoute[]> = {
   >(
     path: P,
     options: Simplify<
-      { method: M } & DistributiveOmit<inferDredgeClientOption<R>, "method">
+      { method: M } & DistributiveOmit<
+        inferDredgeClientOption<R>,
+        "method" | ParamsForOmit<P>
+      >
     >,
   ): inferDredgeResponsePromise<R>;
 
