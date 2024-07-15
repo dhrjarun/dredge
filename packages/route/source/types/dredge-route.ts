@@ -100,6 +100,7 @@ export type MiddlewareFunction<
     req: {
       readonly url: string;
       readonly method: Method;
+      readonly dataType?: DataTypes;
       readonly data: IsNever<IData> extends true
         ? Method extends "get" | "delete" | "head"
           ? undefined
@@ -141,9 +142,7 @@ export type MiddlewareFunction<
       readonly status?: number;
       readonly statusText?: string;
       readonly data: any;
-      readonly dataType?: DataTypes extends string[]
-        ? DataTypes[number]
-        : undefined;
+      readonly dataType?: DataTypes;
       header: {
         (): Record<string, string>;
         (headerName: string): string | undefined;
@@ -171,6 +170,7 @@ export type ErrorMiddlewareFunction<
       readonly method: Method;
       readonly url: string;
       readonly data: Method extends "get" | "delete" | "head" ? undefined : any;
+      readonly dataType?: DataTypes;
 
       param: {
         <T extends string>(key: T): string | undefined;
@@ -194,9 +194,7 @@ export type ErrorMiddlewareFunction<
       readonly status?: number;
       readonly statusText?: string;
       readonly data: any;
-      readonly dataType?: DataTypes extends string[]
-        ? DataTypes[number]
-        : undefined;
+      readonly dataType?: DataTypes;
 
       header: {
         (): Record<string, string>;
@@ -216,6 +214,7 @@ type NextFunction<DataTypes> = {
 
   <$ContextOverride>(
     opts: OptionalData<DataTypes, any> & {
+      dataType?: DataTypes;
       ctx?: $ContextOverride;
       headers?: Record<string, string>;
       status?: number;
@@ -229,6 +228,7 @@ type OptionalEndFunction<DataTypes, DT = any> = {
 
   <T extends DT>(
     opts: OptionalData<DataTypes, T> & {
+      dataType?: DataTypes;
       headers?: Record<string, string>;
       status?: number;
       statusText?: string;
@@ -241,6 +241,7 @@ type EndFunction<DataTypes, DT> = {
 
   <T extends DT>(
     opts: Data<DataTypes, T> & {
+      dataType?: DataTypes;
       headers?: Record<string, string>;
       status?: number;
       statusText?: string;

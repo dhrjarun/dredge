@@ -13,7 +13,10 @@ import {
   inferDefaultDredgeClientOptions,
   inferDredgeClientOption,
 } from "./dredge-client-option";
-import { inferDredgeResponsePromise } from "./dredge-client-response";
+import {
+  DredgeResponsePromise,
+  inferDredgeResponsePromise,
+} from "./dredge-client-response";
 import { DistributiveOmit, RequiredKeys, Simplify } from "./utils";
 
 export type DirectClientOptions = DredgeClientOptions;
@@ -85,4 +88,26 @@ interface MethodClient<Routes extends AnyRoute[]> {
   delete: ResolveRouteShortcutFunction<Routes, "delete">;
   patch: ResolveRouteShortcutFunction<Routes, "patch">;
   head: ResolveRouteShortcutFunction<Routes, "head">;
+}
+
+type AnyResolveRouteShortcutFunction = {
+  (
+    path: string,
+    options?: DirectClientOptions,
+  ): DredgeResponsePromise<string, any>;
+};
+export interface AnyDirectClient {
+  (
+    path: string,
+    option: DirectClientOptions,
+  ): DredgeResponsePromise<string, any>;
+
+  extends(defaultOptions: DefaultDirectClientOptions): AnyDirectClient;
+
+  get: AnyResolveRouteShortcutFunction;
+  post: AnyResolveRouteShortcutFunction;
+  put: AnyResolveRouteShortcutFunction;
+  delete: AnyResolveRouteShortcutFunction;
+  patch: AnyResolveRouteShortcutFunction;
+  head: AnyResolveRouteShortcutFunction;
 }
