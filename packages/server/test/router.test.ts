@@ -447,7 +447,10 @@ describe("req", () => {
     const res = await router.call("/test", {
       method: "get",
       data: "dummy-data",
-      dataType: "json",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
     });
 
     expect(res.data).toStrictEqual({ resData: "dummy-data" });

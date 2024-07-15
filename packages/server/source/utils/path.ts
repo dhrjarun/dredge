@@ -1,10 +1,18 @@
-export function validatePath(...paths: string[]) {
-  const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
-  paths.forEach((item) => {
-    if (!pathRegex.test(item)) {
-      throw `invalid path ${item}`;
+export function isSinglePathValid(...paths: string[]) {
+  const pathRegex = /^[a-zA-Z0-9\.\-_~]+$/g;
+
+  for (const path of paths) {
+    if (!pathRegex.test(path)) {
+      return false;
     }
-  });
+  }
+
+  return true;
+}
+
+export function isPathnameValid(pathName: string) {
+  const pathRegex = /^(\/)?([a-zA-Z0-9\.\-_~]+\/?)*$/g;
+  return pathRegex.test(pathName);
 }
 
 // from trpc

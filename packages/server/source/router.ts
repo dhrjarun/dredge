@@ -1,6 +1,7 @@
 import { AnyRoute, MiddlewareResult, Parser, getParseFn } from "@dredge/route";
 import { mergeHeaders, normalizeHeaders } from "./utils/headers";
 import { mergeDeep } from "./utils/merge";
+import { isPathnameValid, trimSlashes } from "./utils/path";
 
 export class RoutePath {
   name: string;
@@ -83,13 +84,6 @@ export class RoutePath {
   }
 }
 
-const trimSlashes = (path: string): string => {
-  path = path.startsWith("/") ? path.slice(1) : path;
-  path = path.endsWith("/") ? path.slice(0, -1) : path;
-
-  return path;
-};
-
 export interface DredgeRouter {
   _def: {
     root: RoutePath;
@@ -143,6 +137,8 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
     },
 
     call: async (path, options) => {
+      if (!isPathnameValid(path)) throw "Invalid Path!";
+
       const {
         method = "get",
         headers = {},
@@ -217,7 +213,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
         if (!dataType) return;
 
-        const transformer = routeDef.dataTransformer?.[dataType]?.forResponse;
+        const transformer = routeDef.dataTransformer?.[dataType]?.forRequest;
 
         if (!transformer) return;
 
