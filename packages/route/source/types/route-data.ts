@@ -1,3 +1,4 @@
+import { RequiredKeys } from "ts-essentials";
 import { Parser, inferParserType } from "../parser";
 import { Route, UnresolvedRoute } from "./dredge-route";
 
@@ -9,7 +10,7 @@ import { Route, UnresolvedRoute } from "./dredge-route";
 //     : {}
 //   : {});
 
-export type Data<Types, T> = T extends undefined
+export type Data<Types, T> = undefined extends T
   ? OptionalData<Types, T>
   : RequiredData<Types, T>;
 
