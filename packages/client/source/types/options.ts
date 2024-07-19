@@ -1,46 +1,18 @@
-import { MarkRequired } from "@dredge/common";
+import type {
+  DefaultFieldInDirectClientOptions,
+  DredgeClientOptions,
+} from "@dredge/server";
+import { MarkRequired } from "ts-essentials";
 import { HTTPError } from "../errors/HTTPError";
 
-type Context = Record<string, any>;
-
-export type FetchOptions = {
+export interface FetchOptions
+  extends Omit<DredgeClientOptions, "headers">,
+    Omit<RequestInit, "body" | "method"> {
   fetch?: (
     input: string | URL | Request,
     init?: RequestInit,
   ) => Promise<Response>;
-  dataTypes?: string[];
-  prefixUrl?: URL | string;
-  responseDataType?: string;
-  ctx?: Context;
-  stringify?: (
-    data: any,
-    options: {
-      readonly url: string;
-      readonly method: string;
-      readonly headers: Headers;
-      readonly dataType?: string;
-      ctx: Context;
-    },
-  ) => BodyInit | null;
-  parse?: (
-    body: ReadableStream<Uint8Array> | null,
-    options: {
-      readonly url: string;
-      readonly headers: Headers;
-      readonly status: number;
-      readonly statusText: string;
-      readonly dataType?: string;
-      ctx: Context;
-    },
-  ) => any;
   hooks?: Partial<Hooks>;
-  throwHttpErrors?: boolean;
-} & DredgeRequestInit;
-
-interface DredgeRequestInit extends Omit<RequestInit, "body"> {
-  searchParams?: Record<string, string | string[]>;
-  data?: any;
-  dataType?: string;
 }
 
 export type InitHook = (options: NormalizedFetchOptions) => void;
@@ -71,18 +43,18 @@ export interface NormalizedFetchOptions
     | "method"
     | "dataTypes"
     | "fetch"
-    | "stringify"
-    | "parse"
     | "searchParams"
+    | "params"
     | "throwHttpErrors"
+    | "dataTransformer"
   > {
-  path: string;
   headers: Headers;
+  path: string;
   prefixUrl: URL;
   hooks: Hooks;
 }
 
-interface Hooks {
+export interface Hooks {
   init: InitHook[];
   beforeRequest: BeforeRequestHook[];
   afterResponse: AfterResponseHook[];
@@ -91,13 +63,5 @@ interface Hooks {
 
 export type DefaultFetchOptions = Pick<
   FetchOptions,
-  | "fetch"
-  | "headers"
-  | "dataTypes"
-  | "ctx"
-  | "throwHttpErrors"
-  | "referrer"
-  | "hooks"
-> & {
-  prefixUrl?: string | URL;
-};
+  DefaultFieldInDirectClientOptions | "fetch" | "referrer" | "hooks"
+>;
