@@ -13,6 +13,11 @@ import {
 } from "@dredge/route";
 import { IsNever, Merge, RequiredKeys } from "ts-essentials";
 
+interface DataTransformer {
+  forRequest?: (data: any) => any;
+  forResponse?: (data: any) => any;
+}
+
 export interface DredgeClientOptions {
   ctx?: Record<string, any>;
   method?: HTTPMethod;
@@ -25,10 +30,21 @@ export interface DredgeClientOptions {
   searchParams?: Record<string, any | any[]>;
   prefixUrl?: URL | string;
   throwHttpErrors?: boolean;
+  dataTransformer?: {
+    [dataType: string]: DataTransformer;
+  };
 }
 
-export type inferDredgeClientOption<R> = R extends Route<
-  infer Options extends AnyRouteOptions,
+// TODO: serverCtx
+// & ("serverCtx" extends keyof Options
+//   ? { serverCtx?: RouteOptions["modifiedInitialContext"] }
+//   : {})
+
+export type inferDredgeClientOption<
+  R,
+  Options = DredgeClientOptions,
+> = R extends Route<
+  infer RouteOptions extends AnyRouteOptions,
   any,
   any,
   infer Method,
@@ -39,53 +55,55 @@ export type inferDredgeClientOption<R> = R extends Route<
   any,
   any
 >
-  ? Omit<
-      DredgeClientOptions,
-      | "method"
-      | "searchParams"
-      | "data"
-      | "ctx"
-      | "dataType"
-      | "responseDataType"
-      | "dataTypes"
-    > & {
-      method: Method;
-      ctx?: Options["modifiedInitialContext"];
-      dataType?: keyof Options["dataTypes"];
-      responseDataTypes?: keyof Options["dataTypes"];
-      dataTypes?: {
-        [key in keyof Options["dataTypes"]]?: string;
-      };
-    } & ([Method] extends ["post" | "put" | "patch"]
+  ? Merge<
+      Options,
+      {
+        method: Method;
+        dataType?: keyof RouteOptions["dataTypes"];
+        responseDataTypes?: keyof RouteOptions["dataTypes"];
+        dataTypes?: {
+          [key in keyof RouteOptions["dataTypes"]]?: string;
+        };
+        dataTransformer?: {
+          [key in keyof RouteOptions["dataTypes"]]?: DataTransformer;
+        };
+        ctx?: RouteOptions["modifiedInitialContext"];
+      } & ([Method] extends ["post" | "put" | "patch"]
         ? IBody extends Parser
-          ? Data<keyof Options["dataTypes"], inferParserType<IBody>>
+          ? Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>>
           : {}
         : {}) &
-      (IsNever<keyof SearchParams> extends true
-        ? {}
-        : IsNever<
-              RequiredKeys<inferSearchParamsType<SearchParams>>
-            > extends true
-          ? { searchParams?: inferSearchParamsType<SearchParams> }
-          : { searchParams: inferSearchParamsType<SearchParams> }) &
-      (IsNever<keyof Params> extends true
-        ? {}
-        : { params: inferParamsType<Params> })
-  : DredgeClientOptions;
+        (IsNever<keyof SearchParams> extends true
+          ? {}
+          : IsNever<
+                RequiredKeys<inferSearchParamsType<SearchParams>>
+              > extends true
+            ? { searchParams?: inferSearchParamsType<SearchParams> }
+            : { searchParams: inferSearchParamsType<SearchParams> }) &
+        (IsNever<keyof Params> extends true
+          ? {}
+          : { params: inferParamsType<Params> })
+    >
+  : Options;
 
-export type _inferDredgeClientOption<R> = IsNever<R> extends true
-  ? DredgeClientOptions
-  : inferDredgeClientOption<R>;
+export type _inferDredgeClientOption<
+  R,
+  Options = DredgeClientOptions,
+> = IsNever<R> extends true ? Options : inferDredgeClientOption<R, Options>;
 
-export type DefaultDredgeClientOptions = Pick<
-  DredgeClientOptions,
+export type DefaultFieldInDirectClientOptions =
   | "ctx"
   | "headers"
   | "throwHttpErrors"
   | "prefixUrl"
   | "dataTypes"
   | "dataType"
-  | "responseDataType"
+  | "dataTransformer"
+  | "responseDataType";
+
+export type DefaultDredgeClientOptions = Pick<
+  DredgeClientOptions,
+  DefaultFieldInDirectClientOptions
 >;
 
 export type inferRouteArrayContext<Routes, Context = {}> = Routes extends [
@@ -100,15 +118,19 @@ export type inferRouteArrayContext<Routes, Context = {}> = Routes extends [
 
 export type inferDefaultDredgeClientOptions<
   Routes,
+  DefaultOptions = DefaultDredgeClientOptions,
   DT = Routes extends any[] ? inferRouteDataTypes<Routes[number]> : never,
 > = Merge<
-  DefaultDredgeClientOptions,
+  DefaultOptions,
   {
     ctx?: inferRouteArrayContext<Routes>;
     dataType?: keyof DT;
     responseDataType?: keyof DT;
     dataTypes?: {
       [key in keyof DT]?: string;
+    };
+    dataTransformer?: {
+      [key in keyof DT]: DataTransformer;
     };
   }
 >;
