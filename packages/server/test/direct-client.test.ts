@@ -90,7 +90,7 @@ describe("client.extend", () => {
 
   test("extend of ctx", async () => {
     client = client.extends({
-      ctx: {
+      serverCtx: {
         db: "fake-db",
         session: "1",
       },
@@ -104,7 +104,7 @@ describe("client.extend", () => {
     });
 
     client = client.extends({
-      ctx: {
+      serverCtx: {
         db: "dummy-db",
       },
     });

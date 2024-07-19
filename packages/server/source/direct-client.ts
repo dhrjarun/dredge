@@ -66,7 +66,7 @@ export function createDirectClient(
       }
 
       const result = await router.call(_options.path, {
-        ctx: _options.ctx,
+        ctx: _options.serverCtx,
         data: _options.data,
         method: _options.method,
         headers: _options.headers,
@@ -84,6 +84,8 @@ export function createDirectClient(
       };
 
       return result;
+
+      // TODO: get ok field and throw if it is not ok
     }
 
     const responsePromise = fn();
@@ -132,14 +134,15 @@ function mergeDefaultOptions(
   options: DefaultDirectClientOptions,
 ) {
   return {
-    ctx: options.ctx ?? defaultOptions.ctx ?? {},
+    serverCtx: options.serverCtx ?? defaultOptions.serverCtx ?? {},
     headers: mergeHeaders(
       defaultOptions?.headers ?? {},
       options?.headers ?? {},
     ),
     prefixUrl: options.prefixUrl ?? defaultOptions.prefixUrl,
     dataType: options.dataType ?? defaultOptions.dataType,
-    responseDataType: options.dataType ?? defaultOptions.dataType,
+    responseDataType:
+      options.responseDataType ?? defaultOptions.responseDataType,
     throwHttpErrors: options.throwHttpErrors ?? options.throwHttpErrors ?? true,
     dataTypes: {
       ...defaultOptions.dataTypes,

@@ -19,7 +19,6 @@ interface DataTransformer {
 }
 
 export interface DredgeClientOptions {
-  ctx?: Record<string, any>;
   method?: HTTPMethod;
   data?: any;
   dataType?: string;
@@ -34,11 +33,6 @@ export interface DredgeClientOptions {
     [dataType: string]: DataTransformer;
   };
 }
-
-// TODO: serverCtx
-// & ("serverCtx" extends keyof Options
-//   ? { serverCtx?: RouteOptions["modifiedInitialContext"] }
-//   : {})
 
 export type inferDredgeClientOption<
   R,
@@ -67,12 +61,14 @@ export type inferDredgeClientOption<
         dataTransformer?: {
           [key in keyof RouteOptions["dataTypes"]]?: DataTransformer;
         };
-        ctx?: RouteOptions["modifiedInitialContext"];
-      } & ([Method] extends ["post" | "put" | "patch"]
-        ? IBody extends Parser
-          ? Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>>
-          : {}
+      } & ("serverCtx" extends keyof Options
+        ? { serverCtx?: RouteOptions["modifiedInitialContext"] }
         : {}) &
+        ([Method] extends ["post" | "put" | "patch"]
+          ? IBody extends Parser
+            ? Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>>
+            : {}
+          : {}) &
         (IsNever<keyof SearchParams> extends true
           ? {}
           : IsNever<
@@ -92,7 +88,6 @@ export type _inferDredgeClientOption<
 > = IsNever<R> extends true ? Options : inferDredgeClientOption<R, Options>;
 
 export type DefaultFieldInDirectClientOptions =
-  | "ctx"
   | "headers"
   | "throwHttpErrors"
   | "prefixUrl"
@@ -123,7 +118,6 @@ export type inferDefaultDredgeClientOptions<
 > = Merge<
   DefaultOptions,
   {
-    ctx?: inferRouteArrayContext<Routes>;
     dataType?: keyof DT;
     responseDataType?: keyof DT;
     dataTypes?: {
@@ -132,5 +126,7 @@ export type inferDefaultDredgeClientOptions<
     dataTransformer?: {
       [key in keyof DT]: DataTransformer;
     };
-  }
+  } & ("serverCtx" extends keyof DefaultOptions
+    ? { serverCtx?: inferRouteArrayContext<Routes> }
+    : {})
 >;
