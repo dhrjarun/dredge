@@ -1,6 +1,5 @@
 import { AnyRoute, MiddlewareResult, Parser, getParseFn } from "@dredge/route";
 import { mergeHeaders, normalizeHeaders } from "./utils/headers";
-import { mergeDeep } from "./utils/merge";
 import { isPathnameValid, trimSlashes } from "./utils/path";
 
 export class RoutePath {
@@ -419,7 +418,7 @@ function nextEndFunction(
   }
 
   return {
-    ctx: mergeDeep(previousRes.ctx, res?.ctx),
+    ctx: { ...(previousRes.ctx || {}), ...(res?.ctx || {}) },
     headers: mergeHeaders(previousRes.headers, res?.headers, generatedHeaders),
     status: res?.status || previousRes?.status,
     statusText: res?.statusText || previousRes?.statusText,
@@ -479,14 +478,20 @@ async function handleMiddleware(
 ): Promise<MiddlewareResult<any, any> | void> {
   const { request, response, ctx, error, isError = false } = payload;
 
-  const req = {
-    header(headerName?: string) {
+  function createHeaderFunction(headers: Record<string, string>) {
+    return function (headerName?: string) {
       if (headerName) {
-        return request.headers?.[headerName.toLowerCase()];
+        const name = headerName?.toLocaleLowerCase();
+        if (!Object.hasOwn(headers, name)) return null;
+        return headers?.[name];
       }
 
-      return request.headers;
-    },
+      return headers;
+    };
+  }
+
+  const req = {
+    header: createHeaderFunction(request.headers),
     method: request.method,
     data: request.data,
     url: request.url,
@@ -510,13 +515,7 @@ async function handleMiddleware(
     data: response.data,
     dataType: response.dataType,
     ctx,
-    header(headerName?: string) {
-      if (headerName) {
-        return response.headers?.[headerName.toLowerCase()];
-      }
-
-      return response.headers;
-    },
+    header: createHeaderFunction(response.headers),
     next(nextOptions?: any) {
       return nextEndFunction(
         nextOptions,

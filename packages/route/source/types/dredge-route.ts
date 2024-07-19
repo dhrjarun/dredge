@@ -216,7 +216,7 @@ type NextFunction<DataTypes> = {
     opts: OptionalData<DataTypes, any> & {
       dataType?: DataTypes;
       ctx?: $ContextOverride;
-      headers?: Record<string, string>;
+      headers?: Record<string, string | null>;
       status?: number;
       statusText?: string;
     },
@@ -229,7 +229,7 @@ type OptionalEndFunction<DataTypes, DT = any> = {
   <T extends DT>(
     opts: OptionalData<DataTypes, T> & {
       dataType?: DataTypes;
-      headers?: Record<string, string>;
+      headers?: Record<string, string | null>;
       status?: number;
       statusText?: string;
     },
@@ -242,7 +242,7 @@ type EndFunction<DataTypes, DT> = {
   <T extends DT>(
     opts: Data<DataTypes, T> & {
       dataType?: DataTypes;
-      headers?: Record<string, string>;
+      headers?: Record<string, string | null>;
       status?: number;
       statusText?: string;
     },

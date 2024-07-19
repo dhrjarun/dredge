@@ -542,6 +542,46 @@ describe("res object", () => {
     });
   });
 
+  test("if headerValue for some header is provide null, it should be deleted", () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          return res.next({
+            status: 200,
+            statusText: "ok",
+            ctx: {
+              isInitialCheckDone: true,
+            },
+            data: "response-data",
+            headers: {
+              "content-Type": "application/json",
+            },
+          });
+        })
+        .use((req, res) => {
+          expect(res.header("content-type")).toBe("application/json");
+        })
+        .use((req, res) => {
+          return res.next({
+            headers: {
+              "content-type": null,
+            },
+          });
+        })
+        .use((req, res) => {
+          expect(res.header("content-type")).toBeNull();
+        })
+        .error((err) => {
+          if (err !== "DBT") throw err;
+        })
+        .build(),
+    ]);
+
+    router.call("/test", {});
+  });
+
   test("res.next should modify the response", () => {
     function initialCheck(res: any) {
       expect(res.status).toBeUndefined();
