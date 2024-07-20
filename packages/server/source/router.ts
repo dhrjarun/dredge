@@ -1,6 +1,6 @@
 import { AnyRoute, MiddlewareResult, Parser, getParseFn } from "@dredge/route";
 import { mergeHeaders, normalizeHeaders } from "./utils/headers";
-import { isPathnameValid, trimSlashes } from "./utils/path";
+import { isPathnameValid, isValidPrefixUrl, trimSlashes } from "./utils/path";
 
 export class RoutePath {
   name: string;
@@ -136,24 +136,29 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
     },
 
     call: async (path, options) => {
-      if (!isPathnameValid(path)) throw "Invalid Path!";
-
       const {
         method = "get",
         headers = {},
         data,
         searchParams = {},
         ctx: _ctx = {},
-        prefixUrl = "/",
+        prefixUrl,
         transformData = true,
       } = options;
 
-      // TODO: validate path
       let current = root;
       const _path = trimSlashes(path);
+      if (!isPathnameValid(_path)) {
+        throw TypeError("Invalid Pathname");
+      }
       const pathArray = _path.split("/");
       const urlSearchParams = new URLSearchParams(searchParams);
-      let url = trimSlashes(prefixUrl) + "/" + _path;
+
+      if (prefixUrl && !isValidPrefixUrl(prefixUrl)) {
+        throw TypeError("Invalid Prefix Url");
+      }
+
+      let url = (prefixUrl ? trimSlashes(prefixUrl) : "") + "/" + _path;
       const search = urlSearchParams.toString();
       if (search) {
         url += "?" + search;
