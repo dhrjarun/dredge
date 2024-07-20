@@ -456,6 +456,58 @@ describe("req", () => {
     expect(res.data).toStrictEqual({ resData: "dummy-data" });
   });
 
+  test("content-type header should set corresponding request dataType", () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .options({
+          dataTypes: {
+            json: "application/json",
+            formData: "multipart/form-data",
+          },
+        })
+        .path("/test/:dataType")
+        .params({
+          dataType: z.enum(["json", "formData"]),
+        })
+        .get()
+        .use((req, res) => {
+          if (req.param("dataType") === "json") {
+            expect(req.dataType).toBe("json");
+          }
+          if (req.param("dataType") === "formData") {
+            expect(req.dataType).toBe("formData");
+          }
+
+          throw "DBT";
+        })
+        .error((err, req, res) => {
+          if (err !== "DBT") throw err;
+        })
+        .error((err, req, res) => {
+          if (req.param("dataType") === "json") {
+            expect(req.dataType).toBe("json");
+          }
+          if (req.param("dataType") === "formData") {
+            expect(req.dataType).toBe("formData");
+          }
+        })
+        .build(),
+    ]);
+
+    router.call("/test/json", {
+      headers: {
+        "content-type": "application/json",
+      },
+    });
+
+    router.call("/test/formData", {
+      headers: {
+        "content-type":
+          "multipart/form-data;boundary=--DredgeBoundary4948584223",
+      },
+    });
+  });
+
   test("req.header should return headers", () => {
     const router = dredgeRouter([
       dredgeRoute()
@@ -653,6 +705,61 @@ describe("res object", () => {
     router.call("/test", {
       ctx: { db: "fake-db" },
     });
+  });
+
+  test("accept header should set corresponding response dataType and it set corresponding content-type in response header", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .options({
+          dataTypes: {
+            json: "application/json",
+            formData: "multipart/form-data",
+          },
+        })
+        .path("/test/:dataType")
+        .params({
+          dataType: z.enum(["json", "formData"]),
+        })
+        .get()
+        .use((req, res) => {
+          if (req.param("dataType") === "json") {
+            expect(res.dataType).toBe("json");
+          }
+          if (req.param("dataType") === "formData") {
+            expect(res.dataType).toBe("formData");
+          }
+
+          throw "DBT";
+        })
+        .error((err, req, res) => {
+          if (err !== "DBT") throw err;
+        })
+        .error((err, req, res) => {
+          if (req.param("dataType") === "json") {
+            expect(res.dataType).toBe("json");
+          }
+          if (req.param("dataType") === "formData") {
+            expect(res.dataType).toBe("formData");
+          }
+        })
+        .build(),
+    ]);
+
+    const jsonResult = await router.call("/test/json", {
+      headers: {
+        accept: "application/json",
+      },
+    });
+    expect(jsonResult.headers["content-type"]).toBe("application/json");
+
+    const formDataResult = await router.call("/test/formData", {
+      headers: {
+        accept: "multipart/form-data",
+      },
+    });
+    expect(
+      formDataResult.headers["content-type"]?.startsWith("multipart/form-data"),
+    ).toBeTruthy();
   });
 
   test("dataType in res.next", async () => {
