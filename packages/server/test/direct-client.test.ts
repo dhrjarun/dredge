@@ -361,3 +361,34 @@ describe("dataTypes", () => {
     });
   });
 });
+
+test("throw error if status is not ok", async () => {
+  const client = directClient([
+    dredgeRoute()
+      .path("/test/:status")
+      .params({
+        status: z.string().transform((val) => parseInt(val)),
+      })
+      .get()
+      .use((req, res) => {
+        return res.end({
+          data: null,
+          status: req.param("status"),
+          statusText: "Bad Request",
+        });
+      })
+      .build(),
+  ]);
+
+  expect(client.get("/test/400")).rejects.toThrowError("400");
+  expect(client.get("/test/404")).rejects.toThrowError("404");
+  expect(client.get("/test/500")).rejects.toThrowError("500");
+  expect(client.get("/test/100")).rejects.toThrowError("100");
+
+  expect(client.get("/test/200")).resolves.toMatchObject({
+    status: 200,
+  });
+  expect(client.get("/test/299")).resolves.toMatchObject({
+    status: 299,
+  });
+});

@@ -1,3 +1,4 @@
+import { MarkRequired } from "ts-essentials";
 import { DredgeClient } from "./dredge-client";
 import {
   DefaultDredgeClientOptions,
@@ -11,10 +12,27 @@ import {
 export type DirectClientOptions = DredgeClientOptions & {
   serverCtx?: Record<string, any>;
 };
+
+export type NormalizedDirectClientOptions = MarkRequired<
+  DirectClientOptions,
+  | "serverCtx"
+  | "method"
+  | "dataTypes"
+  | "searchParams"
+  | "params"
+  | "throwHttpErrors"
+  | "headers"
+> & {
+  path: string;
+  prefixUrl?: string;
+};
+
 export type DefaultDirectClientOptions = DefaultDredgeClientOptions & {
   serverCtx?: Record<string, any>;
 };
-export type DirectClientResponse<T = any> = DredgeClientResponse<T>;
+export type DirectClientResponse<T = any> = DredgeClientResponse<T> & {
+  ok: boolean;
+};
 
 export type DirectClientResponsePromise<DataTypes, Data> =
   DredgeResponsePromise<DataTypes, Data>;

@@ -124,7 +124,7 @@ export type inferDefaultDredgeClientOptions<
       [key in keyof DT]?: string;
     };
     dataTransformer?: {
-      [key in keyof DT]: DataTransformer;
+      [key in keyof DT]?: DataTransformer;
     };
   } & ("serverCtx" extends keyof DefaultOptions
     ? { serverCtx?: inferRouteArrayContext<Routes> }

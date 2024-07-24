@@ -1,5 +1,6 @@
 import { AnyRoute } from "@dredge/route";
 import { IsNever } from "ts-essentials";
+import { HTTPError } from "./HTTPError";
 import { dredgeRouter } from "./router";
 import {
   DredgeClientOptions,
@@ -10,6 +11,8 @@ import {
   DefaultDirectClientOptions,
   DirectClient,
   DirectClientOptions,
+  DirectClientResponse,
+  NormalizedDirectClientOptions,
 } from "./types/dredge-direct-client";
 import { mergeHeaders } from "./utils/headers";
 import { trimSlashes } from "./utils/path";
@@ -35,7 +38,7 @@ export function createDirectClient(
       ...options,
       ...mergeDefaultOptions(defaultOptions, options),
       path: getSimplePath(path, options?.params || {}),
-    };
+    } as NormalizedDirectClientOptions;
 
     for (const item of Object.keys(_options.dataTypes)) {
       if (item in _options) {
@@ -65,27 +68,33 @@ export function createDirectClient(
         _options.headers["accept"] = acceptHeader;
       }
 
-      const result = await router.call(_options.path, {
+      const result = (await router.call(_options.path, {
         ctx: _options.serverCtx,
         data: _options.data,
         method: _options.method,
         headers: _options.headers,
         searchParams: _options.searchParams,
+        prefixUrl: _options.prefixUrl,
         transformData: false,
-        prefixUrl:
-          _options.prefixUrl instanceof URL
-            ? _options.prefixUrl.toString()
-            : _options.prefixUrl,
-      });
+      })) as DirectClientResponse;
 
       const data = result.data;
       result.data = () => {
         return Promise.resolve(data);
       };
 
-      return result;
+      const { status = 200 } = result;
+      // https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
+      if (status >= 200 && status <= 299) {
+        result.ok = true;
+      } else {
+        result.ok = false;
+      }
+      if (result.ok === false) {
+        throw new HTTPError(result, _options);
+      }
 
-      // TODO: get ok field and throw if it is not ok
+      return result;
     }
 
     const responsePromise = fn();
@@ -133,13 +142,15 @@ function mergeDefaultOptions(
   defaultOptions: DefaultDirectClientOptions,
   options: DefaultDirectClientOptions,
 ) {
-  return {
+  const newOptions: Pick<
+    NormalizedDirectClientOptions,
+    keyof DefaultDirectClientOptions
+  > = {
     serverCtx: options.serverCtx ?? defaultOptions.serverCtx ?? {},
     headers: mergeHeaders(
       defaultOptions?.headers ?? {},
       options?.headers ?? {},
     ),
-    prefixUrl: options.prefixUrl ?? defaultOptions.prefixUrl,
     dataType: options.dataType ?? defaultOptions.dataType,
     responseDataType:
       options.responseDataType ?? defaultOptions.responseDataType,
@@ -149,6 +160,14 @@ function mergeDefaultOptions(
       ...options.dataTypes,
     },
   };
+
+  if (defaultOptions.prefixUrl || options.prefixUrl) {
+    newOptions.prefixUrl = options.prefixUrl
+      ? String(options.prefixUrl)
+      : String(defaultOptions.prefixUrl);
+  }
+
+  return newOptions;
 }
 
 function getSimplePath(path: string, params: Record<string, any>) {
