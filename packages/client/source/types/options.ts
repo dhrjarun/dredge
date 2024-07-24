@@ -8,6 +8,7 @@ import { HTTPError } from "../errors/HTTPError";
 export interface FetchOptions
   extends Omit<DredgeClientOptions, "headers">,
     Omit<RequestInit, "body" | "method"> {
+  ctx?: Record<string, any>;
   fetch?: (
     input: string | URL | Request,
     init?: RequestInit,
@@ -50,7 +51,7 @@ export interface NormalizedFetchOptions
   > {
   headers: Headers;
   path: string;
-  prefixUrl: URL;
+  prefixUrl: string;
   hooks: Hooks;
 }
 
@@ -63,5 +64,5 @@ export interface Hooks {
 
 export type DefaultFetchOptions = Pick<
   FetchOptions,
-  DefaultFieldInDirectClientOptions | "fetch" | "referrer" | "hooks"
+  DefaultFieldInDirectClientOptions | "fetch" | "referrer" | "hooks" | "ctx"
 >;

@@ -214,14 +214,14 @@ function objectToSearchParams(obj: any): URLSearchParams {
 }
 
 function createURL(options: {
-  prefixUrl: URL;
+  prefixUrl: string;
   path: string;
   searchParams?: Record<string, string | string[]>;
 }) {
   const { prefixUrl, path, searchParams = {} } = options;
 
   const url = new URL(prefixUrl);
-  url.pathname = trimSlashes(prefixUrl.pathname) + "/" + trimSlashes(path);
+  url.pathname = trimSlashes(url.pathname) + "/" + trimSlashes(path);
   url.search = objectToSearchParams(options.searchParams).toString();
 
   return url;
@@ -230,7 +230,7 @@ function createURL(options: {
 function mergeDefaultOptions(
   defaultOptions: DefaultFetchOptions,
   options: DefaultFetchOptions,
-): DefaultFetchOptions {
+) {
   const dataTransformer = options.dataTransformer || {};
 
   for (const [key, value] of Object.entries(
@@ -269,10 +269,12 @@ function mergeDefaultOptions(
     ),
   };
 
-  return {
+  const newOptions: Pick<NormalizedFetchOptions, keyof DefaultFetchOptions> = {
     ctx: options.ctx ?? defaultOptions.ctx ?? {},
     headers: mergeHeaders(defaultOptions.headers, options.headers),
-    prefixUrl: new URL(options.prefixUrl ?? defaultOptions.prefixUrl ?? ""),
+    prefixUrl: options.prefixUrl
+      ? String(options.prefixUrl)
+      : String(defaultOptions.prefixUrl),
     dataType: options.dataType ?? defaultOptions.dataType,
     responseDataType:
       options.responseDataType ?? defaultOptions.responseDataType,
@@ -289,6 +291,8 @@ function mergeDefaultOptions(
     hooks,
     referrer: options.referrer ?? defaultOptions.referrer,
   };
+
+  return newOptions;
 }
 
 function getSimplePath(path: string, params: Record<string, any>) {
