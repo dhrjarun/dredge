@@ -394,47 +394,56 @@ describe("res", () => {
   });
 
   test("data in res.next option parameter", () => {
+    type ExpectedHeaders = Record<string, string | null> | undefined;
+    type ExpectedDataTypes = "json" | "form" | undefined;
+
     type ExpectedNextTypes =
       | {
           data?: any;
           ctx?: unknown;
-          headers?: Record<string, string> | undefined;
+          headers?: ExpectedHeaders;
           status?: number | undefined;
           statusText?: string | undefined;
+          dataType?: ExpectedDataTypes;
         }
       | {
           json?: any;
           ctx?: unknown;
-          headers?: Record<string, string> | undefined;
+          headers?: ExpectedHeaders;
           status?: number | undefined;
           statusText?: string | undefined;
+          dataType?: ExpectedDataTypes;
         }
       | {
           form?: any;
           ctx?: unknown;
-          headers?: Record<string, string> | undefined;
+          headers?: ExpectedHeaders;
           status?: number | undefined;
           statusText?: string | undefined;
+          dataType?: ExpectedDataTypes;
         };
 
     type ExpectedEndTypes<T = any> =
       | {
           data?: T;
-          headers?: Record<string, string> | undefined;
+          headers?: ExpectedHeaders;
           status?: number | undefined;
           statusText?: string | undefined;
+          dataType?: ExpectedDataTypes;
         }
       | {
           json?: T;
-          headers?: Record<string, string> | undefined;
+          headers?: ExpectedHeaders;
           status?: number | undefined;
           statusText?: string | undefined;
+          dataType?: ExpectedDataTypes;
         }
       | {
           form?: T;
-          headers?: Record<string, string> | undefined;
+          headers?: ExpectedHeaders;
           status?: number | undefined;
           statusText?: string | undefined;
+          dataType?: ExpectedDataTypes;
         };
 
     dredgeRoute()
