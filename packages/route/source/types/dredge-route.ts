@@ -1,4 +1,7 @@
+import type { Readable } from "stream";
+import type { ReadableStream } from "stream/web";
 import { IsAny, IsNever, MarkOptional, Merge } from "ts-essentials";
+import { MimeStore } from "../mime-store";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";
@@ -264,6 +267,8 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
       forResponse?: (data: any) => any;
     }
   >;
+  dataSerializers: MimeStore<DataSerializer["fn"]>;
+  bodyParsers: MimeStore<BodyParser["fn"]>;
 
   iBody?: Parser;
   oBody?: Parser;
@@ -353,6 +358,72 @@ type inferSearchParamType<SearchParams> = Simplify<{
   [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
 }>;
 
+export type BodyAs =
+  | "text"
+  | "Buffer"
+  | "ReadableStream"
+  | "stream.Readable"
+  | "Blob"
+  | "FormData"
+  | "ArrayBuffer";
+
+export type BodyTypesMap = {
+  null: null;
+  text: string;
+  Buffer: Buffer;
+  ReadableStream: ReadableStream;
+  "stream.Readable": Readable;
+  Blob: Blob;
+  FormData: FormData;
+  ArrayBuffer: ArrayBuffer;
+};
+export type BodyTypes =
+  | null
+  | string
+  | Buffer
+  | ReadableStream
+  | Readable
+  | Blob
+  | FormData
+  | ArrayBuffer;
+
+type DataSerializer<DT = string> = {
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+  fn: (options: {
+    readonly data: any;
+    readonly mediaType?: string;
+    boundary?: string;
+    charset?: string;
+  }) => Promise<BodyTypes> | BodyTypes;
+  dataType?: DT | DT[];
+  mediaType?: string | string[];
+};
+
+export type BodyFn = {
+  (): Promise<
+    | null
+    | string
+    | Buffer
+    | ReadableStream
+    | Readable
+    | Blob
+    | FormData
+    | ArrayBuffer
+  >;
+  <As extends BodyAs>(as: As): Promise<BodyTypesMap[As]>;
+};
+
+type BodyParser<DT = string> = {
+  fn: (options: {
+    readonly body: BodyFn;
+    readonly mediaType?: string;
+    readonly boundary?: string;
+    readonly charset?: string;
+  }) => Promise<any>;
+  dataType?: DT | DT[];
+  mediaType?: string | string[];
+};
+
 export interface UnresolvedRoute<
   Options,
   SuccessContext,
@@ -375,11 +446,16 @@ export interface UnresolvedRoute<
   >(options?: {
     dataTypes?: DataTypes;
     dataTransformer?: {
-      [key in keyof DataTypes]?: {
+      [key in keyof inferDataTypes<Options> | keyof DataTypes]?: {
         forRequest?: (data: any) => any;
         forResponse?: (data: any) => any;
       };
     };
+    dataSerializers?: DataSerializer<
+      inferDataTypes<Options> | keyof DataTypes
+    >[];
+
+    bodyParsers?: BodyParser<inferDataTypes<Options> | keyof DataTypes>[];
     defaultContext?: DefaultContext;
   }): IsNotAllowedDataTypes<DataTypes> extends true
     ? "One or more of dataType is invalid!"

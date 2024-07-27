@@ -1,3 +1,4 @@
+import { MimeStore } from "./mime-store";
 import { Parser } from "./parser";
 import {
   AnyUnresolvedRoute,
@@ -44,6 +45,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     searchParams,
     method,
     dataTypes,
+    dataSerializers: new MimeStore(),
+    bodyParsers: new MimeStore(),
     ...rest,
   };
 
@@ -54,12 +57,78 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       const _dataTypes = _def.dataTypes || {};
       const _defaultContext = _def.defaultContext || {};
       const _dataTransformer = _def.dataTransformer;
+      const _dataSerializers = _def.dataSerializers;
+      const _bodyParsers = _def.bodyParsers;
 
       const {
         dataTypes = {},
         dataTransformer = {},
         defaultContext = {},
+        dataSerializers = [],
+        bodyParsers = [],
       } = options;
+
+      const newDataTypes: Record<string, string> = {
+        ...dataTypes,
+        ..._dataTypes,
+      };
+
+      const newDataSerializers = _dataSerializers.clone();
+      const newBodyParsers = _bodyParsers.clone();
+
+      function findMediaType(dataType: string | string[]) {
+        if (Array.isArray(dataType)) {
+          const mediaType = dataType.map((type) => {
+            const item = newDataTypes[type as string];
+            if (!item) {
+              throw `Invalid DataType: ${type}`;
+            }
+
+            return item;
+          });
+
+          return mediaType;
+        }
+        const mediaType = newDataTypes[dataType];
+        if (!mediaType) {
+          throw `Invalid DataType: ${dataType}`;
+        }
+        return mediaType;
+      }
+
+      dataSerializers.forEach((item) => {
+        let mediaType = item.mediaType;
+        if (!mediaType && !item.dataType) {
+          throw "mediaType or dataType must be given";
+        }
+
+        if (!mediaType) {
+          mediaType = findMediaType(item.dataType as string | string[]);
+        }
+
+        if (Array.isArray(mediaType) && mediaType.length == 0) {
+          throw "could not find any mediaType";
+        }
+
+        newDataSerializers.set(mediaType, item.fn);
+      });
+
+      bodyParsers.forEach((item) => {
+        let mediaType = item.mediaType;
+        if (!mediaType && !item.dataType) {
+          throw "mediaType or dataType must be given";
+        }
+
+        if (!mediaType) {
+          mediaType = findMediaType(item.dataType as string | string[]);
+        }
+
+        if (Array.isArray(mediaType) && mediaType.length == 0) {
+          throw "could not find any mediaType";
+        }
+
+        newBodyParsers.set(mediaType, item.fn);
+      });
 
       const notAllowedDataTypes = [
         "url",
@@ -114,10 +183,9 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
           ..._defaultContext,
           ...defaultContext,
         },
-        dataTypes: {
-          ...dataTypes,
-          ..._dataTypes,
-        },
+        dataTypes: newDataTypes,
+        bodyParsers: newBodyParsers,
+        dataSerializers: newDataSerializers,
         dataTransformer: newDataTransformer,
       });
     },

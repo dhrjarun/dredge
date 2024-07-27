@@ -2,6 +2,82 @@ import { assert, describe, expect, test } from "vitest";
 import { dredgeRoute } from "../source/route";
 
 describe("route.options()", () => {
+  test("bodyParsers and dataSerializers should be in route._def", () => {
+    const route = dredgeRoute()
+      .options({
+        dataTypes: {
+          json: "application/json",
+          form: "multipart/form-data",
+        },
+      })
+      .options({
+        dataTypes: {
+          xml: "application/xml",
+        },
+        bodyParsers: [
+          {
+            fn: async function ({ body }) {
+              return JSON.parse(await body("text"));
+            },
+            mediaType: "application/json",
+          },
+          {
+            dataType: "form",
+            fn: async function ({ body }) {
+              return Object.fromEntries(await body("FormData"));
+            },
+          },
+          {
+            dataType: "xml",
+            fn: async function ({ body }) {
+              return await body("text");
+            },
+          },
+        ],
+
+        dataSerializers: [
+          {
+            mediaType: "application/json",
+            fn: async function ({ data }) {
+              return JSON.stringify(data);
+            },
+          },
+          {
+            dataType: "form",
+            fn: async function ({ data }) {
+              return new FormData();
+            },
+          },
+          {
+            dataType: "xml",
+            fn: async function ({ data }) {
+              return data;
+            },
+          },
+        ],
+      });
+
+    expect(route._def.bodyParsers.get("application/json")).toBeTypeOf(
+      "function",
+    );
+    expect(route._def.bodyParsers.get("multipart/form-data")).toBeTypeOf(
+      "function",
+    );
+    expect(route._def.bodyParsers.get("application/xml")).toBeTypeOf(
+      "function",
+    );
+
+    expect(route._def.dataSerializers.get("application/json")).toBeTypeOf(
+      "function",
+    );
+    expect(route._def.dataSerializers.get("multipart/form-data")).toBeTypeOf(
+      "function",
+    );
+    expect(route._def.dataSerializers.get("application/xml")).toBeTypeOf(
+      "function",
+    );
+  });
+
   test("dataType should be in route._def", () => {
     const route = dredgeRoute()
       .options({
