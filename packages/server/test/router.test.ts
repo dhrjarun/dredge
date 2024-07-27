@@ -1,3 +1,4 @@
+import exp from "constants";
 import { dredgeRoute } from "@dredge/route";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
@@ -6,7 +7,7 @@ import { ValidationError, dredgeRouter } from "../source/router";
 const prefixUrl = "https://life.com";
 
 describe("execution flow", () => {
-  test("it will throw, if request did not matched", () => {
+  test("it will throw, if request did not matched", async () => {
     const router = dredgeRouter([
       dredgeRoute().path("/test-i").get().build(),
       dredgeRoute().path("test-ii/:param/end").post().build(),
@@ -30,6 +31,10 @@ describe("execution flow", () => {
         method: "post",
       }),
     ).rejects.toThrowError();
+
+    const ress = await router.call("/test-iii", {
+      method: "delete",
+    });
 
     expect(
       router.call("/test-iii", {
@@ -877,4 +882,78 @@ describe("Validation", () => {
       },
     });
   });
+});
+
+test("data parser should work", async () => {
+  const router = dredgeRouter([
+    dredgeRoute()
+      .options({
+        dataTypes: {
+          json: "application/json",
+        },
+        bodyParsers: [
+          {
+            fn: async ({ body }) => {
+              return JSON.parse(await body("text"));
+            },
+            mediaType: "application/json",
+          },
+        ],
+        dataSerializers: [
+          {
+            mediaType: "application/json",
+            fn: async ({ data }) => {
+              return JSON.stringify(data);
+            },
+          },
+        ],
+      })
+      .path("/test")
+      .post(
+        z.object({
+          name: z.string(),
+          age: z.number(),
+          hobby: z.array(z.string()),
+        }),
+      )
+      .use((req, res) => {
+        return res.end({
+          status: 200,
+          json: {
+            providedData: req.data,
+          },
+          headers: {
+            "content-type": "application/json",
+          },
+        });
+      })
+      .error((err, req, res) => {
+        if (err !== "DBT") throw err;
+      })
+      .build(),
+  ]);
+
+  const data = {
+    name: "DB",
+    age: 10,
+    hobby: ["writing", "drawing"],
+  };
+  const res = await router.call("/test", {
+    method: "post",
+    body: async (as?: "text") => {
+      if (!as) {
+        return JSON.stringify(data);
+      }
+      if (as === "text") return JSON.stringify(data);
+      throw "not-supported";
+    },
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+
+  expect(res.data.providedData).toStrictEqual(data);
+  expect(JSON.parse(res?.body as string).providedData).toStrictEqual(data);
+  expect(res.headers["content-type"]).toBe("application/json");
+  expect(res.dataType).toBe("json");
 });

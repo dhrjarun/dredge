@@ -1,4 +1,11 @@
-import { AnyRoute, MiddlewareResult, Parser, getParseFn } from "@dredge/route";
+import {
+  AnyRoute,
+  BodyFn,
+  BodyTypes,
+  MiddlewareResult,
+  Parser,
+  getParseFn,
+} from "@dredge/route";
 import { mergeHeaders, normalizeHeaders } from "./utils/headers";
 import { isPathnameValid, isValidPrefixUrl, trimSlashes } from "./utils/path";
 
@@ -94,6 +101,7 @@ export interface DredgeRouter {
       headers?: Record<string, string>;
       method?: string;
       data?: any;
+      body?: BodyFn;
       searchParams?: Record<string, any>;
       ctx?: any;
       prefixUrl?: string;
@@ -105,6 +113,7 @@ export interface DredgeRouter {
     statusText?: string;
     dataType?: string;
     data: any;
+    body?: BodyTypes;
   }>;
 }
 
@@ -144,6 +153,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         ctx: _ctx = {},
         prefixUrl,
         transformData = true,
+        body,
       } = options;
 
       let current = root;
@@ -185,7 +195,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       };
 
       const params: Record<string, string> = routeDef.paths.reduce(
-        (acc: any, item, index) => {
+        (acc: any, item: string, index: number) => {
           if (item.startsWith(":")) {
             acc[item.replace(":", "")] = pathArray[index];
           }
@@ -207,6 +217,23 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         data,
         dataType,
       };
+
+      const contentTypeInfo = extractContentTypeHeader(headers["content-type"]);
+      const bodyParser = contentTypeInfo?.mediaType
+        ? routeDef.bodyParsers.get(contentTypeInfo.mediaType)
+        : undefined;
+      if (bodyParser) {
+        if (typeof body === "function") {
+          const data = await bodyParser({
+            body,
+            mediaType: contentTypeInfo.mediaType,
+            boundary: contentTypeInfo.boundary,
+            charset: contentTypeInfo.charset,
+          });
+
+          unValidatedRequest.data = data;
+        }
+      }
 
       function transformRequestDataIfNeeded() {
         const shouldTransform =
@@ -271,7 +298,10 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
           let validatedData: unknown;
           if (routeDef.iBody) {
-            validatedData = await getValidatorFn(routeDef.iBody, "DATA")(data);
+            validatedData = await getValidatorFn(
+              routeDef.iBody,
+              "DATA",
+            )(unValidatedRequest.data);
             validatedRequest.data = validatedData;
           }
 
@@ -367,13 +397,48 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
       transformResponseDataIfNeeded();
 
-      const contentTypeHeader = extractContentTypeHeader({
-        dataTypes: routeDef.dataTypes,
-        boundary: "--DredgeBoundary",
-      })(response.dataType);
-      if (!response.headers["content-type"] && !!contentTypeHeader) {
+      const dataSerializeOptions = {
+        data: response.data,
+        mediaType: undefined as string | undefined,
+        charset: undefined as string | undefined,
+        boundary: undefined as string | undefined,
+      };
+      if (response.headers["content-type"]) {
+        const info = extractContentTypeHeader(response.headers["content-type"]);
+        dataSerializeOptions.mediaType = info.mediaType;
+        dataSerializeOptions.charset = info.charset;
+        dataSerializeOptions.boundary = info.boundary;
+      } else if (response.dataType) {
+        dataSerializeOptions.mediaType = routeDef.dataTypes[response.dataType];
+      }
+
+      if (dataSerializeOptions.mediaType) {
+        const dataSerializer = routeDef.dataSerializers.get(
+          dataSerializeOptions.mediaType,
+        );
+        if (dataSerializer) {
+          const body = await dataSerializer(dataSerializeOptions);
+          response.body = body;
+        }
+
+        let contentTypeHeader = dataSerializeOptions.mediaType;
+        if (dataSerializeOptions.boundary) {
+          contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
+        }
+        if (dataSerializeOptions.charset) {
+          contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
+        }
+
         response.headers["content-type"] = contentTypeHeader;
       }
+
+      // const contentTypeHeader = getContentTypeHeader({
+      //   dataTypes: routeDef.dataTypes,
+      //   boundary: "--DredgeBoundary",
+      // })(response.dataType);
+      // if (!response.headers["content-type"] && !!contentTypeHeader) {
+      //   response.headers["content-type"] = contentTypeHeader;
+      // }
 
       return response;
     },
@@ -605,7 +670,29 @@ function extractDataType(options: { dataTypes: Record<string, string> }) {
   };
 }
 
-function extractContentTypeHeader(options: {
+function extractContentTypeHeader(contentType?: string) {
+  const data: Record<string, string | undefined> = {
+    charset: undefined,
+    boundary: undefined,
+    mediaType: undefined,
+  };
+  if (!contentType) return data;
+
+  const splitted = contentType.trim().split(";");
+
+  data.mediaType = splitted[0];
+
+  for (const item of splitted.slice(1)) {
+    const [key, value] = item.trim().split("=");
+    if (key) {
+      data[key] = value;
+    }
+  }
+
+  return data;
+}
+
+function getContentTypeHeader(options: {
   dataTypes: Record<string, string>;
   boundary?: string;
 }) {
