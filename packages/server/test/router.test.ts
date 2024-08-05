@@ -43,6 +43,66 @@ describe("execution flow", () => {
     ).resolves.toMatchObject({});
   });
 
+  test("call path should work with relative url, absolute url", async () => {
+    const router = dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .use((req, res) => {
+          return res.end({
+            headers: {
+              "Content-Type": "application/json",
+            },
+            data: {
+              url: req.url,
+            },
+          });
+        })
+        .error((err, req, res) => {
+          if (err !== "DBT") throw err;
+        })
+        .build(),
+    ]);
+
+    const relativeResult = await router.call("/test", {
+      method: "get",
+    });
+
+    const absoluteResult = await router.call("http://localhost:3000/test", {
+      method: "get",
+    });
+
+    expect(relativeResult.data.url).toBe("/test");
+    expect(absoluteResult.data.url).toBe("http://localhost:3000/test");
+
+    const relativeWithPrefixResult = await router.call("/test", {
+      method: "get",
+      prefixUrl: "http://localhost:3000",
+    });
+    expect(relativeWithPrefixResult.data.url).toBe(
+      "http://localhost:3000/test",
+    );
+
+    const anotherRelativeWithPrefixResult = await router.call("/test", {
+      method: "get",
+      prefixUrl: "http://localhost:3000/path/to/something",
+    });
+    expect(anotherRelativeWithPrefixResult.data.url).toBe(
+      "http://localhost:3000/path/to/something/test",
+    );
+
+    // const absoluteWithPrefixResult = await router.call(
+    //   "http://localhost:3000/test",
+    //   {
+    //     method: "get",
+    //     prefixUrl: "http://localhost:3400",
+    //   },
+    // );
+    // expect(absoluteWithPrefixResult.data.url).toBe(
+    //   "http://localhost:3000/test",
+    // );
+  });
+
   test("all success middleware should run", async () => {
     const router = dredgeRouter([
       dredgeRoute()
@@ -217,6 +277,7 @@ describe("req", () => {
         .get()
         .use((req) => {
           expect(req.method).toBe("get");
+
           expect(req.url).toBe(prefixUrl + path);
 
           throw "DBT";

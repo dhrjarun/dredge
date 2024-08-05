@@ -7,7 +7,11 @@ import {
   getParseFn,
 } from "@dredge/route";
 import { mergeHeaders, normalizeHeaders } from "./utils/headers";
-import { isPathnameValid, isValidPrefixUrl, trimSlashes } from "./utils/path";
+import { isPathnameValid, trimSlashes } from "./utils/path";
+import {
+  objectToSearchParams,
+  searchParamsToObject,
+} from "./utils/search-params";
 
 export class RoutePath {
   name: string;
@@ -102,7 +106,7 @@ export interface DredgeRouter {
       method?: string;
       data?: any;
       body?: BodyFn;
-      searchParams?: Record<string, any>;
+      searchParams?: Record<string, any> | URLSearchParams;
       ctx?: any;
       prefixUrl?: string;
       transformData?: boolean | "onlyRequest" | "onlyResponse";
@@ -144,6 +148,27 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       root,
     },
 
+    find: (method: string, routePathArray: string[]) => {
+      let current = root;
+
+      routePathArray.forEach((item) => {
+        const child = current.getStaticChild(item) || current.getDynamicChild();
+
+        if (!child) {
+          throw "not-found";
+        }
+
+        current = child;
+      });
+
+      const route = current.getRoute(method);
+      if (!route) {
+        throw "not-found";
+      }
+
+      return route;
+    },
+
     call: async (path, options) => {
       const {
         method = "get",
@@ -157,24 +182,30 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
       } = options;
 
       let current = root;
-      const _path = trimSlashes(path);
-      if (!isPathnameValid(_path)) {
+
+      // https://github.com/nodejs/node/issues/12682
+      const parsedPrefixUrl = new URL(
+        prefixUrl ?? "relative:///",
+        "relative:///",
+      );
+      // https://developer.mozilla.org/en-US/docs/Web/API/URL_API/Resolving_relative_references#root_relative
+      const parsedUrl = new URL(
+        trimSlashes(path),
+        parsedPrefixUrl.href.endsWith("/")
+          ? parsedPrefixUrl.href
+          : parsedPrefixUrl.href + "/",
+      );
+
+      let routePath = parsedUrl.pathname.slice(parsedPrefixUrl.pathname.length);
+      routePath = trimSlashes(routePath);
+
+      if (!isPathnameValid(routePath)) {
         throw TypeError("Invalid Pathname");
       }
-      const pathArray = _path.split("/");
-      const urlSearchParams = new URLSearchParams(searchParams);
 
-      if (prefixUrl && !isValidPrefixUrl(prefixUrl)) {
-        throw TypeError("Invalid Prefix Url");
-      }
+      const routePathArray = routePath.split("/");
 
-      let url = (prefixUrl ? trimSlashes(prefixUrl) : "") + "/" + _path;
-      const search = urlSearchParams.toString();
-      if (search) {
-        url += "?" + search;
-      }
-
-      pathArray.forEach((item) => {
+      routePathArray.forEach((item) => {
         const child = current.getStaticChild(item) || current.getDynamicChild();
 
         if (!child) {
@@ -194,26 +225,31 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         ..._ctx,
       };
 
-      const params: Record<string, string> = routeDef.paths.reduce(
-        (acc: any, item: string, index: number) => {
-          if (item.startsWith(":")) {
-            acc[item.replace(":", "")] = pathArray[index];
-          }
-          return acc;
-        },
-        {},
-      );
+      const urlSearchParams =
+        searchParams instanceof URLSearchParams
+          ? searchParams
+          : objectToSearchParams(searchParams);
+      urlSearchParams.forEach((value, key) => {
+        parsedUrl.searchParams.append(key, value);
+      });
+      let url = parsedUrl.toString();
+      if (parsedUrl.protocol === "relative:") {
+        url = url.slice("relative://".length);
+      }
+
+      const params = getPathParams(routeDef.paths)(routePathArray);
 
       const _headers = normalizeHeaders(headers);
-      const dataType = extractDataType({ dataTypes: routeDef.dataTypes })(
+      const dataType = getDataType(routeDef.dataTypes)(
         _headers["content-type"],
       );
+
       const unValidatedRequest = {
         url,
         method,
         headers: _headers,
         params,
-        searchParams,
+        searchParams: searchParamsToObject(parsedUrl.searchParams),
         data,
         dataType,
       };
@@ -253,12 +289,12 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 
       transformRequestDataIfNeeded();
 
-      for (const [key, value] of Object.entries(
-        unValidatedRequest.searchParams,
-      )) {
-        const valueArray = Array.isArray(value) ? value : [value];
-        unValidatedRequest.searchParams[key] = valueArray;
-      }
+      // for (const [key, value] of Object.entries(
+      //   unValidatedRequest.searchParams,
+      // )) {
+      //   const valueArray = Array.isArray(value) ? value : [value];
+      //   unValidatedRequest.searchParams[key] = valueArray;
+      // }
 
       let validatedRequest = { ...unValidatedRequest };
 
@@ -305,12 +341,12 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             validatedRequest.data = validatedData;
           }
 
-          let currentCtx = ctx;
           let response: any = {
             headers: {},
-            dataType: extractDataType({ dataTypes: routeDef.dataTypes })(
+            dataType: getDataType(routeDef.dataTypes)(
               validatedRequest.headers["accept"],
             ),
+            ctx,
           };
 
           for (const fn of routeDef.middlewares) {
@@ -318,7 +354,6 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
               fn,
               {
                 isError: false,
-                ctx: currentCtx,
                 request: validatedRequest,
                 response,
               },
@@ -328,8 +363,7 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             if (!middlewareResult) {
               continue;
             }
-            const { ctx, isEnd, ...newResponse } = middlewareResult;
-            currentCtx = ctx;
+            const { isEnd, ...newResponse } = middlewareResult;
             response = newResponse;
 
             if (isEnd) {
@@ -341,11 +375,12 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
         } catch (error) {
           let response: any = {
             headers: {},
-            dataType: extractDataType({ dataTypes: routeDef.dataTypes })(
+            dataType: getDataType(routeDef.dataTypes)(
               unValidatedRequest.headers["accept"],
             ),
+            ctx,
           };
-          let currentCtx = ctx;
+          // let currentCtx = ctx;
 
           for (const fn of routeDef.errorMiddlewares) {
             const middlewareResult = await handleMiddleware(
@@ -355,7 +390,6 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
                 error,
                 request: unValidatedRequest,
                 response: response,
-                ctx: currentCtx,
               },
               routeDef.dataTypes,
             );
@@ -364,8 +398,8 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
               continue;
             }
 
-            const { ctx: newCtx, isEnd, ...newResponse } = middlewareResult;
-            currentCtx = newCtx;
+            const { isEnd, ...newResponse } = middlewareResult;
+            // currentCtx = newCtx;
             response = newResponse;
 
             if (isEnd) {
@@ -446,28 +480,14 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
 }
 
 function nextEndFunction(
-  res?: {
-    ctx?: any;
-    headers?: any;
-    status?: number;
-    statusText?: string;
-    data?: any;
-    dataType?: string;
-  } & { [key: string]: any },
-  previousRes: {
-    ctx?: any;
-    headers?: any;
-    status?: number;
-    statusText?: string;
-    data?: any;
-    dataType?: string;
-  } = {
+  res?: MiddlewareResponse & { [key: string]: any },
+  previousRes: MiddlewareResponse = {
     ctx: {},
     headers: {},
   },
   dataTypes: Record<string, string> = {},
 ) {
-  const generatedHeaders = {};
+  const generatedHeaders: Record<string, string> = {};
 
   if (!res) {
     return previousRes;
@@ -484,6 +504,18 @@ function nextEndFunction(
         dataType = item === "data" ? dataType : item;
         break;
       }
+    }
+  }
+
+  const dataTypeFromHeader = getDataType(dataTypes)(
+    res?.headers?.["content-type"],
+  );
+  if (dataTypeFromHeader) {
+    dataType = dataTypeFromHeader;
+  } else if (dataType) {
+    const ct = getContentTypeHeader(dataTypes)(dataType);
+    if (ct) {
+      generatedHeaders["content-type"] = ct;
     }
   }
 
@@ -526,27 +558,12 @@ async function handleMiddleware(
   payload: {
     isError?: boolean;
     error?: any;
-    request: {
-      headers: Record<string, string>;
-      method: string;
-      data: any;
-      dataType?: string;
-      url: string;
-      params: Record<string, unknown>;
-      searchParams: Record<string, unknown[]>;
-    };
-    response: {
-      headers: Record<string, string>;
-      data?: any;
-      status?: number;
-      statusText?: string;
-      dataType?: string;
-    };
-    ctx: any;
+    request: MiddlewareRequest;
+    response: MiddlewareResponse & { [key: string]: any };
   },
   dataTypes: Record<string, string> = {},
 ): Promise<MiddlewareResult<any, any> | void> {
-  const { request, response, ctx, error, isError = false } = payload;
+  const { request, response, error, isError = false } = payload;
 
   function createHeaderFunction(headers: Record<string, string>) {
     return function (headerName?: string) {
@@ -584,14 +601,13 @@ async function handleMiddleware(
     statusText: response.statusText,
     data: response.data,
     dataType: response.dataType,
-    ctx,
     header: createHeaderFunction(response.headers),
+    ctx: response.ctx,
     next(nextOptions?: any) {
       return nextEndFunction(
         nextOptions,
         {
           ...response,
-          ctx,
         },
         dataTypes,
       );
@@ -603,7 +619,6 @@ async function handleMiddleware(
         endOptions,
         {
           ...response,
-          ctx,
         },
         dataTypes,
       );
@@ -653,7 +668,7 @@ function getValidatorFn(parser: Parser, step: ValidationType) {
 
 type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
 
-function extractDataType(options: { dataTypes: Record<string, string> }) {
+function getDataType(dataTypes: Record<string, string>) {
   return (acceptOrContentTypeHeader?: string) => {
     if (!acceptOrContentTypeHeader) return;
 
@@ -662,7 +677,7 @@ function extractDataType(options: { dataTypes: Record<string, string> }) {
     // const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
     // if(mimeRegex.test(mime)) return;
 
-    for (const [key, value] of Object.entries(options.dataTypes)) {
+    for (const [key, value] of Object.entries(dataTypes)) {
       if (value == mime) {
         return key;
       }
@@ -670,7 +685,7 @@ function extractDataType(options: { dataTypes: Record<string, string> }) {
   };
 }
 
-function extractContentTypeHeader(contentType?: string) {
+export function extractContentTypeHeader(contentType?: string) {
   const data: Record<string, string | undefined> = {
     charset: undefined,
     boundary: undefined,
@@ -692,11 +707,7 @@ function extractContentTypeHeader(contentType?: string) {
   return data;
 }
 
-function getContentTypeHeader(options: {
-  dataTypes: Record<string, string>;
-  boundary?: string;
-}) {
-  const { dataTypes = {}, boundary } = options;
+function getContentTypeHeader(dataTypes: Record<string, string>) {
   return (dataType?: string) => {
     if (!dataType) return;
     if (!(dataType in dataTypes)) return;
@@ -707,12 +718,174 @@ function getContentTypeHeader(options: {
     const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
     if (!mimeRegex.test(mime)) return;
 
-    const [mimeType] = mime.split("/");
+    // const [mimeType] = mime.split("/");
 
-    if (mimeType?.includes("multipart")) {
-      return boundary ? `${mime};boundary=${boundary}` : undefined;
-    }
+    // if (mimeType?.includes("multipart")) {
+    //   return boundary ? `${mime};boundary=${boundary}` : undefined;
+    // }
 
     return mime;
+  };
+}
+
+export function getPathParams(routePath: string[]) {
+  return (pathArray: string[]) => {
+    const params: Record<string, string> = routePath.reduce(
+      (acc: any, item: string, index: number) => {
+        if (item.startsWith(":")) {
+          acc[item.replace(":", "")] = pathArray[index];
+        }
+        return acc;
+      },
+      {},
+    );
+
+    return params;
+  };
+}
+
+export type MiddlewareRequest = {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  params: Record<string, any>;
+  searchParams: Record<string, any[]>;
+  data: any;
+  dataType?: string;
+};
+
+export type MiddlewareResponse = {
+  headers: Record<string, string>;
+  data?: any;
+  status?: number;
+  statusText?: string;
+  dataType?: string;
+  ctx?: any;
+};
+
+export function useValidate(route: AnyRoute) {
+  const routeDef = route._def;
+
+  return async (unValidatedRequest: MiddlewareRequest) => {
+    let validatedRequest: MiddlewareRequest = { ...unValidatedRequest };
+
+    const validatedParams: Record<string, any> = {};
+    for (const [key, value] of Object.entries(unValidatedRequest.params)) {
+      const parser = routeDef.params[key];
+
+      validatedParams[key] = parser
+        ? await getValidatorFn(parser, "PARAMS")(value)
+        : value;
+    }
+    validatedRequest.params = validatedParams;
+
+    const validatedSearchParams: Record<string, any> = {};
+    for (const [key, parser] of Object.entries(routeDef.searchParams)) {
+      const values = unValidatedRequest.searchParams[key];
+      const validatedValues = [];
+
+      if (!values) {
+        await getValidatorFn(parser, "SEARCH_PARAMS")(undefined);
+        continue;
+      }
+
+      for (const item of values) {
+        validatedValues.push(
+          await getValidatorFn(parser, "SEARCH_PARAMS")(item),
+        );
+      }
+
+      validatedSearchParams[key] = validatedValues;
+    }
+    validatedRequest.searchParams = validatedSearchParams;
+
+    let validatedData: unknown;
+    if (routeDef.iBody) {
+      validatedData = await getValidatorFn(
+        routeDef.iBody,
+        "DATA",
+      )(unValidatedRequest.data);
+      validatedRequest.data = validatedData;
+    }
+
+    return validatedRequest;
+  };
+}
+
+export function useSuccessMiddlewares(route: AnyRoute) {
+  const routeDef = route._def;
+
+  return async (
+    validatedRequest: MiddlewareRequest,
+    response: MiddlewareResponse,
+  ) => {
+    let currentCtx = response?.ctx || {};
+
+    for (const fn of routeDef.middlewares) {
+      const middlewareResult = await handleMiddleware(
+        fn,
+        {
+          isError: false,
+          ctx: currentCtx,
+          request: validatedRequest,
+          response,
+        },
+        routeDef.dataTypes,
+      );
+
+      if (!middlewareResult) {
+        continue;
+      }
+      const { ctx, isEnd, ...newResponse } = middlewareResult;
+      currentCtx = ctx;
+      response = newResponse;
+
+      if (isEnd) {
+        break;
+      }
+    }
+
+    return response;
+  };
+}
+
+export function useErrorMiddlewares(route: AnyRoute) {
+  const routeDef = route._def;
+  const errorMiddlewares = routeDef.errorMiddlewares;
+
+  return async (
+    error: any,
+    unValidatedRequest: MiddlewareRequest,
+    response: MiddlewareResponse,
+  ) => {
+    let currentCtx = response?.ctx || {};
+
+    for (const fn of errorMiddlewares) {
+      const middlewareResult = await handleMiddleware(
+        fn,
+        {
+          isError: true,
+          error,
+          request: unValidatedRequest,
+          response: response,
+          ctx: currentCtx,
+        },
+        routeDef.dataTypes,
+      );
+
+      if (!middlewareResult) {
+        continue;
+      }
+
+      const { ctx: newCtx, isEnd, ...newResponse } = middlewareResult;
+      currentCtx = newCtx;
+      response = newResponse;
+
+      if (isEnd) {
+        break;
+      }
+    }
+
+    return response;
   };
 }
