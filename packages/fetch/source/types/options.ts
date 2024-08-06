@@ -1,7 +1,7 @@
 import type {
   DefaultFieldInDirectClientOptions,
   DredgeClientOptions,
-} from "@dredge/server";
+} from "@dredge/types";
 import { MarkRequired } from "ts-essentials";
 import { HTTPError } from "../errors/HTTPError";
 import { MimeStore } from "../mime-store";

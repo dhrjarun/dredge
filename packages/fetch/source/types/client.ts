@@ -1,4 +1,4 @@
-import type { DredgeClient } from "@dredge/server";
+import type { DredgeClient } from "@dredge/types";
 import { DefaultFetchOptions, FetchOptions } from "./options";
 import { FetchResponse, FetchResponsePromise } from "./response";
 

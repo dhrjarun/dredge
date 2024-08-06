@@ -282,7 +282,7 @@ function mergeDefaultOptions(
   const dataTransformer = options.dataTransformer || {};
 
   for (const [key, value] of Object.entries(
-    defaultOptions.dataTransformer || {},
+    defaultOptions?.dataTransformer || {},
   )) {
     if (!dataTransformer?.[key]) {
       dataTransformer[key] = value;
