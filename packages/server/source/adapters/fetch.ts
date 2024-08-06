@@ -1,129 +1,217 @@
+import { AnyRoute, MimeStore } from "@dredge/route";
+import { ReadableStream } from "stream/web";
 import {
-  AnyRoute,
-  DredgeApi,
-  ResolverResult,
-  Transformer,
-  populateTransformer,
-  trimSlashes,
-} from "@dredge/common";
+  MiddlewareRequest,
+  dredgeRouter,
+  extractContentTypeHeader,
+  getDataType,
+  getPathParams,
+  useErrorMiddlewares,
+  useSuccessMiddlewares,
+  useValidate,
+} from "../router";
+import { trimSlashes } from "../utils/path";
+import { searchParamsToObject } from "../utils/search-params";
+
+type BodyParserFunction = (options: {
+  readonly body: ReadableStream<any> | null;
+  arrayBuffer: () => Promise<ArrayBuffer>;
+  formData: () => Promise<FormData>;
+  blob: () => Promise<Blob>;
+  text: () => Promise<string>;
+  readonly mediaType: string;
+  readonly boundary?: string;
+  readonly charset?: string;
+}) => Promise<any>;
+
+type DataSerializerFunction = (options: {
+  readonly data: any;
+  mediaType: string;
+  charset?: string;
+  boundary?: string;
+}) => Promise<
+  string | ReadableStream<Uint8Array> | ArrayBuffer | Blob | FormData
+>;
 
 export async function handleFetchRequest<Context extends object = {}>(options: {
   req: Request;
-  api: DredgeApi<Context, AnyRoute[]>;
-  transformer?: Partial<Transformer>;
+  routes: AnyRoute[];
   ctx: Context;
-  prefixUrl: string | URL;
-}): Promise<Response> {
-  const { req, api, ctx } = options;
+  prefixUrl?: string;
+  bodyParsers?: {
+    [key: string]: BodyParserFunction;
+  };
+  dataSerializers?: {
+    [key: string]: DataSerializerFunction;
+  };
+}) {
+  const { req, routes, prefixUrl, ctx } = options;
 
-  const transformer = populateTransformer(options.transformer);
-  const prefixUrl =
-    options.prefixUrl instanceof URL
-      ? options.prefixUrl
-      : new URL(options.prefixUrl);
-  const url = new URL(req.url!);
-  const initialPathname = trimSlashes(prefixUrl.pathname);
-  if (!url.pathname.startsWith(initialPathname)) {
-    throw "Invalid url";
+  const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);
+  const dataSerializers = new MimeStore<DataSerializerFunction>(
+    options.dataSerializers,
+  );
+
+  const router = dredgeRouter(routes);
+
+  const parsedUrl = new URL(req.url);
+  const parsedPrefixUrl = new URL(prefixUrl || "relative://");
+  const path = trimSlashes(parsedUrl.pathname).slice(
+    trimSlashes(parsedPrefixUrl.pathname).length,
+  );
+  const pathArray = path.split("/");
+
+  const route = router.find(req.method, pathArray);
+  const routeDef = route._def;
+
+  if (!route) {
+    return new Response("Not Found", {
+      status: 404,
+      statusText: "Not Found",
+    });
   }
-  const path = trimSlashes(url.pathname).slice(initialPathname.length);
-  const data = await getDataFromRequestOrResponse(req, {
-    transformer,
-  });
 
   const headers = Object.fromEntries(req.headers);
-  const searchParams = transformer.searchParams.deserialize(url.searchParams);
 
-  const result = await api.resolveRoute(path, {
+  const middlewareRequest: MiddlewareRequest = {
+    url: req.url,
     method: req.method,
-    ctx,
-    data,
     headers,
-    searchParams,
-  });
+    params: getPathParams(route._def.paths)(pathArray),
+    searchParams: searchParamsToObject(parsedUrl.searchParams),
+    data: undefined,
+    dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
+  };
 
-  return createResponseFromResolverResult(result, { transformer });
-}
+  const contentTypeInfo = extractContentTypeHeader(headers["content-type"]);
+  if (contentTypeInfo?.mediaType) {
+    const bodyParser = bodyParsers.get(contentTypeInfo.mediaType);
+    if (bodyParser) {
+      const data = await bodyParser({
+        body: req.body,
+        text: req.text.bind(req),
+        arrayBuffer: req.arrayBuffer.bind(req),
+        formData: req.formData.bind(req),
+        blob: req.blob.bind(req),
 
-async function getDataFromRequestOrResponse(
-  reqOrRes: {
-    headers: Headers;
-    text: () => Promise<string>;
-    formData: () => Promise<FormData>;
-  },
-  options: { transformer: Partial<Transformer> },
-) {
-  const transformer = populateTransformer(options.transformer);
-  const contentType = reqOrRes.headers.get("content-type");
-  let data: any;
-
-  if (contentType?.startsWith("application/json")) {
-    const text = await reqOrRes.text();
-    if (!text) {
-      data = null;
+        mediaType: contentTypeInfo.mediaType!,
+        boundary: contentTypeInfo.boundary,
+        charset: contentTypeInfo.charset,
+      });
+      middlewareRequest.data = data;
     }
-    data = transformer.json.deserialize(text);
-  }
-  if (contentType?.startsWith("multipart/form-data")) {
-    data = transformer.formData.deserialize(await reqOrRes.formData());
   }
 
-  if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-    const searchParams = new URLSearchParams(await reqOrRes.text());
-    data = transformer.searchParams.deserialize(searchParams);
-  }
-
-  return Promise.resolve(data);
-}
-
-export async function createResponseFromResolverResult(
-  result: ResolverResult<any>,
-  options: {
-    transformer?: Partial<Transformer>;
-  },
-) {
-  const transformer = populateTransformer(options.transformer);
-
-  const { data, ...rest } = result;
-  const contentType = result.headers?.["content-type"];
-
-  let dataOrError: any;
   try {
-    dataOrError = await data();
-  } catch (err) {
-    dataOrError = err;
-  }
+    const validatedRequest = await useValidate(route)(middlewareRequest);
+    const middlewareResponse = await useSuccessMiddlewares(route)(
+      validatedRequest,
+      {
+        headers: {},
+        dataType: getDataType(route._def.dataTypes)(
+          validatedRequest.headers["accept"],
+        ),
+        ctx,
+      },
+    );
 
-  if (contentType?.startsWith("application/json")) {
-    const json = transformer.json.serialize(dataOrError);
-    return new Response(json, {
-      ...rest,
-    });
-  }
-  if (contentType?.startsWith("multipart/form-data")) {
-    const form = transformer.formData.serialize(dataOrError);
-    return new Response(form, {
-      ...rest,
-    });
-  }
-  if (contentType?.startsWith("application/x-www-form-urlencoded")) {
-    const searchParams = new URLSearchParams(dataOrError);
-    const form = transformer.searchParams.serialize(searchParams);
-    return new Response(form, {
-      ...rest,
-    });
-  }
+    let body: any = null;
 
-  if (
-    typeof dataOrError === "string"
-    // typeof dataOrError === "string" ||
-    // dataOrError instanceof Buffer ||
-    // dataOrError instanceof Uint8Array
-  ) {
-    return new Response(dataOrError, {
-      ...rest,
+    const dataSerializeOptions = {
+      data: middlewareResponse.data,
+      mediaType: undefined as string | undefined,
+      charset: undefined as string | undefined,
+      boundary: undefined as string | undefined,
+    };
+    if (middlewareResponse.headers["content-type"]) {
+      const info = extractContentTypeHeader(
+        middlewareResponse.headers["content-type"],
+      );
+      dataSerializeOptions.mediaType = info.mediaType;
+      dataSerializeOptions.charset = info.charset;
+      dataSerializeOptions.boundary = info.boundary;
+    } else if (middlewareResponse.dataType) {
+      dataSerializeOptions.mediaType =
+        routeDef.dataTypes[middlewareResponse.dataType];
+    }
+    if (dataSerializeOptions.mediaType) {
+      const dataSerializer = dataSerializers.get(
+        dataSerializeOptions.mediaType,
+      );
+      if (dataSerializer) {
+        body = await dataSerializer(dataSerializeOptions as any);
+      }
+
+      let contentTypeHeader = dataSerializeOptions.mediaType;
+      if (dataSerializeOptions.boundary) {
+        contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
+      }
+      if (dataSerializeOptions.charset) {
+        contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
+      }
+
+      middlewareRequest.headers["content-type"] = contentTypeHeader;
+    }
+
+    return new Response(body, {
+      status: middlewareResponse.status,
+      statusText: middlewareResponse.statusText,
+      headers: middlewareRequest.headers,
+    });
+  } catch (error) {
+    const middlewareResponse = await useErrorMiddlewares(route)(
+      error,
+      middlewareRequest,
+      {
+        headers: {},
+        dataType: getDataType(route._def.dataTypes)(
+          middlewareRequest.headers["accept"],
+        ),
+        ctx,
+      },
+    );
+
+    let body: any = null;
+    const dataSerializeOptions = {
+      data: middlewareResponse.data,
+      mediaType: undefined as string | undefined,
+      charset: undefined as string | undefined,
+      boundary: undefined as string | undefined,
+    };
+    if (middlewareResponse.headers["content-type"]) {
+      const info = extractContentTypeHeader(
+        middlewareResponse.headers["content-type"],
+      );
+      dataSerializeOptions.mediaType = info.mediaType;
+      dataSerializeOptions.charset = info.charset;
+      dataSerializeOptions.boundary = info.boundary;
+    } else if (middlewareResponse.dataType) {
+      dataSerializeOptions.mediaType =
+        routeDef.dataTypes[middlewareResponse.dataType];
+    }
+    if (dataSerializeOptions.mediaType) {
+      const dataSerializer = dataSerializers.get(
+        dataSerializeOptions.mediaType,
+      );
+      if (dataSerializer) {
+        body = await dataSerializer(dataSerializeOptions as any);
+      }
+
+      let contentTypeHeader = dataSerializeOptions.mediaType;
+      if (dataSerializeOptions.boundary) {
+        contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
+      }
+      if (dataSerializeOptions.charset) {
+        contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
+      }
+
+      middlewareRequest.headers["content-type"] = contentTypeHeader;
+    }
+
+    return new Response(body, {
+      headers: middlewareRequest.headers,
+      status: middlewareResponse.status,
+      statusText: middlewareResponse.statusText,
     });
   }
-
-  throw "Invalid data or no ContentType provided";
 }

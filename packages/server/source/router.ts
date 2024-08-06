@@ -99,6 +99,8 @@ export interface DredgeRouter {
     root: RoutePath;
   };
 
+  find(method: string, path: string[]): AnyRoute;
+
   call(
     path: string,
     options: {
@@ -668,7 +670,7 @@ function getValidatorFn(parser: Parser, step: ValidationType) {
 
 type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
 
-function getDataType(dataTypes: Record<string, string>) {
+export function getDataType(dataTypes: Record<string, string>) {
   return (acceptOrContentTypeHeader?: string) => {
     if (!acceptOrContentTypeHeader) return;
 

@@ -1,10 +1,16 @@
 export function searchParamsToObject(
-  searchParams: URLSearchParams,
+  searchParams?: URLSearchParams | string | null,
 ): Record<string, string[]> {
+  if (!searchParams) return {};
+  const sp =
+    searchParams instanceof URLSearchParams
+      ? searchParams
+      : new URLSearchParams(searchParams);
+
   const obj: Record<string, string[]> = {};
 
-  for (const key of searchParams.keys()) {
-    const value = searchParams.getAll(key);
+  for (const key of sp.keys()) {
+    const value = sp.getAll(key);
     obj[key] = value;
   }
   return obj;
