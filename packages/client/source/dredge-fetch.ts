@@ -1,4 +1,5 @@
 import { HTTPError } from "./errors/HTTPError";
+import { MimeStore } from "./mime-store";
 import { AnyDredgeFetchClient, DredgeFetchClient } from "./types/client";
 import {
   DefaultFetchOptions,
@@ -45,7 +46,44 @@ export function createDredgeFetchClient(
     async function fetchResponse() {
       const url = createURL(_options);
 
-      const body = stringifyData(_options);
+      let body: any = null;
+
+      const dataSerializerInfo = {
+        data: response.data,
+        mediaType: undefined as string | undefined,
+        charset: undefined as string | undefined,
+        boundary: undefined as string | undefined,
+      };
+      if (_options.headers.get("content-type")) {
+        const info = extractContentTypeHeader(
+          _options.headers.get("content-type"),
+        );
+        dataSerializerInfo.mediaType = info.mediaType;
+        dataSerializerInfo.charset = info.charset;
+        dataSerializerInfo.boundary = info.boundary;
+      } else if (_options.dataType) {
+        dataSerializerInfo.mediaType = _options.dataTypes[_options.dataType];
+      }
+      if (dataSerializerInfo.mediaType) {
+        const dataSerializer = _options.dataSerializers.get(
+          dataSerializerInfo.mediaType,
+        );
+
+        if (dataSerializer) {
+          body = await dataSerializer(dataSerializerInfo as any);
+        }
+
+        let contentTypeHeader = dataSerializerInfo.mediaType;
+        if (dataSerializerInfo.boundary) {
+          contentTypeHeader += `;boundary=${dataSerializerInfo.boundary}`;
+        }
+        if (dataSerializerInfo.charset) {
+          contentTypeHeader += `;charset=${dataSerializerInfo.charset}`;
+        }
+
+        _options.headers.set("content-type", contentTypeHeader);
+      }
+      // body = stringifyData(_options);
 
       request = new globalThis.Request(url, {
         ..._options,
@@ -77,19 +115,29 @@ export function createDredgeFetchClient(
     }
 
     async function createDredgeResponse(response: globalThis.Response) {
-      const dataType = extractDataType({ dataTypes: _options.dataTypes })(
+      const dataType = getDataType({ dataTypes: _options.dataTypes })(
         response.headers.get("content-type"),
       );
 
       (response as any).dataType = dataType;
 
       (response as any).data = async () => {
-        let data = await parseBody(response);
+        const bodyParserInfo = extractContentTypeHeader(
+          response.headers.get("content-type"),
+        );
+        const bodyParser = bodyParserInfo?.mediaType
+          ? _options.bodyParsers.get(bodyParserInfo.mediaType)
+          : undefined;
+        let data: any = undefined;
+        if (bodyParser) {
+          data = await bodyParser(bodyParserInfo as any);
+        }
+        // let data = await parseBody(response);
 
-        if (!dataType) return;
+        if (!dataType) return data;
         const transformer = _options.dataTransformer?.[dataType]?.forResponse;
 
-        if (!transformer) return;
+        if (!transformer) return data;
 
         data = transformer(data);
 
@@ -123,7 +171,7 @@ export function createDredgeFetchClient(
 
     async function fn() {
       try {
-        const contentTypeHeader = extractContentTypeHeader({
+        const contentTypeHeader = getContentTypeHeader({
           dataTypes: _options.dataTypes,
           boundary: "--DredgeBoundary",
         })(_options.dataType);
@@ -134,7 +182,7 @@ export function createDredgeFetchClient(
         // Delay the fetch so that body method shortcuts can set the responseDataType
         await Promise.resolve();
 
-        const acceptHeader = extractAcceptHeader({
+        const acceptHeader = getAcceptHeader({
           dataTypes: _options.dataTypes,
         })(_options.responseDataType);
         if (!_options.headers.get("accept") && !!acceptHeader) {
@@ -290,6 +338,14 @@ function mergeDefaultOptions(
     dataTransformer,
     hooks,
     referrer: options.referrer ?? defaultOptions.referrer,
+    dataSerializers: new MimeStore([
+      defaultOptions.dataSerializers || {},
+      options.dataSerializers || {},
+    ]),
+    bodyParsers: new MimeStore([
+      defaultOptions.bodyParsers || {},
+      options.bodyParsers || {},
+    ]),
   };
 
   return newOptions;
@@ -318,7 +374,7 @@ function getSimplePath(path: string, params: Record<string, any>) {
   return `/${simplePathArray.join("/")}`;
 }
 
-function extractContentTypeHeader(options: {
+function getContentTypeHeader(options: {
   dataTypes: Record<string, string>;
   boundary?: string;
 }) {
@@ -343,7 +399,29 @@ function extractContentTypeHeader(options: {
   };
 }
 
-function extractAcceptHeader(options: {
+function extractContentTypeHeader(contentType?: string | null) {
+  const data: Record<string, string | undefined> = {
+    charset: undefined,
+    boundary: undefined,
+    mediaType: undefined,
+  };
+  if (!contentType) return data;
+
+  const splitted = contentType.trim().split(";");
+
+  data.mediaType = splitted[0];
+
+  for (const item of splitted.slice(1)) {
+    const [key, value] = item.trim().split("=");
+    if (key) {
+      data[key] = value;
+    }
+  }
+
+  return data;
+}
+
+function getAcceptHeader(options: {
   dataTypes: Record<string, string>;
 }) {
   const { dataTypes } = options;
@@ -361,7 +439,7 @@ function extractAcceptHeader(options: {
   };
 }
 
-function extractDataType(options: { dataTypes: Record<string, string> }) {
+function getDataType(options: { dataTypes: Record<string, string> }) {
   return (acceptOrContentTypeHeader?: string | null) => {
     if (!acceptOrContentTypeHeader) return;
 

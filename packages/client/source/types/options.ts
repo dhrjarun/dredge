@@ -4,6 +4,8 @@ import type {
 } from "@dredge/server";
 import { MarkRequired } from "ts-essentials";
 import { HTTPError } from "../errors/HTTPError";
+import { MimeStore } from "../mime-store";
+import { MaybePromise } from "./utils";
 
 export interface FetchOptions
   extends Omit<DredgeClientOptions, "headers">,
@@ -14,7 +16,39 @@ export interface FetchOptions
     init?: RequestInit,
   ) => Promise<Response>;
   hooks?: Partial<Hooks>;
+  dataSerializers?:
+    | {
+        [key: string]: DataSerializerFunction;
+      }
+    | MimeStore<DataSerializerFunction>;
+  bodyParsers?:
+    | {
+        [key: string]: BodyParserFunction;
+      }
+    | MimeStore<BodyParserFunction>;
 }
+
+type DataSerializerFunction = (options: {
+  readonly data: any;
+  mediaType: string;
+  boundary?: string;
+  charset?: string;
+}) => MaybePromise<
+  ArrayBuffer | Blob | string | FormData | ReadableStream<Uint8Array>
+>;
+
+type BodyParserFunction = (options: {
+  readonly body: ReadableStream<Uint8Array>;
+  text(): Promise<string>;
+  blob(): Promise<Blob>;
+  formData(): Promise<FormData>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  readonly bodyUsed: boolean;
+
+  readonly mediaType: string;
+  readonly boundary?: string;
+  readonly charset?: string;
+}) => MaybePromise<any>;
 
 export type InitHook = (options: NormalizedFetchOptions) => void;
 
@@ -53,6 +87,8 @@ export interface NormalizedFetchOptions
   path: string;
   prefixUrl: string;
   hooks: Hooks;
+  dataSerializers: MimeStore<DataSerializerFunction>;
+  bodyParsers: MimeStore<BodyParserFunction>;
 }
 
 export interface Hooks {
@@ -64,5 +100,11 @@ export interface Hooks {
 
 export type DefaultFetchOptions = Pick<
   FetchOptions,
-  DefaultFieldInDirectClientOptions | "fetch" | "referrer" | "hooks" | "ctx"
+  | DefaultFieldInDirectClientOptions
+  | "fetch"
+  | "referrer"
+  | "hooks"
+  | "ctx"
+  | "dataSerializers"
+  | "bodyParsers"
 >;
