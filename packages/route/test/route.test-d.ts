@@ -1,14 +1,14 @@
-import { describe, expectTypeOf, test } from "vitest";
-import { z } from "zod";
-import { dredgeRoute } from "../source/route";
 import {
+  Simplify,
   inferInitialRouteContext,
   inferModifiedInitialRouteContext,
   inferRouteDataTypes,
   inferRouteEData,
   inferRouteOData,
-} from "../source/types";
-import { Simplify } from "../source/types/utils";
+} from "@dredge/types";
+import { describe, expectTypeOf, test } from "vitest";
+import { z } from "zod";
+import { dredgeRoute } from "../source/route";
 
 describe("route.options()", () => {
   test("invalid dataType should return string type", () => {

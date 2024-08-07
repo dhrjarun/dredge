@@ -1,9 +1,9 @@
 import type * as http from "http";
 import { Readable, Stream } from "stream";
-import { AnyRoute, MimeStore } from "@dredge/route";
-import parseUrl from "parseurl";
 import {
+  AnyRoute,
   MiddlewareRequest,
+  MimeStore,
   dredgeRouter,
   extractContentTypeHeader,
   getDataType,
@@ -11,7 +11,8 @@ import {
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
-} from "../router";
+} from "@dredge/route";
+import parseUrl from "parseurl";
 import { joinDuplicateHeaders } from "../utils/headers";
 import { trimSlashes } from "../utils/path";
 import { searchParamsToObject } from "../utils/search-params";

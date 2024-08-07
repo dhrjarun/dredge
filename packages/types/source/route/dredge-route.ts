@@ -8,6 +8,8 @@ import { MaybePromise, Overwrite, Simplify } from "./utils";
 type MimeStore<T> = {
   get: (mediaType: string) => T;
   set: (mediaType: string | string[], payload: T) => void;
+
+  clone: () => MimeStore<T>;
 };
 
 export interface MiddlewareResult<C, Data> {

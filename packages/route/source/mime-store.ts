@@ -1,7 +1,29 @@
+type MimeStoreInit<T = any> = MimeStore<T> | { [key: string]: T };
+
 export class MimeStore<T> {
   map: Map<string, T> = new Map();
 
-  constructor() {}
+  private handleInit(item: MimeStoreInit<T>) {
+    if (item instanceof MimeStore) {
+      this.map = new Map([...this.map, ...item.map]);
+    } else {
+      Object.entries(item).forEach(([key, value]) => {
+        this.set(key, value);
+      });
+    }
+  }
+
+  constructor(init?: MimeStoreInit<T> | MimeStoreInit<T>[]) {
+    if (!init) return;
+
+    if (Array.isArray(init)) {
+      init.forEach((item) => {
+        this.handleInit(item);
+      });
+    } else {
+      this.handleInit(init);
+    }
+  }
 
   clone(): MimeStore<T> {
     const store = new MimeStore<T>();

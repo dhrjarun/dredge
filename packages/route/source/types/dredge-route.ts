@@ -267,8 +267,8 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
       forResponse?: (data: any) => any;
     }
   >;
-  dataSerializers: MimeStore<DataSerializer["fn"]>;
-  bodyParsers: MimeStore<BodyParser["fn"]>;
+  dataSerializers: MimeStore<DataSerializerFunction>;
+  bodyParsers: MimeStore<BodyParserFunction>;
 
   iBody?: Parser;
   oBody?: Parser;
@@ -387,17 +387,20 @@ export type BodyTypes =
   | FormData
   | ArrayBuffer;
 
-type DataSerializer<DT = string> = {
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
-  fn: (options: {
-    readonly data: any;
-    readonly mediaType?: string;
-    boundary?: string;
-    charset?: string;
-  }) => Promise<BodyTypes> | BodyTypes;
-  dataType?: DT | DT[];
-  mediaType?: string | string[];
-};
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+type DataSerializerFunction = (options: {
+  readonly data: any;
+  readonly mediaType?: string;
+  boundary?: string;
+  charset?: string;
+}) => Promise<BodyTypes> | BodyTypes;
+
+type BodyParserFunction = (options: {
+  readonly body: BodyFn;
+  readonly mediaType?: string;
+  readonly boundary?: string;
+  readonly charset?: string;
+}) => Promise<any>;
 
 export type BodyFn = {
   (): Promise<
@@ -411,17 +414,6 @@ export type BodyFn = {
     | ArrayBuffer
   >;
   <As extends BodyAs>(as: As): Promise<BodyTypesMap[As]>;
-};
-
-type BodyParser<DT = string> = {
-  fn: (options: {
-    readonly body: BodyFn;
-    readonly mediaType?: string;
-    readonly boundary?: string;
-    readonly charset?: string;
-  }) => Promise<any>;
-  dataType?: DT | DT[];
-  mediaType?: string | string[];
 };
 
 export interface UnresolvedRoute<
@@ -451,11 +443,20 @@ export interface UnresolvedRoute<
         forResponse?: (data: any) => any;
       };
     };
-    dataSerializers?: DataSerializer<
-      inferDataTypes<Options> | keyof DataTypes
-    >[];
-
-    bodyParsers?: BodyParser<inferDataTypes<Options> | keyof DataTypes>[];
+    dataSerializers?: {
+      mediaType?: string | string[];
+      dataType?:
+        | (inferDataTypes<Options> | keyof DataTypes)
+        | (inferDataTypes<Options> | keyof DataTypes)[];
+      fn: DataSerializerFunction;
+    }[];
+    bodyParsers?: {
+      mediaType?: string | string[];
+      dataType?:
+        | (inferDataTypes<Options> | keyof DataTypes)
+        | (inferDataTypes<Options> | keyof DataTypes)[];
+      fn: BodyParserFunction;
+    }[];
     defaultContext?: DefaultContext;
   }): IsNotAllowedDataTypes<DataTypes> extends true
     ? "One or more of dataType is invalid!"

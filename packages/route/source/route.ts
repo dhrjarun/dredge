@@ -1,10 +1,10 @@
-import { MimeStore } from "./mime-store";
-import { Parser } from "./parser";
 import {
   AnyUnresolvedRoute,
   RouteBuilderDef,
   UnresolvedRoute,
-} from "./types/dredge-route";
+} from "@dredge/types";
+import { MimeStore } from "./mime-store";
+import { Parser } from "./parser";
 import { trimSlashes } from "./utils/path";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
@@ -45,8 +45,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     searchParams,
     method,
     dataTypes,
-    dataSerializers: new MimeStore(),
-    bodyParsers: new MimeStore(),
+    dataSerializers: new MimeStore<any>(),
+    bodyParsers: new MimeStore<any>(),
     ...rest,
   };
 
