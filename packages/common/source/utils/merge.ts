@@ -33,19 +33,3 @@ export function mergeDeep(
 
   return mergeDeep(target, ...sources);
 }
-
-export function mergeHeaders(
-  target: Record<string, string>,
-  source: Record<string, string | null>,
-) {
-  const headers = { ...target };
-  for (const header in source) {
-    // https://nodejs.org/api/http.html#messageheaders
-    if (!source[header]) {
-      delete headers[header];
-    } else {
-      headers[header.toLowerCase()] = source[header]!;
-    }
-  }
-  return headers;
-}

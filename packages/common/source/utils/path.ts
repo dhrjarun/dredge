@@ -31,3 +31,26 @@ export const trimSlashes = (path: string): string => {
 
   return path;
 };
+
+export function getSimplePath(path: string, params: Record<string, string>) {
+  const isParamPath = path.startsWith(":");
+
+  if (!isParamPath) return path;
+
+  let _path = trimSlashes(path.slice(1));
+
+  const pathArray = _path.split("/");
+
+  const simplePathArray = pathArray.map((item) => {
+    if (item.startsWith(":")) {
+      const param = params[item.slice(1)];
+
+      if (!param) throw "Can't find specified param";
+
+      return param;
+    }
+    return item;
+  });
+
+  return `/${simplePathArray.join("/")}`;
+}

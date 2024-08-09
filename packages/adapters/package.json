@@ -1,5 +1,5 @@
 {
-  "name": "@dredge/server",
+  "name": "@dredge/adapters",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/index.cjs.js",
@@ -29,12 +29,17 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@dredge/common": "workspace:*",
+    "@dredge/types": "workspace:*",
     "@dredge/route": "workspace:*",
     "busboy": "^1.6.0",
+    "fetch-blob": "^4.0.0",
     "form-data-encoder": "^4.0.2",
     "formdata-node": "^6.0.3",
+    "formdata-polyfill": "^4.0.10",
     "parse-path": "^7.0.0",
-    "parseurl": "^1.3.3"
+    "parseurl": "^1.3.3",
+    "url": "^0.11.4"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.3",
@@ -44,6 +49,7 @@
     "@types/parse-path": "^7.0.3",
     "@types/parseurl": "^1.3.3",
     "express": "^4.19.2",
+    "got": "^14.4.2",
     "next": "^14.1.4",
     "node-fetch": "^2.7.0"
   }

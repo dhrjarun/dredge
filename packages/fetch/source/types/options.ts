@@ -1,11 +1,11 @@
+import { MimeStore } from "@dredge/common";
 import type {
   DefaultFieldInDirectClientOptions,
   DredgeClientOptions,
+  MaybePromise,
 } from "@dredge/types";
 import { MarkRequired } from "ts-essentials";
 import { HTTPError } from "../errors/HTTPError";
-import { MimeStore } from "../mime-store";
-import { MaybePromise } from "./utils";
 
 export interface FetchOptions
   extends Omit<DredgeClientOptions, "headers">,
@@ -26,6 +26,10 @@ export interface FetchOptions
         [key: string]: BodyParserFunction;
       }
     | MimeStore<BodyParserFunction>;
+  serializeParams?: (params: Record<string, any>) => Record<string, string>;
+  serializeSearchParams?: (
+    searchParams: Record<string, any[]>,
+  ) => Record<string, string[]>;
 }
 
 type DataSerializerFunction = (options: {
@@ -78,11 +82,13 @@ export interface NormalizedFetchOptions
     | "method"
     | "dataTypes"
     | "fetch"
-    | "searchParams"
     | "params"
     | "throwHttpErrors"
     | "dataTransformer"
+    | "serializeParams"
+    | "serializeSearchParams"
   > {
+  searchParams: Record<string, any[]>;
   headers: Headers;
   path: string;
   prefixUrl: string;

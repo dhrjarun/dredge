@@ -46,7 +46,7 @@ export function joinDuplicateHeaders(
   return newHeaders;
 }
 
-export function mergeHeaders(
+export function mergeDredgeHeaders(
   target: Record<string, string>,
   ...sources: Record<string, string | null>[]
 ) {
@@ -63,7 +63,7 @@ export function mergeHeaders(
     }
   }
 
-  return mergeHeaders(headers, ...sources);
+  return mergeDredgeHeaders(headers, ...sources);
 }
 
 export function normalizeHeaders(headers: Record<string, string>) {
@@ -75,3 +75,22 @@ export function normalizeHeaders(headers: Record<string, string>) {
 
   return newHeaders;
 }
+
+export const mergeHeaders = (
+  source1: HeadersInit = {},
+  source2: HeadersInit = {},
+): Headers => {
+  const result = new globalThis.Headers(source1 as RequestInit["headers"]);
+  const isHeadersInstance = source2 instanceof globalThis.Headers;
+  const source = new globalThis.Headers(source2 as RequestInit["headers"]);
+
+  for (const [key, value] of source.entries()) {
+    if ((isHeadersInstance && value === "undefined") || value === undefined) {
+      result.delete(key);
+    } else {
+      result.set(key, value);
+    }
+  }
+
+  return result;
+};

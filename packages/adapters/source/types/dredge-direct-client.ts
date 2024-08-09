@@ -1,11 +1,3 @@
-// import {
-//   DefaultDredgeClientOptions,
-//   DredgeClientOptions,
-// } from "./dredge-client-option";
-// import {
-//   DredgeClientResponse,
-//   DredgeResponsePromise,
-// } from "./dredge-client-response";
 import {
   DefaultDredgeClientOptions,
   DredgeClient,
@@ -19,18 +11,19 @@ export type DirectClientOptions = DredgeClientOptions & {
   serverCtx?: Record<string, any>;
 };
 
+//TODO: Fix after `&` types
 export type NormalizedDirectClientOptions = MarkRequired<
   DirectClientOptions,
   | "serverCtx"
   | "method"
   | "dataTypes"
-  | "searchParams"
   | "params"
   | "throwHttpErrors"
   | "headers"
 > & {
   path: string;
   prefixUrl?: string;
+  searchParams: Record<string, any[]>;
 };
 
 export type DefaultDirectClientOptions = DefaultDredgeClientOptions & {

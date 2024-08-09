@@ -10,7 +10,8 @@
 
     "noEmit": true,
     "lib": ["es2022"],
-    "module": "preserve"
+    "module": "preserve",
+    "noPropertyAccessFromIndexSignature": false
   },
   "include": ["source", "test"]
 }

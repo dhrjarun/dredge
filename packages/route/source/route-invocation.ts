@@ -1,6 +1,6 @@
+import { mergeDredgeHeaders } from "@dredge/common";
 import { AnyRoute, MiddlewareResult, Parser } from "@dredge/types";
 import { getParseFn } from "./parser";
-import { mergeHeaders } from "./utils/headers";
 
 function nextEndFunction(
   res?: MiddlewareResponse & { [key: string]: any },
@@ -44,7 +44,11 @@ function nextEndFunction(
 
   return {
     ctx: { ...(previousRes.ctx || {}), ...(res?.ctx || {}) },
-    headers: mergeHeaders(previousRes.headers, res?.headers, generatedHeaders),
+    headers: mergeDredgeHeaders(
+      previousRes.headers,
+      res?.headers,
+      generatedHeaders,
+    ),
     status: res?.status || previousRes?.status,
     statusText: res?.statusText || previousRes?.statusText,
     data,

@@ -28,6 +28,7 @@
   "keywords": [],
   "dependencies": {},
   "devDependencies": {
+    "@dredge/common": "workspace:*",
     "@dredge/types": "workspace:*",
     "@types/node": "^20.12.4"
   }

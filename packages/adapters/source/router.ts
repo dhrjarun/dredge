@@ -1,4 +1,12 @@
 import {
+  isPathnameValid,
+  mergeDredgeHeaders,
+  normalizeHeaders,
+  objectToSearchParams,
+  searchParamsToObject,
+  trimSlashes,
+} from "@dredge/common";
+import {
   AnyRoute,
   BodyFn,
   BodyTypes,
@@ -6,12 +14,6 @@ import {
   Parser,
   getParseFn,
 } from "@dredge/route";
-import { mergeHeaders, normalizeHeaders } from "./utils/headers";
-import { isPathnameValid, trimSlashes } from "./utils/path";
-import {
-  objectToSearchParams,
-  searchParamsToObject,
-} from "./utils/search-params";
 
 export class RoutePath {
   name: string;
@@ -523,7 +525,11 @@ function nextEndFunction(
 
   return {
     ctx: { ...(previousRes.ctx || {}), ...(res?.ctx || {}) },
-    headers: mergeHeaders(previousRes.headers, res?.headers, generatedHeaders),
+    headers: mergeDredgeHeaders(
+      previousRes.headers,
+      res?.headers,
+      generatedHeaders,
+    ),
     status: res?.status || previousRes?.status,
     statusText: res?.statusText || previousRes?.statusText,
     data,
