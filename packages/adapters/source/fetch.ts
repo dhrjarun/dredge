@@ -11,8 +11,8 @@ import {
   useValidate,
 } from "@dredge/route";
 import { ReadableStream } from "stream/web";
-import { trimSlashes } from "../utils/path";
-import { searchParamsToObject } from "../utils/search-params";
+import { trimSlashes } from "./utils/path";
+import { searchParamsToObject } from "./utils/search-params";
 
 type BodyParserFunction = (options: {
   readonly body: ReadableStream<any> | null;
@@ -63,15 +63,13 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   const pathArray = path.split("/");
 
   const route = router.find(req.method, pathArray);
-  const routeDef = route._def;
-
-  if (!route) {
+  if (!route)
     return new Response("Not Found", {
       status: 404,
       statusText: "Not Found",
     });
-  }
 
+  const routeDef = route._def;
   const headers = Object.fromEntries(req.headers);
 
   const middlewareRequest: MiddlewareRequest = {

@@ -13,9 +13,9 @@ import {
   useValidate,
 } from "@dredge/route";
 import parseUrl from "parseurl";
-import { joinDuplicateHeaders } from "../utils/headers";
-import { trimSlashes } from "../utils/path";
-import { searchParamsToObject } from "../utils/search-params";
+import { joinDuplicateHeaders } from "./utils/headers";
+import { trimSlashes } from "./utils/path";
+import { searchParamsToObject } from "./utils/search-params";
 
 type BodyParserFunction = (options: {
   readonly body: Readable | null;
@@ -73,6 +73,13 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     const pathArray = path.split("/");
 
     const route = router.find(req.method || "get", pathArray);
+    if (!route) {
+      res.statusCode = 404;
+      res.statusMessage = "Not Found";
+      res.end();
+      return;
+    }
+
     const routeDef = route._def;
 
     if (!route) {
@@ -95,8 +102,8 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     };
 
     const contentTypeInfo = extractContentTypeHeader(headers["content-type"]);
-    if (contentTypeInfo?.mediaType) {
-      const bodyParser = bodyParsers.get(contentTypeInfo.mediaType);
+    if (contentTypeInfo?.["mediaType"]) {
+      const bodyParser = bodyParsers.get(contentTypeInfo["mediaType"]);
       if (bodyParser) {
         const data = await bodyParser({
           body: req,
