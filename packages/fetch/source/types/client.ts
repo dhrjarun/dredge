@@ -2,8 +2,8 @@ import type { DredgeClient } from "@dredge/types";
 import { DefaultFetchOptions, FetchOptions } from "./options";
 import { FetchResponse, FetchResponsePromise } from "./response";
 
-export type DredgeFetchClient<Routes> = DredgeClient<
-  Routes,
+export type DredgeFetchClient<Router> = DredgeClient<
+  Router,
   DefaultFetchOptions,
   FetchOptions,
   FetchResponse

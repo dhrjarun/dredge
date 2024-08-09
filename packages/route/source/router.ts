@@ -1,4 +1,4 @@
-import { AnyRoute } from "@dredge/types";
+import { AnyRoute, DredgeRouter, OverwriteRoutes } from "@dredge/types";
 
 export class RoutePath {
   name: string;
@@ -81,60 +81,111 @@ export class RoutePath {
   }
 }
 
-export interface DredgeRouter {
-  _def: {
-    root: RoutePath;
-  };
+class DredgeRouterClass<Routes extends AnyRoute[] = []>
+  implements DredgeRouter
+{
+  // readonly routes: Routes;
 
-  find(method: string, path: string[]): AnyRoute;
-}
-
-export function dredgeRouter<const Routes extends AnyRoute[]>(
-  routes: Routes,
-): DredgeRouter {
-  const root = new RoutePath({
+  root: RoutePath = new RoutePath({
     name: "$root",
   });
 
-  routes.forEach((route) => {
-    const def = route._def;
-    const paths = def.paths as string[];
+  find(method: string, routePathArray: string[]) {
+    let current = this.root;
 
-    let current = root;
-    paths.forEach((name) => {
-      if (!current.hasChild(name)) {
-        current.addChild(name);
+    for (const item of routePathArray) {
+      const child = current.getStaticChild(item) || current.getDynamicChild();
+
+      if (!child) {
+        return null;
       }
-      current = current.getChild(name)!;
-    });
 
-    current.setRoute(route);
-  });
+      current = child;
+    }
 
-  return {
-    _def: {
-      root,
-    },
+    const route = current.getRoute(method);
+    if (!route) {
+      return null;
+    }
 
-    find: (method: string, routePathArray: string[]) => {
-      let current = root;
+    return route;
+  }
 
-      routePathArray.forEach((item) => {
-        const child = current.getStaticChild(item) || current.getDynamicChild();
+  constructor(routes: (AnyRoute | DredgeRouterClass)[]) {
+    routes.forEach((route) => {
+      if (route instanceof DredgeRouterClass) {
+        route.root.children.forEach((child, name) => {
+          this.root.children.set(name, child);
+        });
 
-        if (!child) {
-          throw "not-found";
+        return;
+      }
+
+      const def = route._def;
+      const paths = def.paths as string[];
+
+      let current = this.root;
+      paths.forEach((name) => {
+        if (!current.hasChild(name)) {
+          current.addChild(name);
         }
-
-        current = child;
+        current = current.getChild(name)!;
       });
 
-      const route = current.getRoute(method);
-      if (!route) {
-        throw "not-found";
-      }
+      current.setRoute(route);
+    });
+  }
+}
 
-      return route;
-    },
-  } as DredgeRouter;
+export function dredgeRouter<const T extends (AnyRoute | DredgeRouter)[]>(
+  routes: T,
+): DredgeRouter<OverwriteRoutes<T>> {
+  // const root = new RoutePath({
+  //   name: "$root",
+  // });
+
+  const router = new DredgeRouterClass(routes as any);
+
+  // routes.forEach((route) => {
+  //   const def = route._def;
+  //   const paths = def.paths as string[];
+
+  //   let current = root;
+  //   paths.forEach((name) => {
+  //     if (!current.hasChild(name)) {
+  //       current.addChild(name);
+  //     }
+  //     current = current.getChild(name)!;
+  //   });
+
+  //   current.setRoute(route);
+  // });
+
+  return router;
+  // return {
+  //   _def: {
+  //     root,
+  //   },
+
+  //   find: (method: string, routePathArray: string[]) => {
+  //     let current = root;
+
+  //     routePathArray.forEach((item) => {
+  //       const child = current.getStaticChild(item) || current.getDynamicChild();
+
+  //       if (!child) {
+  //         throw "not-found";
+  //       }
+
+  //       current = child;
+  //     });
+
+  //     const route = current.getRoute(method);
+  //     if (!route) {
+  //       throw "not-found";
+  //     }
+
+  //     return route;
+  //   },
+  // };
 }

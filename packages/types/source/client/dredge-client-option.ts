@@ -33,27 +33,6 @@ export interface DredgeClientOptions {
   };
 }
 
-type OptionIncludeDataSerializerFn = {
-  dataSerializers?: {
-    fn: any;
-  }[];
-};
-type OptionIncludeBodyParserFn = {
-  bodyParsers?: {
-    fn: any;
-  }[];
-};
-
-// type xx = {
-//   bodyParsers?: {
-//     fn: any;
-//   }[];
-// };
-
-// type xxxx = MarkRequired<xx, "bodyParsers"> extends OptionIncludeBodyParserFn
-//   ? true
-//   : false;
-
 export type inferDredgeClientOption<
   R,
   Options = DredgeClientOptions,

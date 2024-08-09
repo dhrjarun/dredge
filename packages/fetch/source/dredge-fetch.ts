@@ -10,13 +10,13 @@ import {
 import { mergeHeaders } from "./utils/headers";
 import { trimSlashes } from "./utils/path";
 
-export function dredgeFetchClient<const Routes>(): DredgeFetchClient<Routes> {
-  const client = createDredgeFetchClient({}) as any;
+export function dredgeFetch<const Routes>(): DredgeFetchClient<Routes> {
+  const client = createDredgeFetch() as any;
   return client;
 }
 
-export function createDredgeFetchClient(
-  defaultOptions: DefaultFetchOptions,
+export function createDredgeFetch(
+  defaultOptions: DefaultFetchOptions = {},
 ): AnyDredgeFetchClient {
   const client: any = (path: string, options: FetchOptions = {}) => {
     const _options = {
@@ -49,7 +49,7 @@ export function createDredgeFetchClient(
       let body: any = null;
 
       const dataSerializerInfo = {
-        data: response.data,
+        data: _options.data,
         mediaType: undefined as string | undefined,
         charset: undefined as string | undefined,
         boundary: undefined as string | undefined,
@@ -130,7 +130,17 @@ export function createDredgeFetchClient(
           : undefined;
         let data: any = undefined;
         if (bodyParser) {
-          data = await bodyParser(bodyParserInfo as any);
+          data = await bodyParser({
+            mediaType: bodyParserInfo.mediaType,
+            boundary: bodyParserInfo.boundary,
+            charset: bodyParserInfo.charset,
+
+            body: response.body,
+            text: response.text.bind(response),
+            arrayBuffer: response.arrayBuffer.bind(response),
+            blob: response.blob.bind(response),
+            formData: response.formData.bind(response),
+          } as any);
         }
         // let data = await parseBody(response);
 
@@ -218,7 +228,9 @@ export function createDredgeFetchClient(
         }
 
         return createDredgeResponse(response);
-      } catch (err) {}
+      } catch (err) {
+        throw err;
+      }
     }
 
     const responsePromise = fn();
@@ -239,7 +251,7 @@ export function createDredgeFetchClient(
   });
 
   client.extends = (extendOptions: DefaultFetchOptions) => {
-    return createDredgeFetchClient(
+    return createDredgeFetch(
       mergeDefaultOptions(defaultOptions, extendOptions),
     );
   };
@@ -321,8 +333,8 @@ function mergeDefaultOptions(
     ctx: options.ctx ?? defaultOptions.ctx ?? {},
     headers: mergeHeaders(defaultOptions.headers, options.headers),
     prefixUrl: options.prefixUrl
-      ? String(options.prefixUrl)
-      : String(defaultOptions.prefixUrl),
+      ? String(options.prefixUrl || "")
+      : String(defaultOptions.prefixUrl || ""),
     dataType: options.dataType ?? defaultOptions.dataType,
     responseDataType:
       options.responseDataType ?? defaultOptions.responseDataType,

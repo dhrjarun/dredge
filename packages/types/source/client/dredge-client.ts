@@ -6,6 +6,7 @@ import {
   inferRouteMethod,
   inferRoutePath,
 } from "../route";
+import { DredgeRouter } from "../router";
 import { DistributiveOmit, RequiredKeys, Simplify } from "../utils";
 import {
   DefaultDredgeClientOptions,
@@ -63,8 +64,8 @@ type DredgeClientShortcutMethod<
   ): inferDredgeResponsePromise<R, Response>;
 };
 
-export type DredgeClient<Routes, DefaultOptions, Options, Response> =
-  Routes extends AnyRoute[]
+export type DredgeClient<Router, DefaultOptions, Options, Response> =
+  Router extends DredgeRouter<infer Routes extends AnyRoute[]>
     ? {
         <
           P extends inferRoutePath<Routes[number]>,
@@ -85,12 +86,12 @@ export type DredgeClient<Routes, DefaultOptions, Options, Response> =
             Routes,
             DefaultOptions
           >,
-        ): DredgeClient<Routes, DefaultOptions, Options, Response>;
+        ): DredgeClient<Router, DefaultOptions, Options, Response>;
       } & Pick<
         MethodClient<Routes, Options, Response>,
         inferRouteMethod<Routes[number]>
       >
-    : "Routes should be of valid Type";
+    : "Router should be of valid Type";
 
 interface MethodClient<Routes extends AnyRoute[], Options, Response> {
   get: DredgeClientShortcutMethod<Routes, "get", Options, Response>;

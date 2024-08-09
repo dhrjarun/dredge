@@ -11,7 +11,7 @@ import {
   inferRouteDataTypes,
   inferSearchParamsType,
 } from "@dredge/route";
-import { IsNever, Merge, RequiredKeys } from "ts-essentials";
+import { IsNever, MarkRequired, Merge, RequiredKeys } from "ts-essentials";
 
 interface DataTransformer {
   forRequest?: (data: any) => any;
@@ -33,6 +33,27 @@ export interface DredgeClientOptions {
     [dataType: string]: DataTransformer;
   };
 }
+
+type OptionIncludeDataSerializerFn = {
+  dataSerializers?: {
+    fn: any;
+  }[];
+};
+type OptionIncludeBodyParserFn = {
+  bodyParsers?: {
+    fn: any;
+  }[];
+};
+
+// type xx = {
+//   bodyParsers?: {
+//     fn: any;
+//   }[];
+// };
+
+// type xxxx = MarkRequired<xx, "bodyParsers"> extends OptionIncludeBodyParserFn
+//   ? true
+//   : false;
 
 export type inferDredgeClientOption<
   R,
@@ -61,6 +82,20 @@ export type inferDredgeClientOption<
         dataTransformer?: {
           [key in keyof RouteOptions["dataTypes"]]?: DataTransformer;
         };
+        // dataSerializers?: {
+        //   mediaType?: string;
+        //   dataType?: keyof RouteOptions["dataTypes"];
+        //   fn: Options extends OptionIncludeDataSerializerFn
+        //     ? NonNullable<Options["dataSerializers"]>[number]["fn"]
+        //     : Function;
+        // }[];
+        // bodyParser?: {
+        //   mediaType?: string;
+        //   dataType?: keyof RouteOptions["dataTypes"];
+        //   fn: Options extends OptionIncludeBodyParserFn
+        //     ? NonNullable<Options["bodyParsers"]>[number]["fn"]
+        //     : Function;
+        // }[];
       } & ("serverCtx" extends keyof Options
         ? { serverCtx?: RouteOptions["modifiedInitialContext"] }
         : {}) &

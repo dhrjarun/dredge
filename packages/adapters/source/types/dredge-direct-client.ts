@@ -1,13 +1,19 @@
-import { MarkRequired } from "ts-essentials";
-import { DredgeClient } from "./dredge-client";
+// import {
+//   DefaultDredgeClientOptions,
+//   DredgeClientOptions,
+// } from "./dredge-client-option";
+// import {
+//   DredgeClientResponse,
+//   DredgeResponsePromise,
+// } from "./dredge-client-response";
 import {
   DefaultDredgeClientOptions,
+  DredgeClient,
   DredgeClientOptions,
-} from "./dredge-client-option";
-import {
   DredgeClientResponse,
   DredgeResponsePromise,
-} from "./dredge-client-response";
+} from "@dredge/route";
+import { MarkRequired } from "ts-essentials";
 
 export type DirectClientOptions = DredgeClientOptions & {
   serverCtx?: Record<string, any>;
@@ -37,8 +43,8 @@ export type DirectClientResponse<T = any> = DredgeClientResponse<T> & {
 export type DirectClientResponsePromise<DataTypes, Data> =
   DredgeResponsePromise<DataTypes, Data>;
 
-export type DirectClient<Routes> = DredgeClient<
-  Routes,
+export type DirectClient<Router> = DredgeClient<
+  Router,
   DefaultDirectClientOptions,
   DirectClientOptions,
   DirectClientResponse
