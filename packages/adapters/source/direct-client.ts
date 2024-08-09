@@ -1,7 +1,12 @@
-import { AnyRoute } from "@dredge/route";
-import { IsNever } from "ts-essentials";
+import {
+  DredgeRouter,
+  MiddlewareRequest,
+  getDataType,
+  useErrorMiddlewares,
+  useSuccessMiddlewares,
+  useValidate,
+} from "@dredge/route";
 import { HTTPError } from "./HTTPError";
-import { dredgeRouter } from "./router";
 import {
   DredgeClientOptions,
   inferRouteArrayContext,
@@ -17,22 +22,18 @@ import {
 import { mergeHeaders } from "./utils/headers";
 import { trimSlashes } from "./utils/path";
 
-export function directClient<const Routes extends AnyRoute[]>(
-  routes: Routes,
-): IsNever<inferRouteArrayContext<Routes>> extends false
-  ? DirectClient<Routes>
-  : "Routes's Context do not match" {
-  const client = createDirectClient(routes, {}) as any;
+export function directClient<Router extends DredgeRouter>(
+  router: Router,
+): DirectClient<Router> {
+  const client = createDirectClient(router, {}) as any;
 
   return client;
 }
 
 export function createDirectClient(
-  routes: AnyRoute[],
+  router: DredgeRouter,
   defaultOptions: DefaultDirectClientOptions = {},
 ): AnyDirectClient {
-  const router = dredgeRouter(routes);
-
   const client: any = (path: string, options: DirectClientOptions = {}) => {
     const _options = {
       ...options,
@@ -47,6 +48,12 @@ export function createDirectClient(
 
         delete _options[item as keyof DredgeClientOptions];
       }
+    }
+
+    const pathArray = trimSlashes(_options.path).split("/");
+    const route = router.find(_options.method, pathArray)!;
+    if (!route) {
+      throw "not-found";
     }
 
     async function fn() {
@@ -68,33 +75,74 @@ export function createDirectClient(
         _options.headers["accept"] = acceptHeader;
       }
 
-      const result = (await router.call(_options.path, {
-        ctx: _options.serverCtx,
-        data: _options.data,
+      const url = _options.prefixUrl
+        ? new URL(_options.path, _options.prefixUrl).href
+        : _options.path;
+
+      const middlewareRequest: MiddlewareRequest = {
+        url,
         method: _options.method,
         headers: _options.headers,
-        searchParams: _options.searchParams,
-        prefixUrl: _options.prefixUrl,
-        transformData: false,
-      })) as DirectClientResponse;
-
-      const data = result.data;
-      result.data = () => {
-        return Promise.resolve(data);
+        params: _options.params || {},
+        searchParams: _options.searchParams || {},
+        data: _options.data,
+        dataType: _options.dataType,
       };
 
-      const { status = 200 } = result;
-      // https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
-      if (status >= 200 && status <= 299) {
-        result.ok = true;
-      } else {
-        result.ok = false;
-      }
-      if (result.ok === false) {
-        throw new HTTPError(result, _options);
+      let result: any = null;
+      try {
+        const validatedRequest = await useValidate(route)(middlewareRequest);
+        const middlewareResponse = await useSuccessMiddlewares(route)(
+          validatedRequest,
+          {
+            headers: {},
+            // dataType: getDataType(route._def.dataTypes)(
+            //   validatedRequest.headers["accept"],
+            // ),
+            ctx: _options.serverCtx,
+          },
+        );
+
+        result = middlewareResponse;
+      } catch (error) {
+        const middlewareResponse = await useErrorMiddlewares(route)(
+          error,
+          middlewareRequest,
+          {
+            headers: {},
+            // dataType: getDataType(route._def.dataTypes)(
+            //   middlewareRequest.headers["accept"],
+            // ),
+            ctx: _options.serverCtx,
+          },
+        );
+
+        result = middlewareResponse;
       }
 
-      return result;
+      const data = result.data;
+      const response: DirectClientResponse = {
+        status: result.status,
+        statusText: result.statusText,
+        headers: result.headers,
+        data: () => {
+          return Promise.resolve(data);
+        },
+        ok: false,
+      };
+
+      const { status = 200 } = response;
+      // https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
+      if (status >= 200 && status <= 299) {
+        response.ok = true;
+      } else {
+        response.ok = false;
+      }
+      if (response.ok === false) {
+        throw new HTTPError(response, _options);
+      }
+
+      return response;
     }
 
     const responsePromise = fn();
@@ -130,7 +178,7 @@ export function createDirectClient(
 
   client.extends = (extendOptions: DefaultDirectClientOptions) => {
     return createDirectClient(
-      routes,
+      router,
       mergeDefaultOptions(defaultOptions, extendOptions),
     );
   };
