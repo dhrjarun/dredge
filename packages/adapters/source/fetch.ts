@@ -1,7 +1,7 @@
+import { MimeStore, searchParamsToObject, trimSlashes } from "@dredge/common";
 import {
   AnyRoute,
   MiddlewareRequest,
-  MimeStore,
   dredgeRouter,
   extractContentTypeHeader,
   getDataType,
@@ -11,9 +11,8 @@ import {
   useValidate,
 } from "@dredge/route";
 import { ReadableStream } from "stream/web";
-import { trimSlashes } from "./utils/path";
-import { searchParamsToObject } from "./utils/search-params";
 
+// TODO: add bodyUsed getter
 type BodyParserFunction = (options: {
   readonly body: ReadableStream<any> | null;
   arrayBuffer: () => Promise<ArrayBuffer>;
@@ -45,8 +44,23 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   dataSerializers?: {
     [key: string]: DataSerializerFunction;
   };
-}) {
-  const { req, routes, prefixUrl, ctx } = options;
+  deserializeSearchParams?: (
+    searchParams: Record<string, string[]>,
+    schema: any,
+  ) => Record<string, any[]>;
+  deserializeParams?: (
+    params: Record<string, string>,
+    schema: any,
+  ) => Record<string, any>;
+}): Promise<Response> {
+  const {
+    req,
+    routes,
+    prefixUrl,
+    ctx,
+    deserializeParams = (p) => p,
+    deserializeSearchParams = (p) => p,
+  } = options;
 
   const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);
   const dataSerializers = new MimeStore<DataSerializerFunction>(
@@ -72,12 +86,21 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   const routeDef = route._def;
   const headers = Object.fromEntries(req.headers);
 
+  const params = getPathParams(route._def.paths)(pathArray);
+  const searchParams = searchParamsToObject(parsedUrl.searchParams);
+
+  const parsedParams = deserializeParams(params, routeDef.params);
+  const parsedSearchParams = deserializeSearchParams(
+    searchParams,
+    routeDef.searchParams,
+  );
+
   const middlewareRequest: MiddlewareRequest = {
     url: req.url,
     method: req.method,
     headers,
-    params: getPathParams(route._def.paths)(pathArray),
-    searchParams: searchParamsToObject(parsedUrl.searchParams),
+    params: parsedParams,
+    searchParams: parsedSearchParams,
     data: undefined,
     dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
   };

@@ -1,5 +1,11 @@
+import {
+  MimeStore,
+  getSimplePath,
+  mergeHeaders,
+  normalizeSearchParamObject,
+  trimSlashes,
+} from "@dredge/common";
 import { HTTPError } from "./errors/HTTPError";
-import { MimeStore } from "./mime-store";
 import { AnyDredgeFetchClient, DredgeFetchClient } from "./types/client";
 import {
   DefaultFetchOptions,
@@ -7,8 +13,6 @@ import {
   Hooks,
   NormalizedFetchOptions,
 } from "./types/options";
-import { mergeHeaders } from "./utils/headers";
-import { trimSlashes } from "./utils/path";
 
 export function dredgeFetch<const Routes>(): DredgeFetchClient<Routes> {
   const client = createDredgeFetch() as any;
@@ -19,12 +23,21 @@ export function createDredgeFetch(
   defaultOptions: DefaultFetchOptions = {},
 ): AnyDredgeFetchClient {
   const client: any = (path: string, options: FetchOptions = {}) => {
+    const serializeParams = options.serializeParams || ((p) => p);
+    const serializeSearchParams = options.serializeSearchParams || ((p) => p);
+
+    const serializedParams = serializeParams(options?.params || {});
+    const serializedSearchParams = serializeSearchParams(
+      options?.searchParams || {},
+    );
     const _options = {
       ...options,
       ...mergeDefaultOptions(defaultOptions, options),
-      path: getSimplePath(path, options?.params || {}),
-      searchParams: options.searchParams || {},
+      path: getSimplePath(path, serializedParams),
       params: options.params || {},
+      searchParams: normalizeSearchParamObject(options.searchParams || {}),
+      serializeParams,
+      serializeSearchParams,
     } as unknown as NormalizedFetchOptions;
 
     if (!_options.prefixUrl) {
@@ -44,7 +57,11 @@ export function createDredgeFetch(
     let response: any = null;
 
     async function fetchResponse() {
-      const url = createURL(_options);
+      const url = createURL({
+        prefixUrl: _options.prefixUrl,
+        path: _options.path,
+        searchParams: serializedSearchParams,
+      });
 
       let body: any = null;
 
@@ -282,7 +299,7 @@ function createURL(options: {
 
   const url = new URL(prefixUrl);
   url.pathname = trimSlashes(url.pathname) + "/" + trimSlashes(path);
-  url.search = objectToSearchParams(options.searchParams).toString();
+  url.search = objectToSearchParams(searchParams).toString();
 
   return url;
 }
@@ -361,29 +378,6 @@ function mergeDefaultOptions(
   };
 
   return newOptions;
-}
-
-function getSimplePath(path: string, params: Record<string, any>) {
-  const isParamPath = path.startsWith(":");
-
-  if (!isParamPath) return path;
-
-  let _path = trimSlashes(path.slice(1));
-
-  const pathArray = _path.split("/");
-
-  const simplePathArray = pathArray.map((item) => {
-    if (item.startsWith(":")) {
-      const param = params[item.slice(1)];
-
-      if (!param) throw "Can't find specified param";
-
-      return param;
-    }
-    return item;
-  });
-
-  return `/${simplePathArray.join("/")}`;
 }
 
 function getContentTypeHeader(options: {

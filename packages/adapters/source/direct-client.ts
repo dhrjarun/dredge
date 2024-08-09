@@ -1,4 +1,12 @@
 import {
+  getAcceptHeader,
+  getContentTypeHeader,
+  getSimplePath,
+  mergeDredgeHeaders,
+  normalizeSearchParamObject,
+  trimSlashes,
+} from "@dredge/common";
+import {
   DredgeRouter,
   MiddlewareRequest,
   getDataType,
@@ -6,11 +14,8 @@ import {
   useSuccessMiddlewares,
   useValidate,
 } from "@dredge/route";
+import { DredgeClientOptions } from "@dredge/route";
 import { HTTPError } from "./HTTPError";
-import {
-  DredgeClientOptions,
-  inferRouteArrayContext,
-} from "./types/dredge-client-option";
 import {
   AnyDirectClient,
   DefaultDirectClientOptions,
@@ -19,8 +24,6 @@ import {
   DirectClientResponse,
   NormalizedDirectClientOptions,
 } from "./types/dredge-direct-client";
-import { mergeHeaders } from "./utils/headers";
-import { trimSlashes } from "./utils/path";
 
 export function directClient<Router extends DredgeRouter>(
   router: Router,
@@ -39,6 +42,8 @@ export function createDirectClient(
       ...options,
       ...mergeDefaultOptions(defaultOptions, options),
       path: getSimplePath(path, options?.params || {}),
+      params: options?.params || {},
+      searchParams: normalizeSearchParamObject(options?.searchParams || {}),
     } as NormalizedDirectClientOptions;
 
     for (const item of Object.keys(_options.dataTypes)) {
@@ -57,10 +62,9 @@ export function createDirectClient(
     }
 
     async function fn() {
-      const contentTypeHeader = extractContentTypeHeader({
-        dataTypes: _options.dataTypes,
-        boundary: "--DredgeBoundary",
-      })(_options.dataType);
+      const contentTypeHeader = getContentTypeHeader(_options.dataTypes)(
+        _options.dataType,
+      );
       if (!_options.headers["content-type"] && !!contentTypeHeader) {
         _options.headers["content-type"] = contentTypeHeader;
       }
@@ -68,9 +72,9 @@ export function createDirectClient(
       // Delay the fetch so that body method shortcut can set the responseDataType
       await Promise.resolve();
 
-      const acceptHeader = extractAcceptHeader({
-        dataTypes: _options.dataTypes,
-      })(_options.responseDataType);
+      const acceptHeader = getAcceptHeader(_options.dataTypes)(
+        _options.responseDataType,
+      );
       if (!_options.headers["accept"] && !!acceptHeader) {
         _options.headers["accept"] = acceptHeader;
       }
@@ -83,8 +87,8 @@ export function createDirectClient(
         url,
         method: _options.method,
         headers: _options.headers,
-        params: _options.params || {},
-        searchParams: _options.searchParams || {},
+        params: _options.params,
+        searchParams: _options.searchParams,
         data: _options.data,
         dataType: _options.dataType,
       };
@@ -195,7 +199,7 @@ function mergeDefaultOptions(
     keyof DefaultDirectClientOptions
   > = {
     serverCtx: options.serverCtx ?? defaultOptions.serverCtx ?? {},
-    headers: mergeHeaders(
+    headers: mergeDredgeHeaders(
       defaultOptions?.headers ?? {},
       options?.headers ?? {},
     ),
@@ -216,70 +220,4 @@ function mergeDefaultOptions(
   }
 
   return newOptions;
-}
-
-function getSimplePath(path: string, params: Record<string, any>) {
-  const isParamPath = path.startsWith(":");
-
-  if (!isParamPath) return path;
-
-  let _path = trimSlashes(path.slice(1));
-
-  const pathArray = _path.split("/");
-
-  const simplePathArray = pathArray.map((item) => {
-    if (item.startsWith(":")) {
-      const param = params[item.slice(1)];
-
-      if (!param) throw "Can't find specified param";
-
-      return param;
-    }
-    return item;
-  });
-
-  return `/${simplePathArray.join("/")}`;
-}
-
-function extractContentTypeHeader(options: {
-  dataTypes: Record<string, string>;
-  boundary?: string;
-}) {
-  const { dataTypes, boundary } = options;
-  return (dataType?: string) => {
-    if (!dataType) return;
-    if (!(dataType in dataTypes)) return;
-
-    const mime = dataTypes[dataType]?.trim().toLowerCase();
-
-    if (!mime) return;
-    const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    if (!mimeRegex.test(mime)) return;
-
-    const [mimeType] = mime.split("/");
-
-    if (mimeType?.includes("multipart")) {
-      return boundary ? `${mime};boundary=${boundary}` : undefined;
-    }
-
-    return mime;
-  };
-}
-
-function extractAcceptHeader(options: {
-  dataTypes: Record<string, string>;
-}) {
-  const { dataTypes } = options;
-  return (dataType?: string) => {
-    if (!dataType) return;
-    if (!(dataType in dataTypes)) return;
-
-    const mime = dataTypes[dataType]?.trim().toLowerCase();
-
-    if (!mime) return;
-    const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    if (!mimeRegex.test(mime)) return;
-
-    return mime;
-  };
 }

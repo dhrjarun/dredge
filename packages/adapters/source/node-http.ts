@@ -1,9 +1,14 @@
 import type * as http from "http";
 import { Readable, Stream } from "stream";
 import {
+  MimeStore,
+  joinDuplicateHeaders,
+  searchParamsToObject,
+  trimSlashes,
+} from "@dredge/common";
+import {
   AnyRoute,
   MiddlewareRequest,
-  MimeStore,
   dredgeRouter,
   extractContentTypeHeader,
   getDataType,
@@ -13,10 +18,8 @@ import {
   useValidate,
 } from "@dredge/route";
 import parseUrl from "parseurl";
-import { joinDuplicateHeaders } from "./utils/headers";
-import { trimSlashes } from "./utils/path";
-import { searchParamsToObject } from "./utils/search-params";
 
+// TODO: add bodyUsed getter
 type BodyParserFunction = (options: {
   readonly body: Readable | null;
   text: () => Promise<string>;
@@ -45,12 +48,26 @@ export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
   dataSerializers?: {
     [key: string]: DataSerializerFunction;
   };
+  deserializeSearchParams?: (
+    searchParams: Record<string, string[]>,
+    schema: any,
+  ) => Record<string, any[]>;
+  deserializeParams?: (
+    params: Record<string, string>,
+    schema: any,
+  ) => Record<string, any>;
 }
 
 export function createNodeHttpRequestHandler<Context extends object = {}>(
   options: CreateNodeHttpRequestHandlerOptions<Context>,
 ) {
-  const { routes, ctx, prefixUrl } = options;
+  const {
+    routes,
+    ctx,
+    prefixUrl,
+    deserializeParams = (p) => p,
+    deserializeSearchParams = (p) => p,
+  } = options;
 
   const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);
   const dataSerializers = new MimeStore<DataSerializerFunction>(
@@ -91,12 +108,21 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
     const headers = joinDuplicateHeaders(req.headers || {});
 
+    const params = getPathParams(route._def.paths)(pathArray);
+    const searchParams = searchParamsToObject(url.search);
+
+    const parsedParams = deserializeParams(params, routeDef.params);
+    const parsedSearchParams = deserializeSearchParams(
+      searchParams,
+      routeDef.searchParams,
+    );
+
     const middlewareRequest: MiddlewareRequest = {
       url: url.href,
       method: req.method || "get",
       headers,
-      params: getPathParams(route._def.paths)(pathArray),
-      searchParams: searchParamsToObject(url.search),
+      params: parsedParams,
+      searchParams: parsedSearchParams,
       data: undefined,
       dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
     };
