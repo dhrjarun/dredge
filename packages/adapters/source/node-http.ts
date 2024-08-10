@@ -2,6 +2,8 @@ import type * as http from "http";
 import { Readable, Stream } from "stream";
 import {
   MimeStore,
+  deserializeParams as defaultDeserializeParams,
+  deserializeSearchParams as defaultDeserializeSearchParams,
   joinDuplicateHeaders,
   searchParamsToObject,
   trimSlashes,
@@ -50,11 +52,11 @@ export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
   };
   deserializeSearchParams?: (
     searchParams: Record<string, string[]>,
-    schema: any,
+    schema: Record<string, any>,
   ) => Record<string, any[]>;
   deserializeParams?: (
     params: Record<string, string>,
-    schema: any,
+    schema: Record<string, any>,
   ) => Record<string, any>;
 }
 
@@ -65,8 +67,8 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     routes,
     ctx,
     prefixUrl,
-    deserializeParams = (p) => p,
-    deserializeSearchParams = (p) => p,
+    deserializeParams = defaultDeserializeParams,
+    deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
 
   const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);

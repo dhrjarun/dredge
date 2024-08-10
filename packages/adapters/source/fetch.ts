@@ -1,4 +1,10 @@
-import { MimeStore, searchParamsToObject, trimSlashes } from "dredge-common";
+import {
+  MimeStore,
+  deserializeParams as defaultDeserializeParams,
+  deserializeSearchParams as defaultDeserializeSearchParams,
+  searchParamsToObject,
+  trimSlashes,
+} from "dredge-common";
 import {
   AnyRoute,
   MiddlewareRequest,
@@ -46,11 +52,11 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   };
   deserializeSearchParams?: (
     searchParams: Record<string, string[]>,
-    schema: any,
+    schema: Record<string, any>,
   ) => Record<string, any[]>;
   deserializeParams?: (
     params: Record<string, string>,
-    schema: any,
+    schema: Record<string, any>,
   ) => Record<string, any>;
 }): Promise<Response> {
   const {
@@ -58,8 +64,8 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
     routes,
     prefixUrl,
     ctx,
-    deserializeParams = (p) => p,
-    deserializeSearchParams = (p) => p,
+    deserializeParams = defaultDeserializeParams,
+    deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
 
   const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);

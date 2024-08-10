@@ -3,7 +3,6 @@ import {
   NormalizedDirectClientOptions,
 } from "./types/dredge-direct-client";
 
-// eslint-lint-disable-next-line @typescript-eslint/naming-convention
 export class HTTPError extends Error {
   public response: DirectClientResponse;
   // public request: Request;

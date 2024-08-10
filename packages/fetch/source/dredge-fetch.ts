@@ -1,5 +1,7 @@
 import {
   MimeStore,
+  serializeParams as defaultSerializeParams,
+  serializeSearchParams as defaultSerializeSearchParams,
   getSimplePath,
   mergeHeaders,
   normalizeSearchParamObject,
@@ -23,8 +25,9 @@ export function createDredgeFetch(
   defaultOptions: DefaultFetchOptions = {},
 ): AnyDredgeFetchClient {
   const client: any = (path: string, options: FetchOptions = {}) => {
-    const serializeParams = options.serializeParams || ((p) => p);
-    const serializeSearchParams = options.serializeSearchParams || ((p) => p);
+    const serializeParams = options.serializeParams || defaultSerializeParams;
+    const serializeSearchParams =
+      options.serializeSearchParams || defaultSerializeSearchParams;
 
     const serializedParams = serializeParams(options?.params || {});
     const serializedSearchParams = serializeSearchParams(
