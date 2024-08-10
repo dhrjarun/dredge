@@ -1,6 +1,5 @@
 {
   "name": "dredge",
-  "version": "1.0.0",
   "private": true,
   "description": "A rest api builder in typescript",
   "scripts": {
@@ -24,6 +23,7 @@
     "vitest": "^2.0.5"
   },
   "dependencies": {
+    "@changesets/cli": "^2.27.7",
     "zod": "^3.22.4"
   }
 }
