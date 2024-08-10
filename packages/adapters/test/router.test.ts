@@ -1,4 +1,4 @@
-import { dredgeRoute } from "@dredge/route";
+import { dredgeRoute } from "dredge-route";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { ValidationError, dredgeRouter } from "../source/router";

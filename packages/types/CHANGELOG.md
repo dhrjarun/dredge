@@ -1,4 +1,4 @@
-# @dredge/types
+# dredge-types
 
 ## 0.2.0
 

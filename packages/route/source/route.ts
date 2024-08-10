@@ -1,9 +1,9 @@
-import { MimeStore, trimSlashes } from "@dredge/common";
+import { MimeStore, trimSlashes } from "dredge-common";
 import {
   AnyUnresolvedRoute,
   RouteBuilderDef,
   UnresolvedRoute,
-} from "@dredge/types";
+} from "dredge-types";
 import { Parser } from "./parser";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {

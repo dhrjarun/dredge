@@ -5,7 +5,7 @@ import {
   objectToSearchParams,
   searchParamsToObject,
   trimSlashes,
-} from "@dredge/common";
+} from "dredge-common";
 import {
   AnyRoute,
   BodyFn,
@@ -13,7 +13,7 @@ import {
   MiddlewareResult,
   Parser,
   getParseFn,
-} from "@dredge/route";
+} from "dredge-route";
 
 export class RoutePath {
   name: string;

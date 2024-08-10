@@ -1,4 +1,4 @@
-# @dredge/route
+# dredge-route
 
 ## 0.2.0
 

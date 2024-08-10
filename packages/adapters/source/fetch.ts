@@ -1,4 +1,4 @@
-import { MimeStore, searchParamsToObject, trimSlashes } from "@dredge/common";
+import { MimeStore, searchParamsToObject, trimSlashes } from "dredge-common";
 import {
   AnyRoute,
   MiddlewareRequest,
@@ -9,7 +9,7 @@ import {
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
-} from "@dredge/route";
+} from "dredge-route";
 import { ReadableStream } from "stream/web";
 
 // TODO: add bodyUsed getter

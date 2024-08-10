@@ -4,7 +4,7 @@ import {
   DredgeClientOptions,
   DredgeClientResponse,
   DredgeResponsePromise,
-} from "@dredge/route";
+} from "dredge-route";
 import { MarkRequired } from "ts-essentials";
 
 export type DirectClientOptions = DredgeClientOptions & {

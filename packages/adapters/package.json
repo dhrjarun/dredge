@@ -1,5 +1,5 @@
 {
-  "name": "@dredge/adapters",
+  "name": "dredge-adapters",
   "version": "0.2.0",
   "description": "",
   "main": "./dist/index.cjs.js",
@@ -29,9 +29,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dredge/common": "workspace:*",
-    "@dredge/types": "workspace:*",
-    "@dredge/route": "workspace:*",
+    "dredge-common": "workspace:*",
+    "dredge-types": "workspace:*",
+    "dredge-route": "workspace:*",
     "busboy": "^1.6.0",
     "fetch-blob": "^4.0.0",
     "form-data-encoder": "^4.0.2",

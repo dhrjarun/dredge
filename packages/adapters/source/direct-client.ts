@@ -5,7 +5,7 @@ import {
   mergeDredgeHeaders,
   normalizeSearchParamObject,
   trimSlashes,
-} from "@dredge/common";
+} from "dredge-common";
 import {
   DredgeRouter,
   MiddlewareRequest,
@@ -13,8 +13,8 @@ import {
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
-} from "@dredge/route";
-import { DredgeClientOptions } from "@dredge/route";
+} from "dredge-route";
+import { DredgeClientOptions } from "dredge-route";
 import { HTTPError } from "./HTTPError";
 import {
   AnyDirectClient,

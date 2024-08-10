@@ -1,5 +1,5 @@
 {
-  "name": "@dredge/common",
+  "name": "dredge-common",
   "version": "0.2.0",
   "description": "",
   "main": "./dist/index.cjs.js",

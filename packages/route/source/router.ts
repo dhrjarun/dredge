@@ -1,4 +1,4 @@
-import { AnyRoute, DredgeRouter, OverwriteRoutes } from "@dredge/types";
+import { AnyRoute, DredgeRouter, OverwriteRoutes } from "dredge-types";
 
 export class RoutePath {
   name: string;

@@ -1,7 +1,7 @@
 import type { Readable } from "stream";
+import { MimeStore } from "dredge-common";
 import type { ReadableStream } from "stream/web";
 import { IsAny, IsNever, MarkOptional, Merge } from "ts-essentials";
-import { MimeStore } from "../mime-store";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import { HTTPMethod } from "./http";
 import { MaybePromise, Overwrite, Simplify } from "./utils";

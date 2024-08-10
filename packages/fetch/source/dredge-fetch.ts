@@ -4,7 +4,7 @@ import {
   mergeHeaders,
   normalizeSearchParamObject,
   trimSlashes,
-} from "@dredge/common";
+} from "dredge-common";
 import { HTTPError } from "./errors/HTTPError";
 import { AnyDredgeFetchClient, DredgeFetchClient } from "./types/client";
 import {

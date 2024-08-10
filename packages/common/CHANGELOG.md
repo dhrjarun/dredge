@@ -1,4 +1,4 @@
-# @dredge/common
+# dredge-common
 
 ## 0.2.0
 

@@ -1,4 +1,4 @@
-# @dredge/fetch
+# dredge-fetch
 
 ## 0.2.0
 

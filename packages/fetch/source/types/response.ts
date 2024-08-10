@@ -1,7 +1,7 @@
 import type {
   DredgeResponsePromise,
   inferDredgeResponsePromise,
-} from "@dredge/types";
+} from "dredge-types";
 
 export interface FetchResponse<T = any> extends globalThis.Response {
   data(): Promise<T>;

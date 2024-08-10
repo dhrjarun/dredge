@@ -1,9 +1,9 @@
-import { MimeStore } from "@dredge/common";
+import { MimeStore } from "dredge-common";
 import type {
   DefaultFieldInDirectClientOptions,
   DredgeClientOptions,
   MaybePromise,
-} from "@dredge/types";
+} from "dredge-types";
 import { MarkRequired } from "ts-essentials";
 import { HTTPError } from "../errors/HTTPError";
 

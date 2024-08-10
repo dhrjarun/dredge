@@ -1,5 +1,5 @@
 import http from "http";
-import { AnyRoute } from "@dredge/route";
+import { AnyRoute } from "dredge-route";
 import { createNodeHttpRequestHandler } from "./node-http";
 
 export interface CreateHTTPServerOptions<Context extends object> {

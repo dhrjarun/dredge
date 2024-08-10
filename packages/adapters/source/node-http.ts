@@ -5,7 +5,7 @@ import {
   joinDuplicateHeaders,
   searchParamsToObject,
   trimSlashes,
-} from "@dredge/common";
+} from "dredge-common";
 import {
   AnyRoute,
   MiddlewareRequest,
@@ -16,7 +16,7 @@ import {
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
-} from "@dredge/route";
+} from "dredge-route";
 import parseUrl from "parseurl";
 
 // TODO: add bodyUsed getter

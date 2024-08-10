@@ -1,4 +1,4 @@
-# @dredge/adapters
+# dredge-adapters
 
 ## 0.2.0
 
@@ -9,6 +9,6 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @dredge/common@0.2.0
-  - @dredge/route@0.2.0
-  - @dredge/types@0.2.0
+  - dredge-common@0.2.0
+  - dredge-route@0.2.0
+  - dredge-types@0.2.0

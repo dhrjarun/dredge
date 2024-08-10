@@ -1,5 +1,5 @@
 {
-  "name": "@dredge/route",
+  "name": "dredge-route",
   "version": "0.2.0",
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
@@ -28,8 +28,8 @@
   "keywords": [],
   "dependencies": {},
   "devDependencies": {
-    "@dredge/common": "workspace:*",
-    "@dredge/types": "workspace:*",
+    "dredge-common": "workspace:*",
+    "dredge-types": "workspace:*",
     "@types/node": "^20.12.4"
   }
 }

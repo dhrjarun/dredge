@@ -1,4 +1,4 @@
-import { dredgeRoute, dredgeRouter } from "@dredge/route";
+import { dredgeRoute, dredgeRouter } from "dredge-route";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { createDirectClient, directClient } from "../source/direct-client";

@@ -5,7 +5,7 @@ import {
   inferRouteDataTypes,
   inferRouteEData,
   inferRouteOData,
-} from "@dredge/types";
+} from "dredge-types";
 import { describe, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 import { dredgeRoute } from "../source/route";
