@@ -18,6 +18,8 @@ export function deserializeSearchParams(
         result[key] = value.map((v) => new Date(v));
       else result[key] = value;
     }
+
+    result[key] = value;
   }
 
   return result;
@@ -40,6 +42,8 @@ export function deserializeParams(
       else if (mySchema?.type === "date") result[key] = new Date(value);
       else result[key] = value;
     }
+
+    result[key] = value;
   }
 
   return result;

@@ -7,8 +7,8 @@ import {
 } from "dredge-common";
 import {
   AnyRoute,
+  DredgeRouter,
   MiddlewareRequest,
-  dredgeRouter,
   extractContentTypeHeader,
   getDataType,
   getPathParams,
@@ -41,7 +41,7 @@ type DataSerializerFunction = (options: {
 
 export async function handleFetchRequest<Context extends object = {}>(options: {
   req: Request;
-  routes: AnyRoute[];
+  router: DredgeRouter;
   ctx: Context;
   prefixUrl?: string;
   bodyParsers?: {
@@ -61,7 +61,7 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
 }): Promise<Response> {
   const {
     req,
-    routes,
+    router,
     prefixUrl,
     ctx,
     deserializeParams = defaultDeserializeParams,
@@ -72,8 +72,6 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   const dataSerializers = new MimeStore<DataSerializerFunction>(
     options.dataSerializers,
   );
-
-  const router = dredgeRouter(routes);
 
   const parsedUrl = new URL(req.url);
   const parsedPrefixUrl = new URL(prefixUrl || "relative://");

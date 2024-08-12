@@ -10,6 +10,7 @@ import {
 } from "dredge-common";
 import {
   AnyRoute,
+  DredgeRouter,
   MiddlewareRequest,
   dredgeRouter,
   extractContentTypeHeader,
@@ -41,7 +42,7 @@ type DataSerializerFunction = (options: {
 }) => Promise<string | Readable>;
 
 export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
-  routes: AnyRoute[];
+  router: DredgeRouter;
   ctx: Context;
   prefixUrl?: string;
   bodyParsers?: {
@@ -64,7 +65,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
   options: CreateNodeHttpRequestHandlerOptions<Context>,
 ) {
   const {
-    routes,
+    router,
     ctx,
     prefixUrl,
     deserializeParams = defaultDeserializeParams,
@@ -75,8 +76,6 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
   const dataSerializers = new MimeStore<DataSerializerFunction>(
     options.dataSerializers,
   );
-
-  const router = dredgeRouter(routes);
 
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = parseUrl(req);

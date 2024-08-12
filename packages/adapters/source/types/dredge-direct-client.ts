@@ -12,19 +12,20 @@ export type DirectClientOptions = DredgeClientOptions & {
 };
 
 //TODO: Fix after `&` types
-export type NormalizedDirectClientOptions = MarkRequired<
-  DirectClientOptions,
-  | "serverCtx"
-  | "method"
-  | "dataTypes"
-  | "params"
-  | "throwHttpErrors"
-  | "headers"
-> & {
+export interface NormalizedDirectClientOptions
+  extends MarkRequired<
+    DirectClientOptions,
+    | "serverCtx"
+    | "method"
+    | "dataTypes"
+    | "params"
+    | "throwHttpErrors"
+    | "headers"
+  > {
   path: string;
   prefixUrl?: string;
   searchParams: Record<string, any[]>;
-};
+}
 
 export type DefaultDirectClientOptions = DefaultDredgeClientOptions & {
   serverCtx?: Record<string, any>;
