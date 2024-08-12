@@ -1,5 +1,11 @@
 # dredge-adapters
 
+## 0.3.1
+
+### Patch Changes
+
+- fix dredge-adapters types issue
+
 ## 0.3.0
 
 ### Minor Changes

@@ -1,9 +1,9 @@
 import http from "http";
-import { AnyRoute } from "dredge-route";
+import { AnyRoute, DredgeRouter } from "dredge-route";
 import { createNodeHttpRequestHandler } from "./node-http";
 
 export interface CreateHTTPServerOptions<Context extends object> {
-  routes: AnyRoute[];
+  router: DredgeRouter;
   ctx: Context;
   prefixUrl: string;
 }
