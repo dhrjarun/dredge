@@ -70,6 +70,8 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
 
+  const parsedPrefixUrl = new URL(prefixUrl || "relative:///", "relative:///");
+
   const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);
   const dataSerializers = new MimeStore<DataSerializerFunction>(
     options.dataSerializers,
@@ -78,14 +80,15 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = parseUrl(req);
 
-    if (!url) {
-      throw "invalid url";
+    if (!url || !url.pathname) {
+      res.statusCode = 404;
+      res.statusMessage = "Not Found";
+      res.end();
+      return;
     }
 
-    if (!url.pathname) throw "invalid url";
-    const parsedPrefixUrl = new URL(prefixUrl || "relative:///");
-    const path = trimSlashes(url.pathname).slice(
-      trimSlashes(parsedPrefixUrl.pathname).length,
+    const path = trimSlashes(
+      url.pathname.slice(parsedPrefixUrl.pathname.length),
     );
     const pathArray = path.split("/");
 
