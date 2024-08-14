@@ -1,7 +1,14 @@
 {
   "name": "dredge-common",
   "version": "0.3.0",
-  "description": "",
+  "description": "Internal common utilities for dredge",
+  "author": "Dhiraj Arun (https://github.com/dhrjarun)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dhrjarun/dredge.git",
+    "directory": "packages/common"
+  },
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",
@@ -25,9 +32,6 @@
     "lint": "pnpm biome format ./source",
     "lint:fix": "pnpm biome format --write ./source"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "ts-essentials": "^9.4.2"
   }

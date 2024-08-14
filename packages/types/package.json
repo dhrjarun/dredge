@@ -1,7 +1,15 @@
 {
   "name": "dredge-types",
   "version": "0.2.0",
-  "description": "",
+  "description": "Types for dredge, Internal package",
+  "author": "Dhiraj Arun (https://github.com/dhrjarun)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dhrjarun/dredge.git",
+    "directory": "packages/types"
+  },
+  "keywords": ["dredge", "types"],
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",
@@ -25,9 +33,6 @@
     "lint": "pnpm biome format ./source",
     "lint:fix": "pnpm biome format --write ./source"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@types/node": "^20.12.4",
     "ts-essentials": "^9.4.2"

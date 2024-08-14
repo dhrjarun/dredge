@@ -1,6 +1,15 @@
 {
   "name": "dredge-route",
   "version": "0.2.0",
+  "description": "Build dredge Routes",
+  "author": "Dhiraj Arun (https://github.com/dhrjarun)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dhrjarun/dredge.git",
+    "directory": "packages/route"
+  },
+  "keywords": ["dredge", "route", "builder", "router"],
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",
@@ -25,7 +34,6 @@
     "lint:fix": "pnpm biome format --write ./source",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
   "dependencies": {},
   "devDependencies": {
     "dredge-common": "workspace:*",
