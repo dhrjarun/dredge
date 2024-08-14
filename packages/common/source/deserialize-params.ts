@@ -17,9 +17,9 @@ export function deserializeSearchParams(
       else if (mySchema?.type === "date")
         result[key] = value.map((v) => new Date(v));
       else result[key] = value;
+    } else {
+      result[key] = value;
     }
-
-    result[key] = value;
   }
 
   return result;
@@ -41,9 +41,9 @@ export function deserializeParams(
         result[key] = value === "true" ? true : false;
       else if (mySchema?.type === "date") result[key] = new Date(value);
       else result[key] = value;
+    } else {
+      result[key] = value;
     }
-
-    result[key] = value;
   }
 
   return result;

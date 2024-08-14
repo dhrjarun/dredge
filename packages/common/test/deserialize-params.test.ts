@@ -11,6 +11,7 @@ test("deserializeSearchParams", () => {
     b: ["true", "false"],
     c: ["2023-01-01", "2023-02-02"],
     d: ["apple"],
+    e: ["no-schema"],
   };
 
   const schema = {
@@ -27,6 +28,7 @@ test("deserializeSearchParams", () => {
     b: [true, false],
     c: [expect.any(Date), expect.any(Date)],
     d: ["apple"],
+    e: ["no-schema"],
   });
 });
 
@@ -36,6 +38,7 @@ test("deserializeParams", () => {
     b: "true",
     c: "2023-01-01",
     d: "apple",
+    e: "no-schema",
   };
 
   const schema = {
@@ -52,5 +55,6 @@ test("deserializeParams", () => {
     b: true,
     c: expect.any(Date),
     d: "apple",
+    e: "no-schema",
   });
 });
