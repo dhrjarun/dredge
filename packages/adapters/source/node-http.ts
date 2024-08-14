@@ -9,10 +9,8 @@ import {
   trimSlashes,
 } from "dredge-common";
 import {
-  AnyRoute,
   DredgeRouter,
   MiddlewareRequest,
-  dredgeRouter,
   extractContentTypeHeader,
   getDataType,
   getPathParams,
@@ -43,7 +41,7 @@ type DataSerializerFunction = (options: {
 
 export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
   router: DredgeRouter;
-  ctx: Context;
+  ctx?: Context;
   prefixUrl?: string;
   bodyParsers?: {
     [key: string]: BodyParserFunction;
@@ -66,7 +64,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 ) {
   const {
     router,
-    ctx,
+    ctx = {},
     prefixUrl,
     deserializeParams = defaultDeserializeParams,
     deserializeSearchParams = defaultDeserializeSearchParams,
@@ -79,6 +77,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = parseUrl(req);
+
     if (!url) {
       throw "invalid url";
     }
@@ -221,7 +220,9 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
       Object.entries(middlewareResponse.headers).forEach(([key, value]) => {
         res.setHeader(key, value);
       });
-      res.write(body);
+      if (body) {
+        res.write(body);
+      }
       res.end();
     } catch (error) {
       const middlewareResponse = await useErrorMiddlewares(route)(
@@ -282,7 +283,9 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
       Object.entries(middlewareResponse.headers).forEach(([key, value]) => {
         res.setHeader(key, value);
       });
-      res.write(body);
+      if (body) {
+        res.write(body);
+      }
       res.end();
     }
   };

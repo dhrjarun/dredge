@@ -6,7 +6,6 @@ import {
   trimSlashes,
 } from "dredge-common";
 import {
-  AnyRoute,
   DredgeRouter,
   MiddlewareRequest,
   extractContentTypeHeader,
@@ -42,7 +41,7 @@ type DataSerializerFunction = (options: {
 export async function handleFetchRequest<Context extends object = {}>(options: {
   req: Request;
   router: DredgeRouter;
-  ctx: Context;
+  ctx?: Context;
   prefixUrl?: string;
   bodyParsers?: {
     [key: string]: BodyParserFunction;
@@ -63,7 +62,7 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
     req,
     router,
     prefixUrl,
-    ctx,
+    ctx = {},
     deserializeParams = defaultDeserializeParams,
     deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
