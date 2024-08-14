@@ -3,3 +3,6 @@ dist
 
 .DS_Store
 .turbo
+
+
+tsconfig.vitest-temp.json
