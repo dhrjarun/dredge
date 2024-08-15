@@ -15,6 +15,7 @@ import {
   useSuccessMiddlewares,
   useValidate,
 } from "dredge-route";
+import { MaybePromise } from "dredge-types";
 import { ReadableStream } from "stream/web";
 
 // TODO: add bodyUsed getter
@@ -27,14 +28,14 @@ type BodyParserFunction = (options: {
   readonly mediaType: string;
   readonly boundary?: string;
   readonly charset?: string;
-}) => Promise<any>;
+}) => MaybePromise<any>;
 
 type DataSerializerFunction = (options: {
   readonly data: any;
   mediaType: string;
   charset?: string;
   boundary?: string;
-}) => Promise<
+}) => MaybePromise<
   string | ReadableStream<Uint8Array> | ArrayBuffer | Blob | FormData
 >;
 

@@ -18,6 +18,7 @@ import {
   useSuccessMiddlewares,
   useValidate,
 } from "dredge-route";
+import { MaybePromise } from "dredge-types";
 import parseUrl from "parseurl";
 
 // TODO: add bodyUsed getter
@@ -30,14 +31,14 @@ type BodyParserFunction = (options: {
   readonly mediaType: string;
   readonly boundary?: string;
   readonly charset?: string;
-}) => Promise<any>;
+}) => MaybePromise<any>;
 
 type DataSerializerFunction = (options: {
   readonly data: any;
   mediaType: string;
   charset?: string;
   boundary?: string;
-}) => Promise<string | Readable>;
+}) => MaybePromise<string | Readable>;
 
 export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
   router: DredgeRouter;

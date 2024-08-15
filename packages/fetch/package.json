@@ -1,6 +1,6 @@
 {
   "name": "dredge-fetch",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Fetch client for dredge",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -9,7 +9,11 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/fetch"
   },
-  "keywords": ["dredge", "fetch", "client"],
+  "keywords": [
+    "dredge",
+    "fetch",
+    "client"
+  ],
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",

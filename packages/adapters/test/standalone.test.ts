@@ -205,9 +205,113 @@ test("when res.data is undefined", async () => {
   expect(await responseI.text()).toBe("");
 });
 
-test("deserializeParams", async () => {});
+test("deserializeParams", async () => {
+  await startServer({
+    router: dredgeRouter([
+      route
+        .path("/test/:param")
+        .get()
+        .use((req, res) => {
+          return res.end({
+            status: 200,
+            json: req.param(),
+          });
+        })
+        .build(),
+    ]),
 
-test("deserializeSearchParams", async () => {});
+    deserializeParams: (params) => {
+      const newParams: Record<string, any> = {};
+      Object.entries(params).forEach(([key, value]) => {
+        if (key === "param") {
+          newParams[key] = `ds-${value}`;
+        }
+      });
+
+      return newParams;
+    },
+  });
+
+  expect(
+    await (
+      await client("/test/p", {
+        method: "GET",
+      })
+    ).json(),
+  ).toStrictEqual({
+    param: "ds-p",
+  });
+
+  expect(
+    await (
+      await client("/test/pp", {
+        method: "GET",
+      })
+    ).json(),
+  ).toStrictEqual({
+    param: "ds-pp",
+  });
+});
+
+test("deserializeSearchParams", async () => {
+  await startServer({
+    router: dredgeRouter([
+      route
+        .path("/test")
+        .searchParams({
+          a: z.string(),
+          b: z.string(),
+        })
+        .get()
+        .use((req, res) => {
+          return res.end({
+            status: 200,
+            json: {
+              single: req.searchParam(),
+              multiple: req.searchParams(),
+            },
+          });
+        })
+        .build(),
+    ]),
+
+    deserializeSearchParams: (searchParams) => {
+      const newSearchParams: Record<string, any> = {};
+      Object.entries(searchParams).forEach(([key, value]) => {
+        newSearchParams[key] = [];
+
+        value.forEach((v) => {
+          newSearchParams[key].push(`ds-${v}`);
+        });
+      });
+
+      return newSearchParams;
+    },
+  });
+
+  const text = await (
+    await client("/test?a=apple&b=ball&b=banana&a=airplane", {
+      method: "GET",
+    })
+  ).text();
+
+  expect(
+    await (
+      await client("/test?a=apple&b=ball&b=banana&a=airplane", {
+        method: "GET",
+      })
+    ).json(),
+  ).toStrictEqual({
+    single: {
+      a: "ds-apple",
+      b: "ds-ball",
+    },
+    multiple: {
+      a: ["ds-apple", "ds-airplane"],
+      b: ["ds-ball", "ds-banana"],
+    },
+  });
+});
 
 test("parseBody", async () => {
   await startServer({
@@ -225,19 +329,19 @@ test("parseBody", async () => {
     ]),
 
     bodyParsers: {
-      "application/json": async ({}) => {
+      "application/json": ({}) => {
         return "application/json";
       },
-      "multipart/*": async ({}) => {
+      "multipart/*": ({}) => {
         return "multipart/*";
       },
-      "text/*": async ({}) => {
+      "text/*": ({}) => {
         return "text/*";
       },
-      "text/plain": async ({}) => {
+      "text/plain": ({}) => {
         return "text/plain";
       },
-      "*/*": async ({}) => {
+      "*/*": ({}) => {
         return "*/*";
       },
     },
@@ -293,6 +397,7 @@ test("parseBody", async () => {
 
   expect(await any.text()).toBe("*/*");
 });
+
 test("serializeData", async () => {
   await startServer({
     router: dredgeRouter([
@@ -305,24 +410,25 @@ test("serializeData", async () => {
             headers: {
               "Content-Type": req.data || req.header("accept") || "",
             },
+            data: "",
           });
         })
         .build(),
     ]),
     dataSerializers: {
-      "application/json": async ({}) => {
+      "application/json": ({}) => {
         return "application/json";
       },
-      "multipart/*": async ({}) => {
+      "multipart/*": ({}) => {
         return "multipart/*";
       },
-      "text/*": async ({}) => {
+      "text/*": ({}) => {
         return "text/*";
       },
-      "text/plain": async ({}) => {
+      "text/plain": ({}) => {
         return "text/plain";
       },
-      "*/*": async ({}) => {
+      "*/*": ({}) => {
         return "*/*";
       },
     },
@@ -455,7 +561,6 @@ test("params default deserialization", async () => {
           });
         })
         .error((err, req, res) => {
-          console.log("error from md", err);
           return res.end({
             status: 400,
           });
@@ -607,4 +712,4 @@ test("send error response in case of failed validation", async () => {
 //   expect(await response.text()).toBe("text");
 // });
 
-test("update of mediaType and other params in dataSerializers", async () => {});
+test("update of mediaType and other params after dataSerialization", async () => {});

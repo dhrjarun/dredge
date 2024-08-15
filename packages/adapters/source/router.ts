@@ -384,7 +384,6 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             ),
             ctx,
           };
-          // let currentCtx = ctx;
 
           for (const fn of routeDef.errorMiddlewares) {
             const middlewareResult = await handleMiddleware(
@@ -403,7 +402,6 @@ export function dredgeRouter<const Routes extends AnyRoute[]>(
             }
 
             const { isEnd, ...newResponse } = middlewareResult;
-            // currentCtx = newCtx;
             response = newResponse;
 
             if (isEnd) {
@@ -827,14 +825,11 @@ export function useSuccessMiddlewares(route: AnyRoute) {
     validatedRequest: MiddlewareRequest,
     response: MiddlewareResponse,
   ) => {
-    let currentCtx = response?.ctx || {};
-
     for (const fn of routeDef.middlewares) {
       const middlewareResult = await handleMiddleware(
         fn,
         {
           isError: false,
-          ctx: currentCtx,
           request: validatedRequest,
           response,
         },
@@ -844,8 +839,7 @@ export function useSuccessMiddlewares(route: AnyRoute) {
       if (!middlewareResult) {
         continue;
       }
-      const { ctx, isEnd, ...newResponse } = middlewareResult;
-      currentCtx = ctx;
+      const { isEnd, ...newResponse } = middlewareResult;
       response = newResponse;
 
       if (isEnd) {
@@ -876,7 +870,6 @@ export function useErrorMiddlewares(route: AnyRoute) {
           error,
           request: unValidatedRequest,
           response: response,
-          ctx: currentCtx,
         },
         routeDef.dataTypes,
       );
@@ -885,8 +878,7 @@ export function useErrorMiddlewares(route: AnyRoute) {
         continue;
       }
 
-      const { ctx: newCtx, isEnd, ...newResponse } = middlewareResult;
-      currentCtx = newCtx;
+      const { isEnd, ...newResponse } = middlewareResult;
       response = newResponse;
 
       if (isEnd) {

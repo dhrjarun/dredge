@@ -1,5 +1,11 @@
 # dredge-common
 
+## 0.4.0
+
+### Minor Changes
+
+- Fix few minor issues
+
 ## 0.3.0
 
 ### Minor Changes

@@ -9,7 +9,6 @@ import {
 import {
   DredgeRouter,
   MiddlewareRequest,
-  getDataType,
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
