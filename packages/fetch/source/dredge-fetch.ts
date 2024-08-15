@@ -17,34 +17,36 @@ import {
 } from "./types/options";
 
 export function dredgeFetch<const Routes>(): DredgeFetchClient<Routes> {
-  const client = createDredgeFetch() as any;
+  const client = untypedDredgeFetch() as any;
   return client;
 }
 
-export function createDredgeFetch(
+export function untypedDredgeFetch(
   defaultOptions: DefaultFetchOptions = {},
 ): AnyDredgeFetchClient {
   const client: any = (path: string, options: FetchOptions = {}) => {
-    const serializeParams = options.serializeParams || defaultSerializeParams;
-    const serializeSearchParams =
-      options.serializeSearchParams || defaultSerializeSearchParams;
+    const extendedOptions = mergeDefaultOptions(defaultOptions, options);
 
-    const serializedParams = serializeParams(options?.params || {});
-    const serializedSearchParams = serializeSearchParams(
+    const normalizedSearchParams = normalizeSearchParamObject(
       options?.searchParams || {},
     );
+    const serializedParams = extendedOptions.serializeParams(
+      options?.params || {},
+    );
+    const serializedSearchParams = extendedOptions.serializeSearchParams(
+      normalizedSearchParams,
+    );
+
     const _options = {
       ...options,
-      ...mergeDefaultOptions(defaultOptions, options),
+      ...extendedOptions,
       path: getSimplePath(path, serializedParams),
-      params: options.params || {},
-      searchParams: normalizeSearchParamObject(options.searchParams || {}),
-      serializeParams,
-      serializeSearchParams,
+      params: options?.params || {},
+      searchParams: normalizedSearchParams,
     } as unknown as NormalizedFetchOptions;
 
     if (!_options.prefixUrl) {
-      throw "No prefix URL provided";
+      return Promise.reject("No prefix URL provided");
     }
 
     for (const item of Object.keys(_options.dataTypes)) {
@@ -103,7 +105,6 @@ export function createDredgeFetch(
 
         _options.headers.set("content-type", contentTypeHeader);
       }
-      // body = stringifyData(_options);
 
       request = new globalThis.Request(url, {
         ..._options,
@@ -162,7 +163,6 @@ export function createDredgeFetch(
             formData: response.formData.bind(response),
           } as any);
         }
-        // let data = await parseBody(response);
 
         if (!dataType) return data;
         const transformer = _options.dataTransformer?.[dataType]?.forResponse;
@@ -271,7 +271,7 @@ export function createDredgeFetch(
   });
 
   client.extends = (extendOptions: DefaultFetchOptions) => {
-    return createDredgeFetch(
+    return untypedDredgeFetch(
       mergeDefaultOptions(defaultOptions, extendOptions),
     );
   };
@@ -378,6 +378,14 @@ function mergeDefaultOptions(
       defaultOptions.bodyParsers || {},
       options.bodyParsers || {},
     ]),
+    serializeParams:
+      options.serializeParams ||
+      defaultOptions.serializeParams ||
+      defaultSerializeParams,
+    serializeSearchParams:
+      options.serializeSearchParams ||
+      defaultOptions.serializeSearchParams ||
+      defaultSerializeSearchParams,
   };
 
   return newOptions;
@@ -463,75 +471,4 @@ function getDataType(options: { dataTypes: Record<string, string> }) {
       }
     }
   };
-}
-
-function stringifyData(options: NormalizedFetchOptions) {
-  const { headers, data: _data, dataTransformer, dataType } = options;
-
-  let data = _data;
-  if (dataType) {
-    const transformer = dataTransformer?.[dataType]?.forResponse;
-    data = transformer ? transformer(data) : data;
-  }
-
-  const contentType = headers.get("content-type");
-
-  if (!contentType) return;
-
-  if (contentType.startsWith("application/json")) {
-    return JSON.stringify(data);
-  }
-
-  if (contentType.startsWith("multipart/form-data")) {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (
-        typeof value === "string" ||
-        value instanceof Blob ||
-        value instanceof File
-      ) {
-        formData.append(key, value);
-      } else {
-        throw "serialization failed";
-      }
-    });
-
-    return formData;
-  }
-
-  if (contentType.startsWith("application/x-www-form-urlencoded")) {
-    const urlSearchParam = new URLSearchParams(data);
-
-    return urlSearchParam;
-  }
-
-  return;
-}
-
-async function parseBody(response: globalThis.Response) {
-  const contentType = response.headers.get("content-type");
-
-  if (!contentType) return response.body;
-
-  if (contentType.startsWith("application/json")) {
-    return await response.json();
-  }
-
-  if (contentType.startsWith("multipart/form-data")) {
-    const formData = await response.formData();
-
-    return Object.fromEntries(formData.entries());
-  }
-
-  if (contentType.startsWith("application/x-www-form-urlencoded")) {
-    const formData = await response.formData();
-
-    return Object.fromEntries(formData.entries());
-  }
-
-  if (contentType.startsWith("text")) {
-    return await response.text();
-  }
-
-  return null;
 }

@@ -113,4 +113,6 @@ export type DefaultFetchOptions = Pick<
   | "ctx"
   | "dataSerializers"
   | "bodyParsers"
+  | "serializeParams"
+  | "serializeSearchParams"
 >;
