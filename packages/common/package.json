@@ -1,6 +1,6 @@
 {
   "name": "dredge-common",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Internal common utilities for dredge",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -9,19 +9,14 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/common"
   },
-  "main": "./dist/index.cjs.js",
-  "module": "./dist/index.esm.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.cjs.js"
-      },
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.esm.js"
-      }
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },

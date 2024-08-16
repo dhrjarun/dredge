@@ -1,5 +1,15 @@
 # dredge-adapters
 
+## 0.5.2
+
+### Patch Changes
+
+- update package.json entries
+- Updated dependencies
+  - dredge-common@0.5.2
+  - dredge-route@0.4.2
+  - dredge-types@0.4.2
+
 ## 0.5.1
 
 ### Patch Changes

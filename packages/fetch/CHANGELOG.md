@@ -1,5 +1,11 @@
 # dredge-fetch
 
+## 0.5.2
+
+### Patch Changes
+
+- update package.json entries
+
 ## 0.5.1
 
 ### Patch Changes

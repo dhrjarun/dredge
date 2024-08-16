@@ -1,6 +1,6 @@
 {
   "name": "dredge-route",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Build dredge Routes",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -15,19 +15,14 @@
     "builder",
     "router"
   ],
-  "main": "./dist/index.cjs.js",
-  "module": "./dist/index.esm.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.cjs.js"
-      },
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.esm.js"
-      }
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
