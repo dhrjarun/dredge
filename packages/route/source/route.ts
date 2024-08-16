@@ -1,5 +1,5 @@
 import { MimeStore, trimSlashes } from "dredge-common";
-import {
+import type {
   AnyUnresolvedRoute,
   RouteBuilderDef,
   UnresolvedRoute,

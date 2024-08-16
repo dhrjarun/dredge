@@ -1,6 +1,6 @@
 {
   "name": "dredge-route",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Build dredge Routes",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -35,10 +35,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "dredge-types": "workspace:*",
     "dredge-common": "workspace:*"
   },
   "devDependencies": {
-    "dredge-types": "workspace:*",
     "@types/node": "^20.12.4"
   }
 }

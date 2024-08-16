@@ -1,5 +1,4 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "es2022",
     "esModuleInterop": true,
@@ -12,6 +11,5 @@
     "noEmit": true,
     "lib": ["es2022", "dom", "dom.iterable"],
     "module": "preserve"
-  },
-  "include": ["source", "test"]
+  }
 }

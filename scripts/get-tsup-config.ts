@@ -7,9 +7,7 @@ export function getTsupConfig(opts: {
     entry: opts.entry,
     splitting: false,
     sourcemap: true,
-    dts: {
-      resolve: ["dredge-types"],
-    },
+    dts: true,
     clean: true,
     outDir: "dist",
     format: ["esm", "cjs"],

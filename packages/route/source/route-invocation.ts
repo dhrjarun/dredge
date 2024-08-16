@@ -1,5 +1,5 @@
 import { mergeDredgeHeaders } from "dredge-common";
-import { AnyRoute, MiddlewareResult, Parser } from "dredge-types";
+import type { AnyRoute, MiddlewareResult, Parser } from "dredge-types";
 import { getParseFn } from "./parser";
 
 function nextEndFunction(
