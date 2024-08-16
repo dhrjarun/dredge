@@ -1,5 +1,10 @@
 import { expectTypeOf, test } from "vitest";
-import { ExcludeRoute, ExtractRouteBy, Route } from "../source/route";
+import {
+  ExcludeRoute,
+  ExtractRouteBy,
+  HasRouteParamPath,
+  Route,
+} from "../source/route";
 import { ModifyRoutes, OverwriteRoutes } from "../source/router";
 
 test("ExtractRouteBy", () => {
@@ -124,6 +129,21 @@ test("ExcludeRoute", () => {
     any
   >;
 
+  type PostUsers = Route<
+    {
+      withDynamicPath: false;
+    },
+    any,
+    any,
+    "post",
+    ["users"],
+    {},
+    any,
+    any,
+    any,
+    any
+  >;
+
   type GetAdminRoute = Route<
     {
       withDynamicPath: false;
@@ -139,9 +159,7 @@ test("ExcludeRoute", () => {
     any
   >;
 
-  type Routes = [GetUserByIdRoute, GetAdminRoute, GetUsers];
-
-  type Mg = OverwriteRoutes<[GetUserByIdRoute, GetAdminRoute, GetUsers]>;
+  type Routes = [GetUserByIdRoute, GetAdminRoute, GetUsers, PostUsers];
 
   type ModifiedRoutes = ModifyRoutes<Routes>;
 

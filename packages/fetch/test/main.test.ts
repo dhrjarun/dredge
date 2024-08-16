@@ -91,6 +91,7 @@ const GetBirds = route
     });
   })
   .build();
+
 const GetBirdByName = route
   .path("/birds/:name")
   .get()
@@ -98,6 +99,19 @@ const GetBirdByName = route
     return res.end({
       status: 200,
       json: findBird(req.param("name")),
+    });
+  })
+  .build();
+
+const PostBird = route
+  .path("/birds")
+  .post(z.object({ name: z.string(), color: z.string() }))
+  .use((req, res) => {
+    return res.end({
+      status: 200,
+      json: {
+        created: true,
+      },
     });
   })
   .build();
@@ -153,6 +167,7 @@ const GetFreshFruits = route
 
 const router = dredgeRouter([
   GetBirds,
+  PostBird,
   GetBirdByName,
   GetEventByDate,
   GetBirdColors,
@@ -240,6 +255,27 @@ test("client /birds get", async () => {
 
   expectTypeOf(data).toEqualTypeOf<Bird[]>();
   expect(data).toEqual(birds);
+});
+
+test("client.post /birds", async () => {
+  const data = await client
+    .post("/birds", {
+      data: {
+        name: "Parrot",
+        color: "green",
+      },
+    })
+    .json();
+
+  // client.get('/birds');
+
+  expectTypeOf(data).toEqualTypeOf<{
+    created: boolean;
+  }>();
+
+  expect(data).toEqual({
+    created: true,
+  });
 });
 
 test("client.get /birds/pigeon", async () => {

@@ -1,5 +1,11 @@
 import { IsNever, Merge } from "ts-essentials";
-import { AnyRoute, ExcludeRoute, Route, inferRouteSimplePath } from "./route";
+import {
+  AnyRoute,
+  ExcludeRoute,
+  HasRouteParamPath,
+  Route,
+  inferRouteSimplePath,
+} from "./route";
 
 export interface DredgeRouter<Routes = []> {
   find(method: string, path: string[]): AnyRoute | null;
@@ -26,14 +32,16 @@ export type ModifyRoutes<
   All extends AnyRoute[] = T,
   U extends any[] = [],
 > = T extends [infer First extends AnyRoute, ...infer Rest extends AnyRoute[]]
-  ? IsNever<
-      Extract<
-        inferRouteSimplePath<ExcludeRoute<All[number], First>>,
-        inferRouteSimplePath<First>
-      >
-    > extends true
+  ? HasRouteParamPath<First> extends false
     ? ModifyRoutes<Rest, All, [...U, First]>
-    : ModifyRoutes<Rest, All, [...U, MakeDynamicRoute<First>]>
+    : IsNever<
+          Extract<
+            inferRouteSimplePath<ExcludeRoute<All[number], First>>,
+            inferRouteSimplePath<First>
+          >
+        > extends true
+      ? ModifyRoutes<Rest, All, [...U, First]>
+      : ModifyRoutes<Rest, All, [...U, MakeDynamicRoute<First>]>
   : U;
 
 type MakeDynamicRoute<T> = T extends Route<

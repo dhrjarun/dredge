@@ -1,5 +1,11 @@
 # dredge-types
 
+## 0.4.3
+
+### Patch Changes
+
+- Fix client path type issue when there are two routes with same static path but different method
+
 ## 0.4.2
 
 ### Patch Changes

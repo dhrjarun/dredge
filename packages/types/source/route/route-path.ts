@@ -125,3 +125,24 @@ export type inferRouteSignature<R> = R extends Route<
 >
   ? [Method, ...PathArray]
   : never;
+
+export type inferRoutePathArray<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  infer PathArray extends string[],
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? PathArray
+  : never;
+
+export type HasRouteParamPath<T> = IsNever<
+  Extract<inferRoutePathArray<T>[number], `:${string}`>
+> extends true
+  ? false
+  : true;

@@ -1,6 +1,6 @@
 {
   "name": "dredge-fetch",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Fetch client for dredge",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -33,15 +33,12 @@
     "lint:fix": "pnpm biome format --write ./source"
   },
   "dependencies": {
-    "axios": "^1.6.8",
-    "ky": "^1.2.3",
-    "needle": "^3.3.1"
+    "dredge-common": "workspace:*"
   },
   "devDependencies": {
     "dredge-types": "workspace:*",
-    "dredge-common": "workspace:*",
-    "dredge-route": "workspace:*",
     "dredge-adapters": "workspace:*",
+    "dredge-route": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.4",

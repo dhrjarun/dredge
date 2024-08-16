@@ -1,5 +1,11 @@
 # dredge-route
 
+## 0.4.3
+
+### Patch Changes
+
+- Fix dependecies in package.json
+
 ## 0.4.2
 
 ### Patch Changes
