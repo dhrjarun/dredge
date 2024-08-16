@@ -10,31 +10,9 @@ let client = untypedDredgeFetch().extends({
     text: "text/plain",
   },
   prefixUrl,
-
-  dataSerializers: {
-    "application/json": async ({ data }) => {
-      return JSON.stringify(data);
-    },
-    "text/plain": async ({ data }) => {
-      if (typeof data === "string") return data;
-      return "";
-    },
-  },
-  bodyParsers: {
-    "application/json": async ({ text }) => {
-      const payload = await text();
-      if (!payload) return;
-      return JSON.parse(payload);
-    },
-    "text/plain": async ({ text }) => {
-      const payload = await text();
-      if (!payload) return;
-      return payload;
-    },
-  },
 });
 
-test("JSON bodyParse and stringify", async () => {
+test("default JSON bodyParse and stringify", async () => {
   const data = {
     number: 1,
     string: "test",
@@ -49,15 +27,24 @@ test("JSON bodyParse and stringify", async () => {
   const response = await _client.post("/test", {
     dataType: "json",
     data,
-    fetch: async (input, init) => {
-      const request = new Request(input, init);
-      return new Response(await request.text(), {
-        status: 200,
-        headers: {
-          "Content-Type": request.headers.get("content-type") || "",
-        },
-      });
-    },
+    fetch: echoBody,
+  });
+
+  expect(await response.data()).toStrictEqual(data);
+});
+
+test("default text bodyParse and stringify", async () => {
+  const data = "test";
+
+  const _client = client.extends({
+    fetch: echoBody,
+  });
+
+  const response = await _client("/test", {
+    dataType: "text",
+    data,
+    method: "post",
+    fetch: echoBody,
   });
 
   expect(await response.data()).toStrictEqual(data);

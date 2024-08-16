@@ -1,5 +1,11 @@
 # dredge-fetch
 
+## 0.5.0
+
+### Minor Changes
+
+- client now has default json and text bodyParser and dataSerializer 
+
 ## 0.4.0
 
 ### Minor Changes

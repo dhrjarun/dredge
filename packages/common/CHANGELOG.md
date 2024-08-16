@@ -1,5 +1,12 @@
 # dredge-common
 
+## 0.5.0
+
+### Minor Changes
+
+- implement defaultJSONBodyParser and defaultJSONDataSerializer
+- implement defaultTextBodyParser and defaultTextDataSerializer
+
 ## 0.4.0
 
 ### Minor Changes

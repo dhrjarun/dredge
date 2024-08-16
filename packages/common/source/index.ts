@@ -7,3 +7,5 @@ export * from "./utils/content-type";
 
 export * from "./serialize-params";
 export * from "./deserialize-params";
+
+export * from "./body";

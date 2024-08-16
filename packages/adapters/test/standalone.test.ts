@@ -18,27 +18,6 @@ async function startServer(opts: CreateHTTPServerOptions<any>): Promise<{
   client: typeof client;
 }> {
   server = createHTTPServer({
-    dataSerializers: {
-      "application/json": async ({ data }) => {
-        return JSON.stringify(data);
-      },
-      "text/plain": async ({ data }) => {
-        if (typeof data === "string") return data;
-        return "";
-      },
-    },
-    bodyParsers: {
-      "application/json": async ({ text }) => {
-        const payload = await text();
-        if (!payload) return;
-        return JSON.parse(payload);
-      },
-      "text/plain": async ({ text }) => {
-        const payload = await text();
-        if (!payload) return;
-        return payload;
-      },
-    },
     ...opts,
   });
 
@@ -71,7 +50,7 @@ afterEach(() => {
   server.close();
 });
 
-test("JSON bodyParse and dataStringify", async () => {
+test("default JSON bodyParse and dataStringify", async () => {
   const { client } = await startServer({
     router: dredgeRouter([
       route
@@ -133,6 +112,61 @@ test("JSON bodyParse and dataStringify", async () => {
 
   expect(errorResponse.status).toBe(500);
   expect(await errorResponse.json()).toMatchObject(data);
+});
+
+test("default text bodyParse and dataStringify", async () => {
+  await startServer({
+    router: dredgeRouter([
+      route
+        .path("/success")
+        .post(z.string())
+        .use((req, res) => {
+          return res.end({
+            status: 200,
+            text: req.data,
+          });
+        })
+        .build(),
+
+      route
+        .path("/error")
+        .post(z.string())
+        .use((req, res) => {
+          throw "error";
+        })
+        .error((err, req, res) => {
+          return res.end({
+            status: 500,
+            text: req.data,
+          });
+        })
+        .build(),
+    ]),
+  });
+
+  const data = "test";
+
+  const successResponse = await client("success", {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain",
+    },
+    body: data,
+  });
+
+  const errorResponse = await client("error", {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+    body: data,
+  });
+
+  expect(successResponse.status).toBe(200);
+  expect(await successResponse.text()).toBe(data);
+
+  expect(errorResponse.status).toBe(500);
+  expect(await errorResponse.text()).toBe(data);
 });
 
 test("get route", async () => {
@@ -682,34 +716,45 @@ test("send error response in case of failed validation", async () => {
   ).property("status", 400);
 });
 
-// test("no content-type matches in bodyParser and dataSerializers", async () => {
-//   await startServer({
-//     router: dredgeRouter([
-//       dredgeRoute()
-//         .path("/test")
-//         .post(z.string())
-//         .use((req, res) => {
-//           return res.end({
-//             status: 200,
-//             data: "text",
-//           });
-//         })
-//         .build(),
-//     ]),
+test("if no content-type matches in bodyParser and dataSerializers, there will be no body", async () => {
+  await startServer({
+    router: dredgeRouter([
+      dredgeRoute()
+        .path("/test")
+        .post(z.any())
+        .use((req, res) => {
+          console.log("req data", req.data);
+          return res.end({
+            headers: {
+              "x-has-data": req.data ? "true" : "false",
+            },
+            status: 200,
+            data: "test",
+          });
+        })
+        .error((err, req, res) => {
+          return res.end({
+            status: 500,
+          });
+        })
+        .build(),
+    ]),
 
-//     bodyParsers: {},
-//     dataSerializers: {},
-//   });
+    bodyParsers: {},
+    dataSerializers: {},
+  });
 
-//   const response = await client("/test", {
-//     method: "POST",
-//     body: "any-body",
-//     headers: {
-//       "Content-Type": "text/plain",
-//     },
-//   });
+  const response = await client("/test", {
+    method: "POST",
+    body: "any-body",
+    headers: {
+      "Content-Type": "some/type",
+    },
+  });
 
-//   expect(await response.text()).toBe("text");
-// });
+  expect(response.status).toBe(200);
+  expect(response.headers.get("x-has-data")).toBe("false");
+  expect(await response.text()).toBe("");
+});
 
 test("update of mediaType and other params after dataSerialization", async () => {});

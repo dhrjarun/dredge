@@ -1,5 +1,19 @@
 # dredge-adapters
 
+## 0.5.0
+
+### Minor Changes
+
+- adapters now has default json and text bodyParser and dataSerializer
+
+### Patch Changes
+
+- Updated dependencies [d10e27b]
+- Updated dependencies
+  - dredge-types@0.4.0
+  - dredge-route@0.4.0
+  - dredge-common@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes

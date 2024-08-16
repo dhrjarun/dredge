@@ -68,10 +68,30 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
     deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
 
-  const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);
-  const dataSerializers = new MimeStore<DataSerializerFunction>(
-    options.dataSerializers,
-  );
+  const bodyParsers = new MimeStore<BodyParserFunction>({
+    "application/json": async ({ text }) => {
+      const payload = await text();
+      if (!payload) return;
+      return JSON.parse(payload);
+    },
+    "text/plain": async ({ text }) => {
+      const payload = await text();
+      if (!payload) return;
+      return payload;
+    },
+    ...options.bodyParsers,
+  });
+
+  const dataSerializers = new MimeStore<DataSerializerFunction>({
+    "application/json": async ({ data }) => {
+      return JSON.stringify(data);
+    },
+    "text/plain": async ({ data }) => {
+      if (typeof data === "string") return data;
+      return "";
+    },
+    ...options.dataSerializers,
+  });
 
   const parsedUrl = new URL(req.url);
   const parsedPrefixUrl = new URL(prefixUrl || "relative://");

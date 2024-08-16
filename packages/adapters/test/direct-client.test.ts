@@ -149,7 +149,7 @@ describe("client.extend", () => {
         Connection: "keep-alive",
       },
     });
-    expect(await client.post(":/test").data()).toMatchObject({
+    expect(await client.post("/test").data()).toMatchObject({
       headers: {
         "accept-language": "en",
         referer: "https://dredge.io",

@@ -1,7 +1,11 @@
 import {
   MimeStore,
+  defaultJSONBodyParser,
+  defaultJsonDataSerializer,
   serializeParams as defaultSerializeParams,
   serializeSearchParams as defaultSerializeSearchParams,
+  defaultTextBodyParser,
+  defaultTextDataSerializer,
   getSimplePath,
   mergeHeaders,
   normalizeSearchParamObject,
@@ -24,6 +28,22 @@ export function dredgeFetch<const Routes>(): DredgeFetchClient<Routes> {
 export function untypedDredgeFetch(
   defaultOptions: DefaultFetchOptions = {},
 ): AnyDredgeFetchClient {
+  defaultOptions.bodyParsers = new MimeStore([
+    {
+      "application/json": defaultJSONBodyParser,
+      "text/plain": defaultTextBodyParser,
+    },
+    defaultOptions.bodyParsers || {},
+  ]);
+
+  defaultOptions.dataSerializers = new MimeStore([
+    {
+      "application/json": defaultJsonDataSerializer,
+      "text/plain": defaultTextDataSerializer,
+    },
+    defaultOptions.dataSerializers || {},
+  ]);
+
   const client: any = (path: string, options: FetchOptions = {}) => {
     const extendedOptions = mergeDefaultOptions(defaultOptions, options);
 

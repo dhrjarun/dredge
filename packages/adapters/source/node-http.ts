@@ -4,6 +4,10 @@ import {
   MimeStore,
   deserializeParams as defaultDeserializeParams,
   deserializeSearchParams as defaultDeserializeSearchParams,
+  defaultJSONBodyParser,
+  defaultJsonDataSerializer,
+  defaultTextBodyParser,
+  defaultTextDataSerializer,
   joinDuplicateHeaders,
   searchParamsToObject,
   trimSlashes,
@@ -73,10 +77,16 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
   const parsedPrefixUrl = new URL(prefixUrl || "relative:///", "relative:///");
 
-  const bodyParsers = new MimeStore<BodyParserFunction>(options.bodyParsers);
-  const dataSerializers = new MimeStore<DataSerializerFunction>(
-    options.dataSerializers,
-  );
+  const bodyParsers = new MimeStore<BodyParserFunction>({
+    "application/json": defaultJSONBodyParser,
+    "text/plain": defaultTextBodyParser,
+    ...options.bodyParsers,
+  });
+  const dataSerializers = new MimeStore<DataSerializerFunction>({
+    "application/json": defaultJsonDataSerializer,
+    "text/plain": defaultTextDataSerializer,
+    ...options.dataSerializers,
+  });
 
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = parseUrl(req);
