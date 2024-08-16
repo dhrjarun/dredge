@@ -9,12 +9,7 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/route"
   },
-  "keywords": [
-    "dredge",
-    "route",
-    "builder",
-    "router"
-  ],
+  "keywords": ["dredge", "route", "builder", "router"],
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",
@@ -34,7 +29,7 @@
   "scripts": {
     "test": "vitest --typecheck",
     "build": "tsup",
-    "dev": "tsup --watch",
+    "dev": "tsup  --dts-resolve --watch",
     "lint": "pnpm biome format ./source",
     "lint:fix": "pnpm biome format --write ./source",
     "typecheck": "tsc --noEmit"

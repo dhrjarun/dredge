@@ -12,13 +12,14 @@
     "test": "turbo run test",
     "test:watch": "turbo run test:watch"
   },
+  "packageManager": "pnpm@9.0.5",
   "keywords": [],
   "author": "Dhiraj Arun",
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "1.7.1",
     "ts-essentials": "^9.4.2",
-    "tsup": "^8.0.2",
+    "tsup": "^8.2.4",
     "typescript": "^5.3.3",
     "vitest": "^2.0.5"
   },
