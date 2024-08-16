@@ -1,10 +1,14 @@
 import { IsNever } from "ts-essentials";
 import {
   AnyRoute,
-  ExtractRoute,
+  ExtractFirstRouteBy,
+  ExtractRouteBy,
+  ExtractSecondRouteBy,
   HTTPMethod,
+  inferRouteFirstPath,
   inferRouteMethod,
   inferRoutePath,
+  inferRouteSecondPath,
 } from "../route";
 import { DredgeRouter } from "../router";
 import { DistributiveOmit, RequiredKeys, Simplify } from "../utils";
@@ -32,8 +36,40 @@ type DredgeClientShortcutMethod<
   Response,
 > = {
   <
-    P extends inferRoutePath<ExtractRoute<Routes[number], Method>>,
-    R extends ExtractRoute<Routes[number], Method, P>,
+    P extends inferRouteFirstPath<ExtractRouteBy<Routes[number], Method, any>>,
+    R extends ExtractFirstRouteBy<Routes[number], Method, P>,
+  >(
+    ...args: IsNever<
+      RequiredKeys<
+        DistributiveOmit<
+          inferDredgeClientOption<R, Options>,
+          "method" | ParamsForOmit<P>
+        >
+      >
+    > extends true
+      ? [
+          path: P,
+          options?: Simplify<
+            DistributiveOmit<
+              _inferDredgeClientOption<R, Options>,
+              "method" | ParamsForOmit<P>
+            >
+          >,
+        ]
+      : [
+          path: IsNever<P> extends true ? string : P,
+          options: Simplify<
+            DistributiveOmit<
+              _inferDredgeClientOption<R, Options>,
+              "method" | ParamsForOmit<P>
+            >
+          >,
+        ]
+  ): inferDredgeResponsePromise<R, Response>;
+
+  <
+    P extends inferRouteSecondPath<ExtractRouteBy<Routes[number], Method, any>>,
+    R extends ExtractSecondRouteBy<Routes[number], Method, P>,
   >(
     ...args: IsNever<
       RequiredKeys<
@@ -68,9 +104,31 @@ export type DredgeClient<Router, DefaultOptions, Options, Response> =
   Router extends DredgeRouter<infer Routes extends AnyRoute[]>
     ? {
         <
-          P extends inferRoutePath<Routes[number]>,
-          M extends inferRouteMethod<ExtractRoute<Routes[number], any, P>>,
-          R extends ExtractRoute<Routes[number], M, P>,
+          P extends inferRouteFirstPath<
+            ExtractRouteBy<Routes[number], any, any>
+          >,
+          M extends inferRouteMethod<
+            ExtractFirstRouteBy<Routes[number], any, P>
+          >,
+          R extends ExtractFirstRouteBy<Routes[number], M, P>,
+        >(
+          path: P,
+          options: Simplify<
+            { method: M } & DistributiveOmit<
+              inferDredgeClientOption<R, Options>,
+              "method" | ParamsForOmit<P>
+            >
+          >,
+        ): inferDredgeResponsePromise<R, Response>;
+
+        <
+          P extends inferRouteSecondPath<
+            ExtractRouteBy<Routes[number], any, any>
+          >,
+          M extends inferRouteMethod<
+            ExtractSecondRouteBy<Routes[number], any, P>
+          >,
+          R extends ExtractSecondRouteBy<Routes[number], M, P>,
         >(
           path: P,
           options: Simplify<

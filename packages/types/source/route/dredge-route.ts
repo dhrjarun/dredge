@@ -749,6 +749,7 @@ export interface AnyRouteOptions {
   dataTypes: {
     [key: string]: string;
   };
+  withDynamicPath: boolean;
 }
 
 type inferParamsType<Params> = Simplify<{

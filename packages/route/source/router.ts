@@ -140,52 +140,7 @@ class DredgeRouterClass<Routes extends AnyRoute[] = []>
 export function dredgeRouter<const T extends (AnyRoute | DredgeRouter)[]>(
   routes: T,
 ): DredgeRouter<OverwriteRoutes<T>> {
-  // const root = new RoutePath({
-  //   name: "$root",
-  // });
-
   const router = new DredgeRouterClass(routes as any);
 
-  // routes.forEach((route) => {
-  //   const def = route._def;
-  //   const paths = def.paths as string[];
-
-  //   let current = root;
-  //   paths.forEach((name) => {
-  //     if (!current.hasChild(name)) {
-  //       current.addChild(name);
-  //     }
-  //     current = current.getChild(name)!;
-  //   });
-
-  //   current.setRoute(route);
-  // });
-
   return router;
-  // return {
-  //   _def: {
-  //     root,
-  //   },
-
-  //   find: (method: string, routePathArray: string[]) => {
-  //     let current = root;
-
-  //     routePathArray.forEach((item) => {
-  //       const child = current.getStaticChild(item) || current.getDynamicChild();
-
-  //       if (!child) {
-  //         throw "not-found";
-  //       }
-
-  //       current = child;
-  //     });
-
-  //     const route = current.getRoute(method);
-  //     if (!route) {
-  //       throw "not-found";
-  //     }
-
-  //     return route;
-  //   },
-  // };
 }
