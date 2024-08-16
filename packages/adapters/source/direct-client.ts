@@ -7,13 +7,12 @@ import {
   trimSlashes,
 } from "dredge-common";
 import {
-  DredgeRouter,
   MiddlewareRequest,
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
 } from "dredge-route";
-import { DredgeClientOptions } from "dredge-route";
+import { DredgeClientOptions, DredgeRouter } from "dredge-types";
 import { HTTPError } from "./HTTPError";
 import {
   AnyDirectClient,

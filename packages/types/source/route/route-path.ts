@@ -1,5 +1,5 @@
-import { IsNever } from "ts-essentials";
 import { Parser, inferParserType } from "../parser";
+import { IsNever } from "../utils";
 import { Route } from "./dredge-route.js";
 
 type inferParamParserType<P> = IsNever<P> extends true

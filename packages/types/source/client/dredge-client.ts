@@ -1,4 +1,3 @@
-import { IsNever } from "ts-essentials";
 import {
   AnyRoute,
   ExtractFirstRouteBy,
@@ -11,7 +10,7 @@ import {
   inferRouteSecondPath,
 } from "../route";
 import { DredgeRouter } from "../router";
-import { DistributiveOmit, RequiredKeys, Simplify } from "../utils";
+import { DistributiveOmit, IsNever, RequiredKeys, Simplify } from "../utils";
 import {
   DefaultDredgeClientOptions,
   DredgeClientOptions,

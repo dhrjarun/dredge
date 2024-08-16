@@ -1,5 +1,12 @@
 # dredge-fetch
 
+## 0.5.4
+
+### Patch Changes
+
+- Updated dependencies
+  - dredge-common@0.5.3
+
 ## 0.5.3
 
 ### Patch Changes

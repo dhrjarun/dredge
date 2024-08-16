@@ -1,4 +1,3 @@
-import { IsNever, Merge } from "ts-essentials";
 import {
   AnyRoute,
   ExcludeRoute,
@@ -6,6 +5,7 @@ import {
   Route,
   inferRouteSimplePath,
 } from "./route";
+import { IsNever, Merge } from "./utils";
 
 export interface DredgeRouter<Routes = []> {
   find(method: string, path: string[]): AnyRoute | null;

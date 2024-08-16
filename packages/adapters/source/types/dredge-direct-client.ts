@@ -4,8 +4,8 @@ import {
   DredgeClientOptions,
   DredgeClientResponse,
   DredgeResponsePromise,
-} from "dredge-route";
-import { MarkRequired } from "ts-essentials";
+  MarkRequired,
+} from "dredge-types";
 
 export type DirectClientOptions = DredgeClientOptions & {
   serverCtx?: Record<string, any>;

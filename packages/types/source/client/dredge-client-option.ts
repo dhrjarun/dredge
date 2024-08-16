@@ -1,4 +1,3 @@
-import { IsNever, MarkRequired, Merge, RequiredKeys } from "ts-essentials";
 import { Parser, inferParserType } from "../parser";
 import {
   AnyRoute,
@@ -11,6 +10,7 @@ import {
   inferRouteDataTypes,
   inferSearchParamsType,
 } from "../route";
+import { IsNever, Merge, RequiredKeys } from "../utils";
 
 interface DataTransformer {
   forRequest?: (data: any) => any;

@@ -1,9 +1,16 @@
 import type { Readable } from "stream";
 import type { ReadableStream } from "stream/web";
-import { IsAny, IsNever, MarkOptional, Merge } from "ts-essentials";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
+import {
+  IsAny,
+  IsNever,
+  MarkOptional,
+  MaybePromise,
+  Merge,
+  Overwrite,
+  Simplify,
+} from "../utils";
 import { HTTPMethod } from "./http";
-import { MaybePromise, Overwrite, Simplify } from "./utils";
 
 type MimeStore<T> = {
   get: (mediaType: string) => T;

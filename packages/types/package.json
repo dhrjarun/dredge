@@ -1,6 +1,6 @@
 {
   "name": "dredge-types",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Types for dredge, Internal package",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -26,13 +26,12 @@
   },
   "scripts": {
     "test": "vitest --typecheck",
-    "build": "tsup --dts-resolve",
-    "dev": "tsup --dts-resolve --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "lint": "pnpm biome format ./source",
     "lint:fix": "pnpm biome format --write ./source"
   },
   "devDependencies": {
-    "@types/node": "^20.12.4",
-    "ts-essentials": "^9.4.2"
+    "@types/node": "^20.12.4"
   }
 }

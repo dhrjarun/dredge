@@ -116,14 +116,6 @@ export type PickFirstDefined<TType, TPick> = undefined extends TType
     : TPick
   : TType;
 
-// ts-essentials
-
-export type MarkOptional<Type, Keys extends keyof Type> = Type extends Type
-  ? Omit<Type, Keys> & Partial<Pick<Type, Keys>>
-  : never;
-
-export type * from "ts-essentials";
-
 export type DistributiveOmit<
   T,
   K extends string | number | symbol,
@@ -136,3 +128,33 @@ export type MarkOptionalToUndefined<T> = MarkOptional<
   T,
   keyof FilterUndefined<T>
 >;
+
+// ts-essentials https://github.com/ts-essentials/ts-essentials/
+export type MarkOptional<Type, Keys extends keyof Type> = Type extends Type
+  ? Omit<Type, Keys> & Partial<Pick<Type, Keys>>
+  : never;
+
+export type OptionalKeys<Type> = Type extends unknown
+  ? {
+      [Key in keyof Type]-?: undefined extends {
+        [Key2 in keyof Type]: Key2;
+      }[Key]
+        ? Key
+        : never;
+    }[keyof Type]
+  : never;
+
+export type RequiredKeys<Type> = Type extends unknown
+  ? Exclude<keyof Type, OptionalKeys<Type>>
+  : never;
+
+// https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
+export type IsAny<Type> = 0 extends 1 & Type ? true : false;
+
+export type IsNever<Type> = [Type] extends [never] ? true : false;
+
+export type Merge<Object1, Object2> = Omit<Object1, keyof Object2> & Object2;
+
+export type MarkRequired<Type, Keys extends keyof Type> = Type extends Type
+  ? Type & Required<Pick<Type, Keys>>
+  : never;

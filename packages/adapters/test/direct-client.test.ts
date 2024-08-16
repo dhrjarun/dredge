@@ -175,88 +175,88 @@ describe("client.extend", () => {
   });
 });
 
-// test("paramPath should work", async () => {
-//   const client = directClient(
-//     dredgeRouter([
-//       route
-//         .path("/test/:PI/:PII")
-//         .get()
-//         .use((req, res) => {
-//           return res.end({
-//             data: {
-//               path: req.url,
-//             },
-//             status: 200,
-//             statusText: "ok",
-//           });
-//         })
-//         .build(),
-//     ]),
-//   );
+test("paramPath should work", async () => {
+  const client = directClient(
+    dredgeRouter([
+      route
+        .path("/test/:PI/:PII")
+        .get()
+        .use((req, res) => {
+          return res.end({
+            data: {
+              path: req.url,
+            },
+            status: 200,
+            statusText: "ok",
+          });
+        })
+        .build(),
+    ]),
+  );
 
-//   expect(
-//     await client
-//       .get(":/test/:PI/:PII", {
-//         params: {
-//           PI: "a",
-//           PII: "b",
-//         },
-//       })
-//       .data(),
-//   ).toStrictEqual({
-//     path: "/test/a/b",
-//   });
+  expect(
+    await client
+      .get(":/test/:PI/:PII", {
+        params: {
+          PI: "a",
+          PII: "b",
+        },
+      })
+      .data(),
+  ).toStrictEqual({
+    path: "/test/a/b",
+  });
 
-//   const response = await client(":/test/:PI/:PII", {
-//     method: "get",
-//     params: {
-//       PI: "a",
-//       PII: "b",
-//     },
-//   });
+  const response = await client(":/test/:PI/:PII", {
+    method: "get",
+    params: {
+      PI: "a",
+      PII: "b",
+    },
+  });
 
-//   expect(await response.data()).toStrictEqual({
-//     path: "/test/a/b",
-//   });
-// });
+  expect(await response.data()).toStrictEqual({
+    path: "/test/a/b",
+  });
+});
 
-// test("throw error if params is empty string", () => {
-//   const client = directClient(
-//     dredgeRouter([
-//       route
-//         .path("/test/:PI/:PII")
-//         .get()
-//         .use((req, res) => {
-//           return res.end({
-//             data: {
-//               path: req.url,
-//             },
-//             status: 200,
-//             statusText: "ok",
-//           });
-//         })
-//         .build(),
-//     ]),
-//   );
+test("throw error if params is empty string", () => {
+  const client = directClient(
+    dredgeRouter([
+      route
+        .path("/test/:PI/:PII")
+        .get()
+        .use((req, res) => {
+          return res.end({
+            data: {
+              path: req.url,
+            },
+            status: 200,
+            statusText: "ok",
+          });
+        })
+        .build(),
+    ]),
+  );
 
-//   expect(() => {
-//     client.get(":/test/:PI/:PII", {
-//       params: {
-//         PI: "",
-//         PII: "abc",
-//       },
-//     });
-//   }).toThrowError();
+  expect(() => {
+    client.get(":/test/:PI/:PII", {
+      params: {
+        PI: "",
+        PII: "abc",
+      },
+    });
+  }).toThrowError();
 
-//   expect(() => {
-//     client.get(":/test/:PI/:PII", {
-//       params: {
-//         PI: "",
-//         PII: "",
-//       },
-//     });
-//   }).toThrowError();
-// });
+  expect(() => {
+    client.get(":/test/:PI/:PII", {
+      params: {
+        PI: "",
+        PII: "",
+      },
+    });
+  }).toThrowError();
+});
 
 // describe("dataTypes", () => {
 //   const route = dredgeRoute().options({
@@ -382,6 +382,7 @@ describe("client.extend", () => {
 //         })
 //         .get()
 //         .use((req, res) => {
+//           console.log("status", req.param("status"));
 //           return res.end({
 //             data: null,
 //             status: req.param("status"),

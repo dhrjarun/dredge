@@ -1,6 +1,6 @@
 {
   "name": "dredge-route",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Build dredge Routes",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -29,7 +29,7 @@
   "scripts": {
     "test": "vitest --typecheck",
     "build": "tsup",
-    "dev": "tsup  --dts-resolve --watch",
+    "dev": "tsup --watch",
     "lint": "pnpm biome format ./source",
     "lint:fix": "pnpm biome format --write ./source",
     "typecheck": "tsc --noEmit"

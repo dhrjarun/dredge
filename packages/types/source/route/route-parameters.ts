@@ -1,6 +1,5 @@
-import { IsNever } from "ts-essentials";
 import { inferParserType } from "../parser";
-import { MarkOptionalToUndefined, Simplify } from "./utils";
+import { IsNever, MarkOptionalToUndefined, Simplify } from "../utils";
 
 export type inferSearchParamsType<SearchParams> = Simplify<
   MarkOptionalToUndefined<{

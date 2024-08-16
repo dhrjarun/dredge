@@ -1,6 +1,6 @@
-import { Merge } from "ts-essentials";
 import { Parser, inferParserType } from "../parser";
 import { AnyRouteOptions, Route } from "../route";
+import { Merge } from "../utils";
 
 export interface DredgeClientResponse<T = any> {
   headers: Record<string, string>;

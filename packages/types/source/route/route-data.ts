@@ -1,4 +1,3 @@
-import { RequiredKeys } from "ts-essentials";
 import { Parser, inferParserType } from "../parser";
 import { Route, UnresolvedRoute } from "./dredge-route";
 

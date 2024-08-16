@@ -106,13 +106,14 @@ importers:
         version: 6.1.0
 
   packages/route:
+    dependencies:
+      dredge-common:
+        specifier: workspace:*
+        version: link:../common
     devDependencies:
       '@types/node':
         specifier: ^20.12.4
         version: 20.12.4
-      dredge-common:
-        specifier: workspace:*
-        version: link:../common
       dredge-types:
         specifier: workspace:*
         version: link:../types
@@ -122,9 +123,6 @@ importers:
       '@types/node':
         specifier: ^20.12.4
         version: 20.12.4
-      ts-essentials:
-        specifier: ^9.4.2
-        version: 9.4.2(typescript@5.4.2)
 
 packages:
 

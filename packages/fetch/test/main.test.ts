@@ -14,12 +14,18 @@ type Fruit = {
   isFresh: boolean;
 };
 
-const route = dredgeRoute().options({
-  dataTypes: {
-    json: "application/json",
-    text: "text/plain",
-  },
-});
+const route = dredgeRoute()
+  .options({
+    dataTypes: {
+      json: "application/json",
+      text: "text/plain",
+    },
+  })
+  .error((error, req, res) => {
+    return res.end({
+      status: 400,
+    });
+  });
 
 const birds = [
   {
@@ -180,27 +186,6 @@ type RootRouter = typeof router;
 let server = createHTTPServer({
   router,
   ctx: {},
-  dataSerializers: {
-    "application/json": async ({ data }) => {
-      return JSON.stringify(data);
-    },
-    "text/plain": async ({ data }) => {
-      if (typeof data === "string") return data;
-      return "";
-    },
-  },
-  bodyParsers: {
-    "application/json": async ({ text }) => {
-      const payload = await text();
-      if (!payload) return;
-      return JSON.parse(payload);
-    },
-    "text/plain": async ({ text }) => {
-      const payload = await text();
-      if (!payload) return;
-      return payload;
-    },
-  },
 });
 
 let client = dredgeFetch<typeof router>().extends({
@@ -260,14 +245,12 @@ test("client /birds get", async () => {
 test("client.post /birds", async () => {
   const data = await client
     .post("/birds", {
-      data: {
+      json: {
         name: "Parrot",
         color: "green",
       },
     })
     .json();
-
-  // client.get('/birds');
 
   expectTypeOf(data).toEqualTypeOf<{
     created: boolean;

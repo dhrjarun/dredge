@@ -13,7 +13,6 @@ import {
   trimSlashes,
 } from "dredge-common";
 import {
-  DredgeRouter,
   MiddlewareRequest,
   extractContentTypeHeader,
   getDataType,
@@ -22,6 +21,7 @@ import {
   useSuccessMiddlewares,
   useValidate,
 } from "dredge-route";
+import type { DredgeRouter } from "dredge-types";
 import { MaybePromise } from "dredge-types";
 import parseUrl from "parseurl";
 
