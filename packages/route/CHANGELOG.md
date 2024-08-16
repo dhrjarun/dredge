@@ -1,5 +1,11 @@
 # dredge-route
 
+## 0.4.1
+
+### Patch Changes
+
+- default condition in package.json exports field should be last one
+
 ## 0.4.0
 
 ### Minor Changes

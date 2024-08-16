@@ -1,5 +1,11 @@
 # dredge-common
 
+## 0.5.1
+
+### Patch Changes
+
+- default condition in package.json exports field should be last one
+
 ## 0.5.0
 
 ### Minor Changes

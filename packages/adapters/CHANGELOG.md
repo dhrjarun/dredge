@@ -1,5 +1,15 @@
 # dredge-adapters
 
+## 0.5.1
+
+### Patch Changes
+
+- default condition in package.json exports field should be last one
+- Updated dependencies
+  - dredge-common@0.5.1
+  - dredge-route@0.4.1
+  - dredge-types@0.4.1
+
 ## 0.5.0
 
 ### Minor Changes
