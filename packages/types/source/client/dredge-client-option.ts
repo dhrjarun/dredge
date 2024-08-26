@@ -49,7 +49,7 @@ export type inferDredgeClientOption<
   any
 >
   ? Merge<
-      Options,
+      Omit<Options, "data">,
       {
         method: Method;
         dataType?: keyof RouteOptions["dataTypes"];

@@ -1,5 +1,12 @@
 # dredge-route
 
+## 0.4.6
+
+### Patch Changes
+
+- Updated dependencies
+  - dredge-types@0.4.5
+
 ## 0.4.5
 
 ### Patch Changes
