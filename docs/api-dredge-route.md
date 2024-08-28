@@ -8,7 +8,7 @@ const route = dredgeRoute();
 ```
 
 With initial context. 
-```tš
+```ts
 const route = dredgeRoute<{ db: DB }>()
 ```
 
