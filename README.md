@@ -26,7 +26,7 @@ Dredge is a typescript library for building TypeSafe rest APIs.
 
 ## Team
 
-As of now, I (Dhiraj Arun) am the only contributor to this project. You can reach me on [Twitter](https://twitter.com/dhirajarun).
+As of now, I ([Dhiraj Arun](https://github.com/dhrjarun)) am the only contributor to this project. You can contact me on [X](https://x.com/dhrjarun).
 
 
 ## Credits
