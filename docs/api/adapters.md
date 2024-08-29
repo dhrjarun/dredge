@@ -20,6 +20,9 @@ const server = createHTTPServer({
 
 ### prefixUrl  
 
+Type: `string`
+
+
 ### bodyParsers
 
 ### dataSerializers

@@ -15,14 +15,14 @@ Dredge is a typescript library for building TypeSafe rest APIs.
 ## Documentation
 
 ### Guide
-- [Quick Start](docs/quick-start.md)
+- [Quick Start](docs/guide//quick-start.md)
 ### API 
-- [dredgeRoute](docs/api-dredge-route.md)
-- [RouteRequest](docs/api-route-request.md)
-- [RouteResponse](docs/api-route-response.md)
-- [dredgeRouter](docs/api-dredge-router.md)
-- [dredgeAdapters](docs/api-adapters.md)
-- [dredgeFetch](docs/api-dredge-fetch.md)
+- [dredgeRoute](docs/api/dredge-route.md)
+- [RouteRequest](docs/api/route-request.md)
+- [RouteResponse](docs/api/route-response.md)
+- [dredgeRouter](docs/api/dredge-router.md)
+- [dredgeAdapters](docs/api/adapters.md)
+- [dredgeFetch](docs/api/dredge-fetch.md)
 
 ## Team
 
