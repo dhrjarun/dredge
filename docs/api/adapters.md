@@ -19,7 +19,6 @@ const server = createHTTPServer({
 ## Options
 
 ### prefixUrl  
-
 Type: `string`
 
 
@@ -29,4 +28,16 @@ Type: `string`
 
 ### deserializeParams
 
+```ts
+type DeserializeParamsFunction = (
+    params: Record<string, string>, schema: any
+) => Record<string, any>
+```
+
 ### deserializeSearchParams
+
+```ts
+type DeserializeSearchParamsFunction = (
+    searchParams: Record<string, string[]>, schema: any
+) => Record<string, any[]>
+```

@@ -12,13 +12,14 @@ let client = dredgeFetch<RootRouter>().extends({
 ## client(path, options)
 
 Returns: [`DredgeResponsePromise`](#dredgeresponsepromise)\
-Shortcuts:
+Methods:
 - `client.get(path, options)`
 - `client.post(path, options)`
 - `client.put(path, options)`
 - `client.patch(path, options)`
 - `client.delete(path, options)`
 - `client.head(path, options)`
+- `client.extends(defaultOptions)`
 
 ### path
 
@@ -303,5 +304,61 @@ const extended = client.extends({
 
 ## DredgeResponsePromise
 
+Methods are:
+- `data` and other dataTypes methods
+- `then`
+- `catch`
+- `finally`
+
+`client` returns `DredgeResponsePromise` which is a `Promise` that resolves to `DredgeResponse`.
+
+`DredgeResponse` is a `Response` object with a promise property `data` which resolves to parsed data according to content-type header.
+
+```ts
+type DredgeResponse = globalThis.Response & {
+    data: Promise<any>
+}
+```
+
+```ts
+const response = await client.get('/posts')
+
+const data = await response.data()
+```
+
+### dredgeResponsePromise.data()
+
+Returns: `Promise<any>`\
+alias of: `dredgeResponse.data`
+
+```ts
+const data = await client.get('/posts', {
+    responseDataType: 'json'
+}).data()
+```
+
+If you have defined [dataTypes](#datatypes), then you can call those method to get the data, as well set the `accept` header rather than using [responseDataType](#responsedatatype).
+
+```ts
+client = client.extends({
+  dataTypes: {
+        json: 'application/json',
+        form: 'multipart/form-data'
+    },
+})
+
+const data = await client.get('/posts').json() // will be sent as 'Accept: application/json' 
+const data = await client.get('/posts').form() // will be sent as 'Accept: multipart/form-data'
+```
 
 ## HTTPError
+
+```ts
+interface HTTPError extends Error {
+    name: 'HttpError';
+    
+    request: Request;
+    response: Response;
+    options: NormalizedFetchOptions;
+}
+```

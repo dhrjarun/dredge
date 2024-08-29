@@ -2,19 +2,26 @@
 
 
 ```ts
+// route.ts
 import { dredgeRoute } from 'dredge-route'
 
-const route = dredgeRoute();
+export const route = dredgeRoute();
 ```
 
 With initial context. 
 ```ts
-const route = dredgeRoute<{ db: DB }>()
+// route.ts
+import { dredgeRoute } from 'dredge-route'
+import type { DB } from './db'
+
+export const route = dredgeRoute<{ db: DB }>()
 ```
 
 ## route.path()
 
 ```ts
+import { route } from './route'
+
 route.path('/user/admin')
 route.path('/user').path('/admin') // same as above
 
@@ -25,7 +32,9 @@ route.path('/user/:id') // param
 ## route.params()
 
 ```ts
-route.params({
+import { route } from './route'
+
+route.path('/user/:id').params({
 	id: z.number()
 })
 ```
@@ -35,7 +44,9 @@ For schema, you can use [zod](https://zod.dev), [superstruct](https://docs.super
 ## route.searchParams()
 
 ```ts
-route.searchParams({
+import { route } from './route'
+
+route.path('/entries').searchParams({
 	skip: z.number(), 
 })
 ```
@@ -45,6 +56,8 @@ route.searchParams({
 Define the method of the route, if the method support body, you can pass schema for the data. Well data is the parsed body. 
 
 ```ts
+import { route } from './route'
+
 route.path('/posts').get()
 route.path('/posts/:id').delete()
 
@@ -68,6 +81,8 @@ route.path('/posts/:id').put(
 ## route.use()
 
 ```ts
+import { route } from './route'
+
 route.use((req, res) => {
 	// do something...
 })
@@ -78,6 +93,8 @@ These are the middleware which will run after the success of validation. Checkou
 ## route.error()
 
 ```ts
+import { route } from './route'
+
 route.error((error, req, res) => {
 	// do something...
 })
@@ -89,7 +106,10 @@ These are the middleware which will run after the failure of validation or if yo
 
 
 ### dataType
+
 ```ts
+import { route } from './route'
+
 route.options({
 	dataTypes: {
 		json: 'application/json',
@@ -104,7 +124,9 @@ route.options({
 As of now, you need to call `build()` to get the route object which you can then pass to `dredgeRouter()`.
 
 ```ts
-const getPostsRoute = dredgeRoute<{ db: DB }>()
+import { route } from './route'
+
+const getPostsRoute = route
     .path('/posts')
     .get()
     .use((req, res) => {

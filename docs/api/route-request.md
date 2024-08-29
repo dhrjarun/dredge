@@ -6,7 +6,7 @@ RouteRequest is an object you can access it success middleware as well error mid
 
 ```ts
 route.path('/entry').use((req, res) => {
-	const url = req.url // <BaseURL>/entry
+	const url = req.url // http://localhost:3000/entry 
 })
 ```
 
