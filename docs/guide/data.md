@@ -1,4 +1,4 @@
-## Data
+# Data
 
 Instead of request/response body, you deal with data in Dredge. You will pass data to client which will be serialized to generate body. Client response has method `data()` which parses the body and returns. 
 
@@ -92,12 +92,12 @@ type InitialContext = {
 }
 
 export const route = dredgeRoute<InitialContext>()
-    .options({
-        dataTypes: {
-            json: 'application/json', // media-type
-            text: 'text/plain',
-        }
-    })
+    .options({ // [!code ++]
+        dataTypes: { // [!code ++]
+            json: 'application/json', // media-type  // [!code ++]
+            text: 'text/plain', // [!code ++]
+        } // [!code ++]
+    }) // [!code ++]
 ```
 
 Now let's define `Post /text` route again. 
@@ -133,10 +133,10 @@ import type { RootRouter } from './root-router'
 
 export const client = dredgeFetch<RootRouter>().extends({
     prefixUrl: 'http://localhost:3000',
-    dataTypes: {
-        json: 'application/json',
-        text: 'text/plain',
-    }
+    dataTypes: { // [!code ++]
+        json: 'application/json', // [!code ++]
+        text: 'text/plain', // [!code ++]
+    } // [!code ++]
 })
 ```
 
@@ -187,13 +187,44 @@ data = await client.post('/posts', {
 
 ## Stringify
 
-Data are stringified according to `content-type` to generate body. By default, dredge provide support for the `text/plain` and `application/json` data. For route data, you can define your custom stringifier in the adapter's `dataSerializers` option.
+Data are stringified according to `content-type` to generate body. By default, dredge provide support for the `text/plain` and `application/json` data. You can define custom stringifier for both client and adapter(server).
+
+
+DataSerializers are object, where key is the `media-type/subtype` or `media-type/*` or `*/*` and value is a function which takes `options` as argument and returns body. Options contains `data`, `mediaType`, `boundary` and `charset`. You can modify `charset` and `boundary`, a new `content-type` will be created based on modified `charset` and/or `boundary`.
 
 ```ts
+// data-serializers.ts
+
+import YAML from 'yaml'
+
+export const dataSerializers = {
+    // handle specific content-type
+    'application/yaml': ({ data, mediaType, boundary, charset }) => {  
+      return YAML.stringify(data);
+    },
+
+    'text/plan': (options) => {
+        options.charset = 'utf-8'; // Changing charset
+
+        return String(options.data);
+    },
+
+    // handle all image types
+    'image/*': (options) => {}
+
+    // handle rest of all types
+    '*/*': (options) => {}
+}
+```
+
+Pass the dataSerializers to the [adapter](../api/adapters#dataserializers) and [client](../api/dredge-fetch#dataserializers). 
+```ts
 // server.ts
+
 import { createHTTPServer } from 'dredge-adapters'
 import { rootRouter } from './root-router'
 import { db } from './db'
+import { dataSerializers } from './data-serializers' // [!code ++]
 
 const server = createHTTPServer({
     prefixUrl: '/api',
@@ -201,23 +232,81 @@ const server = createHTTPServer({
     ctx: {
         db,
     },
-    dataSerializers: {
-        // handle specific content-type
-        'application/yaml': ({ data, mediaType, boundary, charset }) => {
-          
-          
-          return body;
-        },
+    dataSerializers: dataSerializers, // [!code ++]
+})
+```
 
-        // handle all image types
-        'image/*': (options) => {}
+```ts
+// client.ts
 
-        // handle rest of all types
-        '*': (options) => {}
-    }
+import { dredgeFetch } from 'dredge-fetch'
+import type { RootRouter } from './root-router'
+import { dataSerializers } from './data-serializers' // [!code ++]
+
+export const client = dredgeFetch<RootRouter>().extends({
+    prefixUrl: 'http://localhost:3000',
+    dataSerializers: dataSerializers, // [!code ++]
 })
 ```
 
 ## Parse
 
-Body as well parsed according to `content-type` to create data. 
+Define your custom bodyParsers. 
+
+BodyParsers are object, where key is the `media-type/subtype` or `media-type/*` or `*/*` and value is a function which takes `options` as argument and returns data. Options contains `body`, `mediaType`, `boundary`, `charset` and some body methods. Body methods let you transform the body eg. `text()`, `buffer()`, `formData()`, etc. Different adapters or client support different body methods. You cannot modify `charset` and `boundary` in bodyParsers.
+
+```ts
+// body-parsers.ts
+import YAML from 'yaml'
+
+export const bodyParsers = {
+    // handle specific content-type
+    'application/yaml': async (options) => {
+        return YAML.parse(await options.text());
+    }
+
+    // handle all image types
+    'image/*': (options) => {}
+
+    // handle rest of all types
+    '*/*': (options) => {}
+}
+```
+
+Pass the bodyParsers to the [adapter](../api/adapters#bodyparsers) and [client](../api/dredge-fetch#bodyparsers).
+
+```ts
+// server.ts
+
+import { createHTTPServer } from 'dredge-adapters'
+import { rootRouter } from './root-router'
+import { db } from './db'
+import { dataSerializers } from './data-serializers'
+import { bodyParsers } from './body-parsers' // [!code ++]
+
+const server = createHTTPServer({
+    prefixUrl: '/api',
+    router: rootRouter,
+    ctx: { 
+        db,
+    },
+    dataSerializers: dataSerializers,
+    bodyParsers: bodyParsers, // [!code ++]
+})
+```
+
+```ts
+// client.ts
+
+import { dredgeFetch } from 'dredge-fetch'
+import type { RootRouter } from './root-router'
+import { dataSerializers } from './data-serializers'
+import { bodyParsers } from './body-parsers' // [!code ++]
+
+export const client = dredgeFetch<RootRouter>().extends({
+    prefixUrl: 'http://localhost:3000',
+    dataSerializers: dataSerializers,
+    bodyParsers: bodyParsers, // [!code ++]
+})
+
+```

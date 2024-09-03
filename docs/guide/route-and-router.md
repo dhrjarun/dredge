@@ -1,5 +1,6 @@
 # Route & Router
 
+## Route
 Route define a particular API endpoint which is a URI (or path) and a specific HTTP request method (GET, POST, PUT, DELETE, etc.).
 
 

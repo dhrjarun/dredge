@@ -3,14 +3,40 @@
 ## Installation
 
 Install these packages on server
-```sh
+
+::: code-group
+
+```sh [npm]
 npm install dredge-route dredge-adapters
 ```
 
+```sh [yarn]
+yarn add dredge-route dredge-adapters
+```
+
+```sh [pnpm]
+pnpm add dredge-route dredge-adapters
+```
+
+:::
+
+
 Install this on client
-```sh
+
+::: code-group
+
+```sh [npm]
 npm install dredge-fetch
 ```
+
+```sh [yarn]
+yarn add dredge-fetch
+```
+
+```sh [pnpm]
+pnpm add dredge-fetch
+```
+:::
 
 ## Hello World
 
@@ -70,7 +96,7 @@ server.listen(3000)
 ```
 
 
-## 4. Create client
+### 4. Create client
 
 Import the `RootRouter` type and build the client with it, Make sure to pass the correct prefixUrl.
 ```ts

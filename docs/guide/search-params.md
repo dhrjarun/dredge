@@ -1,5 +1,6 @@
 # SearchParams
 
+## 
 ```ts
 import { route } from './route'
 

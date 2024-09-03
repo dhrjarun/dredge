@@ -2,6 +2,7 @@
 
 Context can store data, which you can access in the [middlewares](middleware.md) `res.ctx`. It is a great place to store stuff like database connection, user session, etc.
 
+## Initial Context
 When creating the route, you can define the initial context which are passed to the [route](route-and-router.md) by the adapter. Later on in the middleware, you can store new data or modify the existing data of the context.
 
 ```ts

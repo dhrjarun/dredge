@@ -25,7 +25,7 @@ Dredge is a typescript library for building TypeSafe rest APIs without code gene
 ### Guide
 - [Quick Start](docs/guide//quick-start.md)
 - [Route and Router](docs/guide/route-and-router.md)
-- [Adapter](docs/guide/adapter.md)
+- [Adapters](docs/guide/adapters.md)
 - [Validation](docs/guide/validation.md)
 - [Middleware](docs/guide/middleware.md)
 - [Context](docs/guide/context.md)

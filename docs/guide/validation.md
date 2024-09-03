@@ -25,7 +25,7 @@ route.path('/entries').searchParams({
 })
 ```
 
-# Data
+## Data
 
 ```ts
 import { route } from './route'

@@ -1,5 +1,6 @@
-## Path and Params
+# Path and Params
 
+## Path
 Every route must define path. You do that with `route.path()`. 
 
 ```ts
