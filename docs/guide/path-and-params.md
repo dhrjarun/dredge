@@ -84,7 +84,7 @@ client = client.extends({
 
 Params need to be deserialized to the correct type before giving to route, by default `deserializeParams` function uses information from params schema to deserialize the param value.  
 
-You can pass your custom deserialization function using [`deserializeParams`](../api//adapters.md/#deserializeparams) in adapter options.
+You can pass your custom deserialization function using [`deserializeParams`](../api/adapters.md#deserializeparams) in adapter options.
 
 ```ts
 import { createHTTPServer } from 'dredge-adapters'

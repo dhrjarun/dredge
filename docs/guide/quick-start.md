@@ -79,7 +79,7 @@ export const rootRouter = dredgeRouter([hwRoute]);
 export type RootRouter = typeof rootRouter;
 ```
 
-### 3. Serve the API with an [Adapter](adapter.md)  
+### 3. Serve the API with an [Adapter](adapters.md)  
 
 Pass the created router to the adapter.
 

@@ -88,7 +88,7 @@ route.use((req, res) => {
 })
 ```
 
-These are the middleware which will run after the success of validation. Checkout [RouteRequest](api-route-request.md) and [RouteResponse](api-route-response.md) for more information.
+These are the middleware which will run after the success of validation. Checkout [RouteRequest](route-request.md) and [RouteResponse](route-response.md) for more information.
 
 ## route.error()
 
@@ -100,7 +100,7 @@ route.error((error, req, res) => {
 })
 ```
 
-These are the middleware which will run after the failure of validation or if you throw error in success middleware. Checkout [RouteRequest](api-route-request.md) and [RouteResponse](api-route-response.md) for more information.
+These are the middleware which will run after the failure of validation or if you throw error in success middleware. Checkout [RouteRequest](route-request.md) and [RouteResponse](route-response.md) for more information.
 
 ## route.options()
 
