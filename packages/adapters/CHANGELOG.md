@@ -1,5 +1,11 @@
 # dredge-adapters
 
+## 0.5.8
+
+### Patch Changes
+
+- Fix url and prefix url issue of fetch adapter
+
 ## 0.5.7
 
 ### Patch Changes

@@ -113,15 +113,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
     const routeDef = route._def;
 
-    if (!route) {
-      res.statusCode = 404;
-      res.statusMessage = "Not Found";
-      res.end();
-      return;
-    }
-
     const headers = joinDuplicateHeaders(req.headers || {});
-
     const params = getPathParams(route._def.paths)(pathArray);
     const searchParams = searchParamsToObject(url.search);
 
@@ -142,8 +134,8 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     };
 
     const contentTypeInfo = extractContentTypeHeader(headers["content-type"]);
-    if (contentTypeInfo?.["mediaType"]) {
-      const bodyParser = bodyParsers.get(contentTypeInfo["mediaType"]);
+    if (contentTypeInfo?.mediaType) {
+      const bodyParser = bodyParsers.get(contentTypeInfo.mediaType);
       if (bodyParser) {
         const data = await bodyParser({
           body: req,

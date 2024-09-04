@@ -2,6 +2,10 @@ import {
   MimeStore,
   deserializeParams as defaultDeserializeParams,
   deserializeSearchParams as defaultDeserializeSearchParams,
+  defaultJSONBodyParser,
+  defaultJsonDataSerializer,
+  defaultTextBodyParser,
+  defaultTextDataSerializer,
   searchParamsToObject,
   trimSlashes,
 } from "dredge-common";
@@ -62,56 +66,42 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   const {
     req,
     router,
-    prefixUrl,
     ctx = {},
+    prefixUrl,
     deserializeParams = defaultDeserializeParams,
     deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
 
+  const parsedPrefixUrl = new URL(prefixUrl || "relative:///", "relative:///");
+
   const bodyParsers = new MimeStore<BodyParserFunction>({
-    "application/json": async ({ text }) => {
-      const payload = await text();
-      if (!payload) return;
-      return JSON.parse(payload);
-    },
-    "text/plain": async ({ text }) => {
-      const payload = await text();
-      if (!payload) return;
-      return payload;
-    },
+    "application/json": defaultJSONBodyParser,
+    "text/plain": defaultTextBodyParser,
     ...options.bodyParsers,
   });
-
   const dataSerializers = new MimeStore<DataSerializerFunction>({
-    "application/json": async ({ data }) => {
-      return JSON.stringify(data);
-    },
-    "text/plain": async ({ data }) => {
-      if (typeof data === "string") return data;
-      return "";
-    },
+    "application/json": defaultJsonDataSerializer,
+    "text/plain": defaultTextDataSerializer,
     ...options.dataSerializers,
   });
 
-  const parsedUrl = new URL(req.url);
-  const parsedPrefixUrl = new URL(prefixUrl || "relative://");
-  const path = trimSlashes(parsedUrl.pathname).slice(
-    trimSlashes(parsedPrefixUrl.pathname).length,
-  );
+  const url = new URL(req.url);
+  const path = trimSlashes(url.pathname.slice(parsedPrefixUrl.pathname.length));
   const pathArray = path.split("/");
 
-  const route = router.find(req.method, pathArray);
-  if (!route)
+  const route = router.find(req.method || "get", pathArray);
+  if (!route) {
     return new Response("Not Found", {
       status: 404,
       statusText: "Not Found",
     });
+  }
 
   const routeDef = route._def;
-  const headers = Object.fromEntries(req.headers);
 
+  const headers = Object.fromEntries(req.headers);
   const params = getPathParams(route._def.paths)(pathArray);
-  const searchParams = searchParamsToObject(parsedUrl.searchParams);
+  const searchParams = searchParamsToObject(url.search);
 
   const parsedParams = deserializeParams(params, routeDef.params);
   const parsedSearchParams = deserializeSearchParams(
@@ -120,8 +110,8 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
   );
 
   const middlewareRequest: MiddlewareRequest = {
-    url: req.url,
-    method: req.method,
+    url: url.href,
+    method: req.method || "get",
     headers,
     params: parsedParams,
     searchParams: parsedSearchParams,
