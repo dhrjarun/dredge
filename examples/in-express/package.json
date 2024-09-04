@@ -1,0 +1,19 @@
+{
+  "name": "in-express",
+  "private": true,
+  "scripts": {
+    "dev": "npx tsx watch src/server.ts",
+    "start": "npx tsx src/server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dredge-adapters": "^0.5.8",
+    "dredge-fetch": "^0.5.6",
+    "dredge-route": "^0.4.6"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21"
+  }
+}
