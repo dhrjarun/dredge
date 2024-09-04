@@ -1,0 +1,21 @@
+{
+  "name": "dredge-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "license": "MIT",
+  "author": "Dhiraj Arun (https://github.com/dhrjarun)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dhrjarun/dredge.git",
+    "directory": "web"
+  },
+  "devDependencies": {
+    "vitepress": "^1.3.4",
+    "vue": "^3.4.38"
+  }
+}

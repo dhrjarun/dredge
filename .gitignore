@@ -6,3 +6,5 @@ dist
 
 
 tsconfig.vitest-temp.json
+
+web/.vitepress/cache
