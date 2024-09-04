@@ -1,19 +1,7 @@
 import { defineConfig } from "vitepress";
 import examples from "../examples";
 
-// https://vitepress.dev/reference/site-config
-export default defineConfig({
-  title: "Dredge",
-  description: "Documentation site for Dredge",
-
-  vite: {
-    build: {
-      rollupOptions: {
-        external: ["vue/server-renderer", "vue"],
-      },
-    },
-  },
-
+const devConfig = {
   srcDir: "../",
   srcExclude: ["**/node_modules/**", "../packages", "../examples", "README.md"],
   rewrites: {
@@ -22,6 +10,22 @@ export default defineConfig({
     "web/:page": ":page",
     "web/examples/:page": "examples/:page",
   },
+};
+
+const buildConfig = {
+  srcDir: ".",
+  rewrites: {
+    "docs/guide/:page": "guide/:page",
+    "docs/api/:page": "api/:page",
+  },
+};
+
+// https://vitepress.dev/reference/site-config
+export default defineConfig({
+  title: "Dredge",
+  description: "Documentation site for Dredge",
+
+  ...(process.env.NODE_ENV === "production" ? buildConfig : devConfig),
 
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
