@@ -24,6 +24,10 @@ const buildConfig = {
 export default defineConfig({
   title: "Dredge",
   description: "Documentation site for Dredge",
+  sitemap: {
+    hostname: "https://dredge.dhrjarun.com",
+  },
+  cleanUrls: true,
 
   ...(process.env.NODE_ENV === "production" ? buildConfig : devConfig),
 
