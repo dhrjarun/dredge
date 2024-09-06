@@ -3,7 +3,7 @@
 Dredge is a typescript library for building TypeSafe rest APIs without code generation.
 
 <div align="center">
-  <video src="media/say-my-name.mp4" width="500px"></video> 
+  <video src="https://github.com/user-attachments/assets/6c93cd81-d812-47d1-bf1d-9d8bad8809c5" width="500px"></video> 
 </div>
 
 ## Features
@@ -14,6 +14,10 @@ Dredge is a typescript library for building TypeSafe rest APIs without code gene
 - Batteries Included
 - Ultrafast & Lightweight
 
+## Documentation
+
+Visit [dredge.dhrjarun.com](https://dredge.dhrjarun.com/guide/quick-start) for documentation.
+
 ## Structure
 
 | Package | Description |
@@ -23,10 +27,6 @@ Dredge is a typescript library for building TypeSafe rest APIs without code gene
 | [dredge-fetch](packages/fetch/)        | HTTP Fetch client                |
 | [dredge-types](packages/types/)        | Internal lib storing types       |
 | [dredge-common](packages/common/)      | Internal lib storing common code |
-
-## Documentation
-
-Visit [dredge.dhrjarun.com](https://dredge.dhrjarun.com) for documentation.
 
 ## Team
 
