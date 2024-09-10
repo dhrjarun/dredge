@@ -1,5 +1,11 @@
 # dredge-fetch
 
+## 0.5.7
+
+### Patch Changes
+
+- Relative prefixUrl in browser now do not throw error
+
 ## 0.5.6
 
 ### Patch Changes

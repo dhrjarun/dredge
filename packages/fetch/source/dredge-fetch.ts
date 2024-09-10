@@ -65,10 +65,6 @@ export function untypedDredgeFetch(
       searchParams: normalizedSearchParams,
     } as unknown as NormalizedFetchOptions;
 
-    if (!_options.prefixUrl) {
-      return Promise.reject("No prefix URL provided");
-    }
-
     for (const item of Object.keys(_options.dataTypes)) {
       if (item in _options) {
         _options.data = _options[item as keyof NormalizedFetchOptions];
@@ -318,11 +314,19 @@ function createURL(options: {
   path: string;
   searchParams?: Record<string, string | string[]>;
 }) {
-  const { prefixUrl, path, searchParams = {} } = options;
+  let { prefixUrl, path, searchParams = {} } = options;
 
-  const url = new URL(prefixUrl);
-  url.pathname = trimSlashes(url.pathname) + "/" + trimSlashes(path);
-  url.search = objectToSearchParams(searchParams).toString();
+  path = trimSlashes(path);
+
+  if (!prefixUrl.endsWith("/")) {
+    prefixUrl += "/";
+  }
+
+  let search = objectToSearchParams(searchParams).toString();
+  let url = prefixUrl + path;
+  if (search) {
+    url += "?" + search;
+  }
 
   return url;
 }

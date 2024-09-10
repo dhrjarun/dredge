@@ -3,30 +3,6 @@ import { untypedDredgeFetch } from "../source/dredge-fetch";
 import { echoUrl } from "./helpers/fetch-implementations";
 import { client, prefixUrl } from "./helpers/untyped-client";
 
-test("Rejects if prefixUrl is not provided", () => {
-  expect(untypedDredgeFetch().get("/test")).rejects.toThrowError(/prefix/i);
-
-  expect(
-    client
-      .extends({
-        prefixUrl: "https://a.com",
-        fetch: async () => {
-          return new Response("test");
-        },
-      })
-      .post("/test"),
-  ).resolves.toBeDefined();
-
-  expect(
-    untypedDredgeFetch().post("/test", {
-      prefixUrl: "https://a.com",
-      fetch: async () => {
-        return new Response("test");
-      },
-    }),
-  ).resolves.toBeDefined();
-});
-
 test("Reject if prefixUrl is invalid", () => {
   expect(
     untypedDredgeFetch().get("/test", {
