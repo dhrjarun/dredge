@@ -40,8 +40,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8
       dredge-fetch:
-        specifier: ^0.5.6
-        version: 0.5.6
+        specifier: ^0.5.7
+        version: 0.5.7
       dredge-route:
         specifier: ^0.4.6
         version: 0.4.6
@@ -56,8 +56,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8
       dredge-fetch:
-        specifier: workspace:*
-        version: link:../../packages/fetch
+        specifier: ^0.5.7
+        version: 0.5.7
       dredge-route:
         specifier: ^0.4.6
         version: 0.4.6
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8
       dredge-fetch:
-        specifier: workspace:*
-        version: link:../../packages/fetch
+        specifier: ^0.5.7
+        version: 0.5.7
       dredge-route:
         specifier: ^0.4.6
         version: 0.4.6
@@ -136,8 +136,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8
       dredge-fetch:
-        specifier: ^0.5.6
-        version: 0.5.6
+        specifier: ^0.5.7
+        version: 0.5.7
       dredge-route:
         specifier: ^0.4.6
         version: 0.4.6
@@ -1600,8 +1600,8 @@ packages:
   dredge-common@0.5.3:
     resolution: {integrity: sha512-4RFD+USV/DbwMWU3oq0zg/sVL1Ks8zYDfmf+ewDTPs4HlzHoCHIckTT/mF/oP5v9YUXs0zV3iNdmfYla4X4k1A==}
 
-  dredge-fetch@0.5.6:
-    resolution: {integrity: sha512-WpdA75XLLBoviiwnATAljd+aC+bbAC00tc4Jgfyx1HYYJkMzspYN77RSeS9JXFLrbCzL2P+694eHBrAvUFFwTQ==}
+  dredge-fetch@0.5.7:
+    resolution: {integrity: sha512-us5dKEr6cjwZm1MCd9ts7I6Jf3nBzKlaqCFZK90oGpYMAqN2wihA71PJArxOzp63jRkiPOertSDSxqpGVy60bg==}
 
   dredge-route@0.4.6:
     resolution: {integrity: sha512-Ti2yLmCBt5kuf+4rtTX5WPVwqKCg9yVmkl7De9L0FiYZEkTTXdqSq1/mGhI4auf6wZp1wn5Ux9I0RPlVZO8T5w==}
@@ -4063,7 +4063,7 @@ snapshots:
 
   dredge-common@0.5.3: {}
 
-  dredge-fetch@0.5.6:
+  dredge-fetch@0.5.7:
     dependencies:
       dredge-common: 0.5.3
       dredge-types: 0.4.5
