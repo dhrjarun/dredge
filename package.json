@@ -5,8 +5,8 @@
   "scripts": {
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
-    "dev": "turbo dev",
-    "build": "turbo build",
+    "dev": "turbo dev --filter dredge-*",
+    "build": "turbo build --filter dredge-*",
     "format": "pnpm biome format .",
     "format:fix": "pnpm format --write",
     "test": "turbo run test",

@@ -56,8 +56,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8
       dredge-fetch:
-        specifier: ^0.5.6
-        version: 0.5.6
+        specifier: workspace:*
+        version: link:../../packages/fetch
       dredge-route:
         specifier: ^0.4.6
         version: 0.4.6
@@ -96,8 +96,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8
       dredge-fetch:
-        specifier: ^0.5.6
-        version: 0.5.6
+        specifier: workspace:*
+        version: link:../../packages/fetch
       dredge-route:
         specifier: ^0.4.6
         version: 0.4.6
