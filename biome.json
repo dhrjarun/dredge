@@ -3,6 +3,10 @@
   "organizeImports": {
     "enabled": true
   },
+  "files": {
+    "ignore": ["web/.vitepress/cache/**", ".turbo/**", ".next/**"]
+  },
+
   "linter": {
     "enabled": true,
     "rules": {

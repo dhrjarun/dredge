@@ -9,11 +9,7 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/adapters"
   },
-  "keywords": [
-    "dredge",
-    "adapters",
-    "router"
-  ],
+  "keywords": ["dredge", "adapters", "router"],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

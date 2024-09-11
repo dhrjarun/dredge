@@ -3,8 +3,8 @@
   "private": true,
   "description": "A rest api builder in typescript",
   "scripts": {
-    "lint": "turbo lint",
-    "lint:fix": "turbo lint:fix",
+    "lint": "turbo lint --filter dredge-*",
+    "lint:fix": "turbo lint:fix dredge-*",
     "dev": "turbo dev --filter dredge-*",
     "build": "turbo build --filter dredge-*",
     "format": "pnpm biome format .",
