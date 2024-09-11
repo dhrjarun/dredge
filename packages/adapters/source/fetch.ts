@@ -43,7 +43,7 @@ type DataSerializerFunction = (options: {
   string | ReadableStream<Uint8Array> | ArrayBuffer | Blob | FormData
 >;
 
-export async function handleFetchRequest<Context extends object = {}>(options: {
+export interface HandleFetchRequestOptions<Context extends object> {
   req: Request;
   router: DredgeRouter;
   ctx?: Context;
@@ -62,7 +62,10 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
     params: Record<string, string>,
     schema: Record<string, any>,
   ) => Record<string, any>;
-}): Promise<Response> {
+}
+export async function handleFetchRequest<Context extends object = {}>(
+  options: HandleFetchRequestOptions<Context>,
+) {
   const {
     req,
     router,
@@ -192,7 +195,7 @@ export async function handleFetchRequest<Context extends object = {}>(options: {
     return new Response(body, {
       status: middlewareResponse.status,
       statusText: middlewareResponse.statusText,
-      headers: middlewareRequest.headers,
+      headers: middlewareResponse.headers,
     });
   } catch (error) {
     const middlewareResponse = await useErrorMiddlewares(route)(
