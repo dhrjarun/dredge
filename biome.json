@@ -4,9 +4,14 @@
     "enabled": true
   },
   "files": {
-    "ignore": ["web/.vitepress/cache/**", ".turbo/**", ".next/**"]
+    "ignore": [
+      "web/.vitepress/cache/**",
+      ".turbo/**",
+      ".next/**",
+      "dist/**",
+      "tsconfig.vitest-temp.json"
+    ]
   },
-
   "linter": {
     "enabled": true,
     "rules": {

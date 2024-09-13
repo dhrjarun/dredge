@@ -1,5 +1,11 @@
 # dredge-adapters
 
+## 0.5.9
+
+### Patch Changes
+
+- Fix Typescript: TS2742 issue within fetch adapter
+
 ## 0.5.8
 
 ### Patch Changes
