@@ -63,9 +63,10 @@ export interface HandleFetchRequestOptions<Context extends object> {
     schema: Record<string, any>,
   ) => Record<string, any>;
 }
+
 export async function handleFetchRequest<Context extends object = {}>(
   options: HandleFetchRequestOptions<Context>,
-) {
+): Promise<Response> {
   const {
     req,
     router,
