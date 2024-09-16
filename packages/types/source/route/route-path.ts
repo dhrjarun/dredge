@@ -2,10 +2,36 @@ import { Parser, inferParserType } from "../parser";
 import { IsNever } from "../utils";
 import { Route } from "./dredge-route.js";
 
+type _inferPathArray<T> = T extends `${infer P}/${infer Rest}`
+  ? [P, ..._inferPathArray<Rest>]
+  : T extends `/${infer P}`
+    ? [P]
+    : [T];
+
+type TrimSlashes<T> = T extends `/${infer U}/`
+  ? U
+  : T extends `/${infer U}`
+    ? U
+    : T extends `${infer U}/`
+      ? U
+      : T;
+
+export type inferPathArray<T> = _inferPathArray<TrimSlashes<T>>;
+
+type SupportedTypeInTemplateLiteral =
+  | string
+  | number
+  | bigint
+  | boolean
+  | null
+  | undefined;
+
 type inferParamParserType<P> = IsNever<P> extends true
   ? string
   : P extends Parser
-    ? inferParserType<P>
+    ? inferParserType<P> extends SupportedTypeInTemplateLiteral
+      ? inferParserType<P>
+      : string
     : string;
 
 type _inferSimplePathString<
@@ -24,6 +50,36 @@ export type inferSimplePathString<
   ? never
   : Paths extends string[]
     ? _inferSimplePathString<Paths, Params>
+    : never;
+
+export type inferRouteGenericPath<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  infer PathArray extends string[],
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? inferGenericPath<PathArray>
+  : never;
+
+type _inferGenericPath<Paths> = Paths extends [
+  infer First extends string,
+  ...infer Tail extends string[],
+]
+  ? `/${First extends `:${infer N}`
+      ? string | number | bigint
+      : First}${_inferGenericPath<Tail>}`
+  : "";
+
+export type inferGenericPath<Paths> = Paths extends []
+  ? never
+  : Paths extends string[]
+    ? _inferGenericPath<Paths>
     : never;
 
 type _inferParamPathString<Paths> = Paths extends [
@@ -109,6 +165,21 @@ export type inferRouteSimplePath<R> = R extends Route<
   any
 >
   ? inferSimplePathString<PathArray, Params>
+  : never;
+
+export type inferRouteParamPath<R> = R extends Route<
+  any,
+  any,
+  any,
+  any,
+  infer PathArray,
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? inferParamPathString<PathArray>
   : never;
 
 export type inferRouteSignature<R> = R extends Route<
