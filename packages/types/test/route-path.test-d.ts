@@ -1,6 +1,5 @@
 import { expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import { inferPathArray } from "../source";
 import { Route, UnresolvedRoute } from "../source/route/dredge-route";
 import {
   inferRouteFirstPath,
@@ -8,47 +7,8 @@ import {
   inferRouteSecondPath,
 } from "../source/route/route-path";
 import { inferRouterRoutes } from "../source/router";
-import { Merge } from "../source/utils";
 import { dredgeRoute } from "./helpers/dredge-route";
 import { dredgeRouter } from "./helpers/dredge-router";
-
-type CreateDredgeRoute<
-  Options extends {
-    options?: {
-      dataTypes?: Record<string, string>;
-      withDynamicPath?: boolean;
-      initialContext?: any;
-    };
-    params?: Record<string, any>;
-    searchParams?: Record<string, any>;
-    successContext?: any;
-    errorContext?: any;
-    method?: "get" | "post" | "put" | "delete" | "patch" | "head";
-    paths?: string;
-    iData?: any;
-    oData?: any;
-    eData?: any;
-  },
-> = Route<
-  Merge<
-    {
-      dataTypes: {};
-      initialContext: {};
-      withDynamicPath: false;
-      modifiedInitialContext: {};
-    },
-    Options["options"]
-  >,
-  Options["successContext"],
-  Options["errorContext"],
-  Options["method"],
-  inferPathArray<Options["paths"]>,
-  Options["params"],
-  Options["searchParams"],
-  Options["iData"],
-  Options["oData"],
-  Options["eData"]
->;
 
 test("ParamPath only reutrn for route containing dynamic path", () => {
   const testRouter = dredgeRouter([
@@ -70,7 +30,7 @@ test("ParamPath only reutrn for route containing dynamic path", () => {
   >();
 });
 
-const testRouter = dredgeRouter([
+const singleParamNonAutoRouter = dredgeRouter([
   dredgeRoute().path("/a/b/c/d").build(),
   dredgeRoute().path("/:a/b/c/d").build(),
   dredgeRoute()
@@ -91,7 +51,9 @@ const testRouter = dredgeRouter([
       d: z.date(),
     })
     .build(),
+]);
 
+const singleParamAutoRouter = dredgeRouter([
   dredgeRoute().path("/e/f/g/h").build(),
   dredgeRoute()
     .path("/:e/f/g/h")
@@ -105,21 +67,21 @@ const testRouter = dredgeRouter([
       f: z.boolean(),
     })
     .build(),
-
   dredgeRoute()
     .path("/e/f/:g/h")
     .params({
       g: z.undefined(),
     })
     .build(),
-
   dredgeRoute()
     .path("/e/f/g/:h")
     .params({
       h: z.null(),
     })
     .build(),
+]);
 
+const doubleParamNonAutoRouter = dredgeRouter([
   dredgeRoute().path("/s/t/u/v/w/x").build(),
   dredgeRoute()
     .path("/:s/t/:u/v/w/x")
@@ -142,7 +104,8 @@ const testRouter = dredgeRouter([
       x: z.date(),
     })
     .build(),
-
+]);
+const doubleParamAutoRouter = dredgeRouter([
   dredgeRoute().path("/p/q/r/s/t/u").build(),
   dredgeRoute()
     .path("/:p/q/:r/s/t/u")
@@ -167,64 +130,41 @@ const testRouter = dredgeRouter([
     .build(),
 ]);
 
+type SingleParamNonAutoRouter = typeof singleParamNonAutoRouter;
+type SingleParamAutoRouter = typeof singleParamAutoRouter;
+type DoubleParamNonAutoRouter = typeof doubleParamNonAutoRouter;
+type DoubleParamAutoRouter = typeof doubleParamAutoRouter;
+
+type SingleParamNonAutoRouterRoutes =
+  inferRouterRoutes<SingleParamNonAutoRouter>;
+type SingleParamAutoRouterRoutes = inferRouterRoutes<SingleParamAutoRouter>;
+type DoubleParamNonAutoRouterRoutes =
+  inferRouterRoutes<DoubleParamNonAutoRouter>;
+type DoubleParamAutoRouterRoutes = inferRouterRoutes<DoubleParamAutoRouter>;
+
+const testRouter = dredgeRouter([
+  singleParamNonAutoRouter,
+  singleParamAutoRouter,
+  doubleParamNonAutoRouter,
+  doubleParamAutoRouter,
+]);
+
 type TestRouter = typeof testRouter;
 type Routes = inferRouterRoutes<TestRouter>;
 
-test("autcompletable paths", () => {
-  const testRouter = dredgeRouter([
-    dredgeRoute().path("/a/b/c/d").build(),
-    dredgeRoute().path("/:a/b/c/d").build(),
-    dredgeRoute().path("/a/:b/c/d").build(),
-
-    dredgeRoute().path("/x/y/z/a").build(),
-    dredgeRoute().path("/x/y/z/:a").build(),
-    dredgeRoute()
-      .path("/x/:y/z/a")
-      .params({
-        y: z.enum(["1", "2"]),
-      })
-      .build(),
-    dredgeRoute().path("/m/n/o").build(),
-    dredgeRoute().path("/m/:n").build(),
-    dredgeRoute()
-      .path("/o/:p")
-      .params({
-        p: z.boolean(),
-      })
-      .build(),
-  ]);
-
-  type TestRouter = typeof testRouter;
-  type Routes = inferRouterRoutes<TestRouter>;
-  type Path = inferRouteFirstPath<Routes[number]>;
-
-  expectTypeOf<Path>().toEqualTypeOf<
-    | "/a/b/c/d"
-    | ":/:a/b/c/d"
-    | ":/a/:b/c/d"
-    | "/x/y/z/a"
-    | ":/x/y/z/:a"
-    | "/x/1/z/a"
-    | "/x/2/z/a"
-    | ":/x/:y/z/a"
-    | "/m/n/o"
-    | ":/m/:n"
-    | "/o/true"
-    | "/o/false"
-    | ":/o/:p"
-  >();
-});
 test("autocompletable paths", () => {
   type Path = inferRouteFirstPath<Routes[number]>;
 
-  type SingleParam =
+  type SingleParamNonAutoPath =
     | `/a/b/c/d`
     | `:/:a/b/c/d`
-    | `/a/:b/c/d`
-    | `/a/b/:c/d`
-    | `/a/b/c/:d`
-    | "e/f/g/h"
-    | ":/e/f/g/h"
+    | `:/a/:b/c/d`
+    | `:/a/b/:c/d`
+    | `:/a/b/c/:d`;
+
+  type SingleParamAutoPath =
+    | "/e/f/g/h"
+    | ":/:e/f/g/h"
     | ":/e/:f/g/h"
     | ":/e/f/:g/h"
     | ":/e/f/g/:h"
@@ -235,24 +175,48 @@ test("autocompletable paths", () => {
     | "/e/f/undefined/h"
     | "/e/f/g/null";
 
-  type DoubleParams =
+  type SingleParamPath = SingleParamNonAutoPath | SingleParamAutoPath;
+
+  type DoubleParamNonAutoPath =
     | "/s/t/u/v/w/x"
     | ":/:s/t/:u/v/w/x"
     | ":/s/:t/u/:v/w/x"
-    | ":/s/t/u/v/:w/:x"
+    | ":/s/t/u/v/:w/:x";
+
+  type DoubleParamAutoPath =
     | "/p/q/r/s/t/u"
     | ":/:p/q/:r/s/t/u"
     | ":/p/:q/r/:s/t/u"
     | ":/p/q/r/s/:t/:u"
-    | "/a/r/true/t/u"
-    | "/a/r/false/t/u"
-    | "/b/r/true/t/u"
-    | "/b/r/false/t/u"
+    | "/a/q/true/s/t/u"
+    | "/a/q/false/s/t/u"
+    | "/b/q/true/s/t/u"
+    | "/b/q/false/s/t/u"
     | "/p/true/r/undefined/t/u"
     | "/p/false/r/undefined/t/u"
     | "/p/q/r/s/undefined/null";
 
-  expectTypeOf<Path>().toEqualTypeOf<SingleParam | DoubleParams>();
+  type DoubleParamPath = DoubleParamNonAutoPath | DoubleParamAutoPath;
+
+  type AllPath = SingleParamPath | DoubleParamPath;
+
+  expectTypeOf<
+    inferRouteFirstPath<SingleParamNonAutoRouterRoutes[number]>
+  >().toEqualTypeOf<SingleParamNonAutoPath>();
+
+  expectTypeOf<
+    inferRouteFirstPath<SingleParamAutoRouterRoutes[number]>
+  >().toEqualTypeOf<SingleParamAutoPath>();
+
+  expectTypeOf<
+    inferRouteFirstPath<DoubleParamNonAutoRouterRoutes[number]>
+  >().toEqualTypeOf<DoubleParamNonAutoPath>();
+
+  expectTypeOf<
+    inferRouteFirstPath<DoubleParamAutoRouterRoutes[number]>
+  >().toEqualTypeOf<DoubleParamAutoPath>();
+
+  expectTypeOf<inferRouteFirstPath<Routes[number]>>().toEqualTypeOf<AllPath>();
 });
 
 test("non-autocompletable paths", () => {
@@ -270,27 +234,3 @@ test("non-autocompletable paths", () => {
 
   expectTypeOf<Path>().toEqualTypeOf<SingleParam | DoubleParams>();
 });
-
-type Generic = `/a/${string | number | bigint}`;
-
-type s = Generic extends `/a/${string}` ? true : false; // true
-type n = Generic extends `/a/${number}` ? true : false; // false
-type b = Generic extends `/a/${bigint}` ? true : false; // false
-type l = Generic extends `/a/${"b" | "c"}` ? true : false; // false
-
-type ss = `/a/${string}` extends Generic ? true : false; // true
-type nn = `/a/${number}` extends Generic ? true : false; // true
-type bb = `/a/${bigint}` extends Generic ? true : false; // true
-type ll = `/a/${"b" | "c"}` extends Generic ? true : false; // true
-
-type sss = Extract<Generic, `/a/${string}`>; // Gerneric
-type nnn = Extract<Generic, `/a/${number}`>; //`/a/${number}`
-type bbb = Extract<Generic, `/a/${bigint}`>; // `/a/${bigint}`
-type lll = Extract<Generic, `/a/${"b" | "c"}`>; // never
-type ooo = Extract<Generic, `/a/${boolean}`>; // never
-type v = Extract<Generic, `/a/${null}`>; // never
-type uuu = Extract<Generic, `/a/${undefined}`>; // never
-
-type ssss = Extract<"/a/${string}", Generic>; // `/a/${string}`
-type nnnn = Extract<"/a/${number}", Generic>; // `/a/${number}`
-type oooo = Extract<"/a/${boolean}", Generic>; // `/a/${boolean}`
