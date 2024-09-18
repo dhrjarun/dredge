@@ -148,6 +148,13 @@ export type RequiredKeys<Type> = Type extends unknown
   ? Exclude<keyof Type, OptionalKeys<Type>>
   : never;
 
+export type DistributiveIndex<T, K extends PropertyKey> = T extends Record<
+  K,
+  infer V
+>
+  ? V
+  : never;
+
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
 export type IsAny<Type> = 0 extends 1 & Type ? true : false;
 
