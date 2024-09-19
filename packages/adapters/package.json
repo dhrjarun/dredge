@@ -9,7 +9,11 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/adapters"
   },
-  "keywords": ["dredge", "adapters", "router"],
+  "keywords": [
+    "dredge",
+    "adapters",
+    "router"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -22,7 +26,8 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "vitest --typecheck",
+    "test": "vitest run --typecheck",
+    "test:watch": "vitest watch --typecheck",
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "pnpm biome format ./source",
