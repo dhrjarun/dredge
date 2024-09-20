@@ -1,0 +1,46 @@
+name: pr
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Tools
+        uses: ./.github/setup
+      - name: Build Packages
+        run: pnpm build
+      - name: Run Tests
+        run: pnpm test
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Tools
+        uses: ./.github/setup
+      - name: Run Lint
+        run: pnpm lint
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Tools
+        uses: ./.github/setup
+      - name: Run Format
+        run: pnpm format
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Tools
+        uses: ./.github/setup
+      - name: Build Web
+        run: pnpm build:web

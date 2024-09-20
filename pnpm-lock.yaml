@@ -148,9 +148,6 @@ importers:
       '@types/node':
         specifier: ^22.5.5
         version: 22.5.5
-      in-express:
-        specifier: ^1.0.0
-        version: 1.0.0
 
   packages/adapters:
     dependencies:
@@ -1872,9 +1869,6 @@ packages:
   ignore@5.3.1:
     resolution: {integrity: sha512-5Fytz/IraMjqpwfd34ke28PTVMjZjJG2MPn5t7OE4eUCUNf8BAa7b5WUS9/Qvr6mwOQS7Mk6vdsMno5he+T8Xw==}
     engines: {node: '>= 4'}
-
-  in-express@1.0.0:
-    resolution: {integrity: sha512-Ko04+xZnzASmXOomhCm+9H/6b5gOznAxvJotd4J8TzD7eKj8+D9mIQqo2pYFTbcqthlftNyy0LOHk/vu2zBqiw==}
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -4501,12 +4495,6 @@ snapshots:
       safer-buffer: 2.1.2
 
   ignore@5.3.1: {}
-
-  in-express@1.0.0:
-    dependencies:
-      dredge-adapters: 0.5.9
-      dredge-fetch: 0.5.7
-      dredge-route: 0.4.6
 
   inherits@2.0.4: {}
 

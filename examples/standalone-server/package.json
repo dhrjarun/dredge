@@ -17,7 +17,6 @@
     "dredge-route": "^0.4.6"
   },
   "devDependencies": {
-    "@types/node": "^22.5.5",
-    "in-express": "^1.0.0"
+    "@types/node": "^22.5.5"
   }
 }
