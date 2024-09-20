@@ -9,10 +9,7 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/types"
   },
-  "keywords": [
-    "dredge",
-    "types"
-  ],
+  "keywords": ["dredge", "types"],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -25,6 +22,8 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .turbo dist",
     "test": "vitest run --typecheck",
     "build": "tsup",
     "dev": "tsup --watch",

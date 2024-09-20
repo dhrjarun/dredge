@@ -21,6 +21,8 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .turbo dist",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "build": "tsup",

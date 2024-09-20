@@ -2,6 +2,8 @@
   "name": "in-nextjs-pages-dir",
   "private": true,
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .turbo dist",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

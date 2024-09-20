@@ -2,6 +2,8 @@
   "name": "in-express",
   "private": true,
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .turbo dist",
     "dev": "npx tsx watch src/server.ts",
     "start": "npx tsx src/server.ts"
   },
