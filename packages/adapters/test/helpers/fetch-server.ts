@@ -2,21 +2,21 @@ import { serve } from "@hono/node-server";
 import { Server } from "http";
 import { Hono } from "hono";
 import {
-  HandleFetchRequestOptions,
-  handleFetchRequest,
+  CreateFetchRequestHandlerOptions,
+  createFetchRequestHandler,
 } from "../../source/fetch";
 
 export async function startServer(
-  opts: Omit<HandleFetchRequestOptions<any>, "req">,
+  opts: Omit<CreateFetchRequestHandlerOptions<any>, "req">,
 ): Promise<Server> {
   const app = new Hono();
-
-  app.all("*", async (c) => {
-    const res = await handleFetchRequest({
+  const handler =
+    await createFetchRequestHandler({
       ...opts,
-      req: c.req.raw,
     });
 
+  app.all("*", async (c) => {
+    const res = await handler(c.req.raw);
     c.res = res;
     c.res.headers.delete("Content-Length"); // Because of `FetchError: request to ... failed, reason: Parse Error: Duplicate Content-Length`
   });
