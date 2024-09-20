@@ -15,7 +15,6 @@
     "test:watch": "turbo run test:watch",
     "typecheck": "turbo run typecheck",
     "clean": "turbo clean && rm -rf node_modules",
-    "version": "changeset version",
     "release": "pnpm build && changeset publish"
   },
   "packageManager": "pnpm@9.10.0",
