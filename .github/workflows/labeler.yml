@@ -9,6 +9,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-    - uses: actions/labeler@v5
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Add Labels to PR
+      uses: actions/labeler@v5
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
