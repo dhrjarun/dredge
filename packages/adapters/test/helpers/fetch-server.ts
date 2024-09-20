@@ -10,10 +10,9 @@ export async function startServer(
   opts: Omit<CreateFetchRequestHandlerOptions<any>, "req">,
 ): Promise<Server> {
   const app = new Hono();
-  const handler =
-    await createFetchRequestHandler({
-      ...opts,
-    });
+  const handler = await createFetchRequestHandler({
+    ...opts,
+  });
 
   app.all("*", async (c) => {
     const res = await handler(c.req.raw);

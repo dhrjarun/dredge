@@ -88,9 +88,10 @@ export async function createFetchRequestHandler<Context extends object = {}>(
   });
 
   return async (req: Request): Promise<Response> => {
-
     const url = new URL(req.url);
-    const path = trimSlashes(url.pathname.slice(parsedPrefixUrl.pathname.length));
+    const path = trimSlashes(
+      url.pathname.slice(parsedPrefixUrl.pathname.length),
+    );
     const pathArray = path.split("/");
 
     const route = router.find(req.method || "get", pathArray);
@@ -254,6 +255,5 @@ export async function createFetchRequestHandler<Context extends object = {}>(
         statusText: middlewareResponse.statusText,
       });
     }
-  }
-
+  };
 }
