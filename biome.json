@@ -9,7 +9,8 @@
       ".turbo/**",
       ".next/**",
       "dist/**",
-      "tsconfig.vitest-temp.json"
+      "tsconfig.vitest-temp.json",
+      ".pnpm-store/**"
     ]
   },
   "linter": {

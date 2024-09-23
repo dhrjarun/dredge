@@ -1,0 +1,21 @@
+name: autofix.ci  # needed to securely identify the workflow
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+permissions:
+  contents: read
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Tools
+        uses: ./.github/setup
+      - name: Fix Formatting
+        run: pnpm format:fix
+      - name: Commit Formatting Changes
+        uses: autofix-ci/action@8bc06253bec489732e5f9c52884c7cace15c0160

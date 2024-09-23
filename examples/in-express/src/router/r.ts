@@ -1,9 +1,6 @@
-import type { DB } from "@/db";
 import { ValidationError, dredgeRoute } from "dredge-route";
 
-type InitialContext = {
-  db: DB;
-};
+type InitialContext = {};
 
 export const route = dredgeRoute<InitialContext>()
   .options({

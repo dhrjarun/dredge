@@ -3,6 +3,8 @@
   "main": "index.js",
   "private": true,
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .turbo dist",
     "dev": "npx tsx watch src/server.ts",
     "start": "npx tsx src/server.ts"
   },
@@ -13,5 +15,8 @@
     "dredge-adapters": "^0.5.9",
     "dredge-fetch": "^0.5.7",
     "dredge-route": "^0.4.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5"
   }
 }

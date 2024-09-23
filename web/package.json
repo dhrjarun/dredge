@@ -1,8 +1,10 @@
 {
-  "name": "dredge-web",
+  "name": "web",
   "private": true,
   "type": "module",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf node_modules .turbo dist",
     "copy-docs": "node ../scripts/copy-docs-to-web.js",
     "dev": "vitepress dev",
     "build": "pnpm copy-docs && vitepress build",

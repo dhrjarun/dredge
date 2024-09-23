@@ -22,7 +22,9 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "vitest --typecheck",
+    "clean": "rm -rf node_modules .turbo dist",
+    "test": "vitest run --typecheck",
+    "test:watch": "vitest watch --typecheck",
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "pnpm biome format ./source",
