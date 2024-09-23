@@ -1,6 +1,6 @@
 {
   "name": "dredge-adapters",
-  "version": "0.5.9",
+  "version": "1.0.0",
   "description": "adapters for dredge",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
@@ -9,7 +9,11 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/adapters"
   },
-  "keywords": ["dredge", "adapters", "router"],
+  "keywords": [
+    "dredge",
+    "adapters",
+    "router"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

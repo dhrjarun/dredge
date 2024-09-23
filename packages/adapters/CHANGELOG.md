@@ -1,5 +1,11 @@
 # dredge-adapters
 
+## 1.0.0
+
+### Major Changes
+
+- 7df3817: hadleFetchRequest is now createFetchRequestHandler
+
 ## 0.5.9
 
 ### Patch Changes
