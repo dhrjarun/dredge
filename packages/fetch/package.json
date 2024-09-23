@@ -9,7 +9,11 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/fetch"
   },
-  "keywords": ["dredge", "fetch", "client"],
+  "keywords": [
+    "dredge",
+    "fetch",
+    "client"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
