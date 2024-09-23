@@ -25,5 +25,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         with:
-          verison: pnpm ci:version  # https://github.com/changesets/changesets/issues/421
+          version: pnpm ci:version  # https://github.com/changesets/changesets/issues/421
           publish: pnpm ci:release
