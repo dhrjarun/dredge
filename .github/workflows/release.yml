@@ -26,3 +26,4 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         with:
           publish: pnpm release
+          version: pnpm changeset version && pnpm install --lockfile-only # https://github.com/changesets/changesets/issues/421
