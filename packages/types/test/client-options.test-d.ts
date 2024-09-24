@@ -114,7 +114,7 @@ test("options.params", () => {
       })
       .get()
       .build(),
-    // r.path('/k').get().build(), // TODO: fix this
+    // r.path('/k').get().build(), // TODO: fix this, it causes some unneccary type in params type.
   ]);
 
   type Router = inferRouterRoutes<typeof router>;

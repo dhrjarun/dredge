@@ -9,6 +9,12 @@ import {
 import { inferRouterRoutes } from "../source/router";
 import { dredgeRoute } from "./helpers/dredge-route";
 import { dredgeRouter } from "./helpers/dredge-router";
+import {
+  singleParamAutoRouter,
+  singleParamNonAutoRouter,
+  doubleParamAutoRouter,
+  doubleParamNonAutoRouter,
+} from "./path-routes";
 
 test("ParamPath only reutrn for route containing dynamic path", () => {
   const testRouter = dredgeRouter([
@@ -29,106 +35,6 @@ test("ParamPath only reutrn for route containing dynamic path", () => {
     ":/a/:b" | ":/:x/y/z" | ":/m/n/:o" | ":/x/:y/z"
   >();
 });
-
-const singleParamNonAutoRouter = dredgeRouter([
-  dredgeRoute().path("/a/b/c/d").build(),
-  dredgeRoute().path("/:a/b/c/d").build(),
-  dredgeRoute()
-    .path("/a/:b/c/d")
-    .params({
-      b: z.number(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/a/b/:c/d")
-    .params({
-      c: z.bigint(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/a/b/c/:d")
-    .params({
-      d: z.date(),
-    })
-    .build(),
-]);
-
-const singleParamAutoRouter = dredgeRouter([
-  dredgeRoute().path("/e/f/g/h").build(),
-  dredgeRoute()
-    .path("/:e/f/g/h")
-    .params({
-      e: z.enum(["a", "b"]),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/e/:f/g/h")
-    .params({
-      f: z.boolean(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/e/f/:g/h")
-    .params({
-      g: z.undefined(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/e/f/g/:h")
-    .params({
-      h: z.null(),
-    })
-    .build(),
-]);
-
-const doubleParamNonAutoRouter = dredgeRouter([
-  dredgeRoute().path("/s/t/u/v/w/x").build(),
-  dredgeRoute()
-    .path("/:s/t/:u/v/w/x")
-    .params({
-      s: z.string(),
-      u: z.number(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/s/:t/u/:v/w/x")
-    .params({
-      t: z.number(),
-      v: z.bigint(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/s/t/u/v/:w/:x")
-    .params({
-      w: z.bigint(),
-      x: z.date(),
-    })
-    .build(),
-]);
-const doubleParamAutoRouter = dredgeRouter([
-  dredgeRoute().path("/p/q/r/s/t/u").build(),
-  dredgeRoute()
-    .path("/:p/q/:r/s/t/u")
-    .params({
-      p: z.enum(["a", "b"]),
-      r: z.boolean(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/p/:q/r/:s/t/u")
-    .params({
-      q: z.boolean(),
-      s: z.undefined(),
-    })
-    .build(),
-  dredgeRoute()
-    .path("/p/q/r/s/:t/:u")
-    .params({
-      t: z.undefined(),
-      u: z.null(),
-    })
-    .build(),
-]);
 
 type SingleParamNonAutoRouter = typeof singleParamNonAutoRouter;
 type SingleParamAutoRouter = typeof singleParamAutoRouter;
