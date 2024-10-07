@@ -10,7 +10,6 @@ export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as UnresolvedRoute<
     {
       initialContext: Context;
-      modifiedInitialContext: Context;
       withDynamicPath: false;
       dataTypes: {};
     },
