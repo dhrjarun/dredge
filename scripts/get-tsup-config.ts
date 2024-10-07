@@ -1,8 +1,6 @@
 import type { Options } from "tsup";
 
-export function getTsupConfig(opts: {
-  entry: Options["entry"];
-}) {
+export function getTsupConfig(opts: { entry: Options["entry"] }) {
   const config: Options = {
     entry: opts.entry,
     splitting: false,

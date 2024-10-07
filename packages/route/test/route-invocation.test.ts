@@ -9,20 +9,20 @@ test("all success middleware should run", async () => {
   const route = dredgeRoute()
     .path("/test")
     .get()
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         headers: {
           "Content-Type": "application/json",
         },
       });
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         status: 200,
         statusText: "ok",
       });
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         data: "dummy-data",
       });
@@ -52,20 +52,20 @@ test("all error middleware should run", async () => {
     .use(() => {
       throw "any";
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.next({
         headers: {
           "Content-Type": "application/json",
         },
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.next({
         status: 404,
         statusText: "not-found",
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.next({
         data: "dummy-data",
       });
@@ -92,20 +92,20 @@ test("res.end() function should skip the rest of the success middleware", async 
   const route = dredgeRoute()
     .path("/test")
     .get()
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         headers: {
           "Content-Type": "application/json",
         },
       });
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.end({
         status: 200,
         statusText: "ok",
       });
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         data: "dummy-data",
         status: 201,
@@ -137,20 +137,20 @@ test("res.end() function should skip the rest of the error middleware", async ()
     .use(() => {
       throw "any";
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.next({
         headers: {
           "Content-Type": "application/json",
         },
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.end({
         status: 404,
         statusText: "not-found",
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.next({
         data: "dummy-data",
         status: 400,
@@ -191,7 +191,7 @@ test("defaultContext should be merged", async () => {
     })
     .path("/test")
     .get()
-    .use((req, res) => {
+    .use((_req, res) => {
       expect(res.ctx).toStrictEqual({
         db: "test-db",
         local: "LOCAL",
@@ -200,7 +200,7 @@ test("defaultContext should be merged", async () => {
         },
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       expect(res.ctx).toStrictEqual({
         db: "test-db",
         local: "LOCAL",
@@ -245,34 +245,34 @@ test("if headerValue for some header is provide null, it should be deleted", asy
   const route = dredgeRoute()
     .path("/test")
     .get()
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         headers: {
           "content-Type": "application/json",
         },
       });
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       expect(res.header("content-type")).toBe("application/json");
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.next({
         headers: {
           "content-type": null,
         },
       });
     })
-    .use((req, res) => {
+    .use((_req, res) => {
       expect(res.header("content-type")).toBeNull();
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.next({
         headers: {
           "content-Type": "application/json",
         },
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       expect(res.header("content-type")).toBe("application/json");
     })
     .build();
@@ -308,7 +308,7 @@ test("content-type header should set corresponding request dataType", async () =
         data: req.dataType,
       });
     })
-    .error((err, req, res) => {
+    .error((_err, req, res) => {
       return res.end({
         data: req.dataType,
       });
@@ -355,12 +355,12 @@ test("accept header should set corresponding response dataType and it set corres
     })
     .path("/test")
     .get()
-    .use((req, res) => {
+    .use((_req, res) => {
       return res.end({
         data: res.dataType,
       });
     })
-    .error((err, req, res) => {
+    .error((_err, _req, res) => {
       return res.end({
         data: res.dataType,
       });

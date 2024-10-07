@@ -230,7 +230,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       const _params = _def.params;
       const _paths = _def.paths;
 
-      Object.entries(params).forEach(([path, parser]) => {
+      Object.entries(params).forEach(([path]) => {
         if (_params[path]) {
           throw `${path} param schema already defined`;
         }
@@ -255,7 +255,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       const _searchParams = _def.searchParams;
 
       // check if it already defined
-      Object.entries(searchParams).forEach(([name, parser]) => {
+      Object.entries(searchParams).forEach(([name]) => {
         if (_searchParams[name]) {
           throw `${name} searchParam schema already defined`;
         }

@@ -84,8 +84,6 @@ export class RoutePath {
 class DredgeRouterClass<Routes extends AnyRoute[] = []>
   implements DredgeRouter
 {
-  // readonly routes: Routes;
-
   root: RoutePath = new RoutePath({
     name: "$root",
   });
