@@ -53,7 +53,7 @@ export type inferDredgeClientOption<
       {
         method: Method;
         dataType?: keyof RouteOptions["dataTypes"];
-        responseDataTypes?: keyof RouteOptions["dataTypes"];
+        responseDataType?: keyof RouteOptions["dataTypes"];
         dataTypes?: {
           [key in keyof RouteOptions["dataTypes"]]?: string;
         };

@@ -1,8 +1,8 @@
 import {
   AnyRoute,
-  ExcludeRoute,
   HasRouteParamPath,
   Route,
+  inferRouteGenericPath,
   inferRouteSimplePath,
 } from "./route";
 import { IsNever, Merge } from "./utils";
@@ -35,13 +35,10 @@ export type ModifyRoutes<
   ? HasRouteParamPath<First> extends false
     ? ModifyRoutes<Rest, All, [...U, First]>
     : IsNever<
-          Extract<
-            inferRouteSimplePath<ExcludeRoute<All[number], First>>,
-            inferRouteSimplePath<First>
-          >
-        > extends true
-      ? ModifyRoutes<Rest, All, [...U, First]>
-      : ModifyRoutes<Rest, All, [...U, MakeDynamicRoute<First>]>
+          Extract<inferRouteGenericPath<First>, inferRouteSimplePath<First>>
+        > extends false
+      ? ModifyRoutes<Rest, All, [...U, MakeDynamicRoute<First>]>
+      : ModifyRoutes<Rest, All, [...U, First]>
   : U;
 
 type MakeDynamicRoute<T> = T extends Route<
