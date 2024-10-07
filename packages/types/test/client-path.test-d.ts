@@ -1,6 +1,4 @@
 import { expectTypeOf, test } from "vitest";
-import { z } from "zod";
-import { Route, UnresolvedRoute } from "../source/route/dredge-route";
 import {
   inferRouteFirstPath,
   inferRouteParamPath,
@@ -59,8 +57,6 @@ type TestRouter = typeof testRouter;
 type Routes = inferRouterRoutes<TestRouter>;
 
 test("autocompletable paths", () => {
-  type Path = inferRouteFirstPath<Routes[number]>;
-
   type SingleParamNonAutoPath =
     | `/a/b/c/d`
     | `:/:a/b/c/d`

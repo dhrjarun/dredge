@@ -2,13 +2,6 @@ import { dredgeRoute } from "./helpers/dredge-route";
 import { dredgeRouter } from "./helpers/dredge-router";
 import z from "zod";
 
-function toNumber(x: string | number | bigint): number {
-  if (typeof x === "string") {
-    return parseInt(x);
-  }
-  return Number(x);
-}
-
 export const singleParamNonAutoRouter = dredgeRouter([
   dredgeRoute()
     .path("/a/b/c/d")
