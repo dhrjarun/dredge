@@ -15,7 +15,7 @@
     "test:watch": "turbo run test:watch",
     "typecheck": "turbo run typecheck",
     "clean": "turbo clean && rm -rf node_modules",
-    "ci:version": "pnpm changeset version && pnpm install --lockfile-only",
+    "ci:version": "pnpm changeset version && pnpm format && pnpm install --lockfile-only",
     "ci:release": "pnpm build && changeset publish"
   },
   "packageManager": "pnpm@9.10.0",
