@@ -1,5 +1,11 @@
 # dredge-types
 
+## 0.4.6
+
+### Patch Changes
+
+- 878dea2: Fix client type issue due to path type
+
 ## 0.4.5
 
 ### Patch Changes
