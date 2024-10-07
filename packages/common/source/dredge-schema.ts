@@ -148,7 +148,7 @@ function handleZodInnerTypes(
   schema: any,
   options: { nullable?: boolean; optional?: boolean; default?: any } = {},
 ): { schema: any } & DredgeSchemaOptions {
-  const type = schema._def.typeName;
+  const type = schema._def.typeName as keyof typeof zodTypeDredgeTypeMap;
 
   if (
     type === "ZodOptional" ||
