@@ -25,7 +25,6 @@ describe("route.options()", () => {
           json: "application/json",
           formData: "application/form-data",
         },
-        defaultContext: {},
       })
       .options({})
       .options({
