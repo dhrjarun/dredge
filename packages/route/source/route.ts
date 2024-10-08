@@ -56,26 +56,12 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
     options: (options = {}) => {
       const _dataTypes = _def.dataTypes || {};
-      const _defaultContext = _def.defaultContext || {};
-      const _dataTransformer = _def.dataTransformer;
-      const _dataSerializers = _def.dataSerializers;
-      const _bodyParsers = _def.bodyParsers;
-
-      const {
-        dataTypes = {},
-        dataTransformer = {},
-        defaultContext = {},
-        dataSerializers = [],
-        bodyParsers = [],
-      } = options;
+      const { dataTypes = {} } = options;
 
       const newDataTypes: Record<string, string> = {
         ...dataTypes,
         ..._dataTypes,
       };
-
-      const newDataSerializers = _dataSerializers.clone();
-      const newBodyParsers = _bodyParsers.clone();
 
       function findMediaType(dataType: string | string[]) {
         if (Array.isArray(dataType)) {
@@ -96,40 +82,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         }
         return mediaType;
       }
-
-      dataSerializers.forEach((item) => {
-        let mediaType = item.mediaType;
-        if (!mediaType && !item.dataType) {
-          throw "mediaType or dataType must be given";
-        }
-
-        if (!mediaType) {
-          mediaType = findMediaType(item.dataType as string | string[]);
-        }
-
-        if (Array.isArray(mediaType) && mediaType.length == 0) {
-          throw "could not find any mediaType";
-        }
-
-        newDataSerializers.set(mediaType, item.fn);
-      });
-
-      bodyParsers.forEach((item) => {
-        let mediaType = item.mediaType;
-        if (!mediaType && !item.dataType) {
-          throw "mediaType or dataType must be given";
-        }
-
-        if (!mediaType) {
-          mediaType = findMediaType(item.dataType as string | string[]);
-        }
-
-        if (Array.isArray(mediaType) && mediaType.length == 0) {
-          throw "could not find any mediaType";
-        }
-
-        newBodyParsers.set(mediaType, item.fn);
-      });
 
       const notAllowedDataTypes = [
         "url",
@@ -167,27 +119,9 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         }
       });
 
-      const newDataTransformer: any = {
-        ..._dataTransformer,
-      };
-
-      for (const [key, value] of Object.entries(dataTransformer)) {
-        newDataTransformer[key] = {
-          ..._dataTransformer[key],
-          ...(value as any),
-        };
-      }
-
       return createRouteBuilder({
         ..._def,
-        defaultContext: {
-          ..._defaultContext,
-          ...defaultContext,
-        },
         dataTypes: newDataTypes,
-        bodyParsers: newBodyParsers,
-        dataSerializers: newDataSerializers,
-        dataTransformer: newDataTransformer,
       });
     },
 

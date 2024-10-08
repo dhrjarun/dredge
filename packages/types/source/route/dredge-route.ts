@@ -4,7 +4,6 @@ import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import {
   IsAny,
   IsNever,
-  MarkOptional,
   MaybePromise,
   Merge,
   Overwrite,
@@ -443,34 +442,8 @@ export interface UnresolvedRoute<
 > {
   _def: RouteBuilderDef<false>;
 
-  options<
-    const DataTypes extends Record<string, string> = {},
-    const DefaultContext extends Partial<
-      Options extends { initialContext: any } ? Options["initialContext"] : {}
-    > = {},
-  >(options?: {
+  options<const DataTypes extends Record<string, string> = {}>(options?: {
     dataTypes?: DataTypes;
-    dataTransformer?: {
-      [key in keyof inferDataTypes<Options> | keyof DataTypes]?: {
-        forRequest?: (data: any) => any;
-        forResponse?: (data: any) => any;
-      };
-    };
-    dataSerializers?: {
-      mediaType?: string | string[];
-      dataType?:
-        | (inferDataTypes<Options> | keyof DataTypes)
-        | (inferDataTypes<Options> | keyof DataTypes)[];
-      fn: DataSerializerFunction;
-    }[];
-    bodyParsers?: {
-      mediaType?: string | string[];
-      dataType?:
-        | (inferDataTypes<Options> | keyof DataTypes)
-        | (inferDataTypes<Options> | keyof DataTypes)[];
-      fn: BodyParserFunction;
-    }[];
-    defaultContext?: DefaultContext;
   }): IsNotAllowedDataTypes<DataTypes> extends true
     ? "One or more of dataType is invalid!"
     : UnresolvedRoute<
@@ -480,12 +453,6 @@ export interface UnresolvedRoute<
             dataTypes: Merge<
               DataTypes,
               Options extends { dataTypes: any } ? Options["dataTypes"] : {}
-            >;
-            modifiedInitialContext: MarkOptional<
-              Options extends { modifiedInitialContext: any }
-                ? Options["modifiedInitialContext"]
-                : never,
-              keyof DefaultContext
             >;
           }
         >,
@@ -752,7 +719,6 @@ export type AnyUnresolvedRoute = UnresolvedRoute<
 
 export interface AnyRouteOptions {
   initialContext: any;
-  modifiedInitialContext: any;
   dataTypes: {
     [key: string]: string;
   };

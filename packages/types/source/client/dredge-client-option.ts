@@ -61,7 +61,7 @@ export type inferDredgeClientOption<
           [key in keyof RouteOptions["dataTypes"]]?: DataTransformer;
         };
       } & ("serverCtx" extends keyof Options
-        ? { serverCtx?: RouteOptions["modifiedInitialContext"] }
+        ? { serverCtx?: RouteOptions["initialContext"] }
         : {}) &
         ([Method] extends ["post" | "put" | "patch"]
           ? IBody extends Parser

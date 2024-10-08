@@ -1,7 +1,5 @@
 import {
   Simplify,
-  inferInitialRouteContext,
-  inferModifiedInitialRouteContext,
   inferRouteDataTypes,
   inferRouteEData,
   inferRouteOData,
@@ -27,7 +25,6 @@ describe("route.options()", () => {
           json: "application/json",
           formData: "application/form-data",
         },
-        defaultContext: {},
       })
       .options({})
       .options({
@@ -46,41 +43,6 @@ describe("route.options()", () => {
       readonly json: "application/json";
       readonly formData: "application/form-data";
       readonly xml: "application/xml";
-    }>();
-  });
-
-  test("merging of defaultContext should work", () => {
-    type Context = { db: "fake-db"; session: { username: string }; meta: any };
-
-    let route = dredgeRoute<Context>()
-      .options({
-        defaultContext: {
-          db: "fake-db",
-        },
-      })
-      .options({})
-      .options({
-        defaultContext: {
-          db: "fake-db",
-          meta: {
-            info: "......",
-          },
-        },
-      })
-      .path("/test")
-      .get()
-      .build();
-
-    type InitialContext = inferInitialRouteContext<typeof route>;
-    type ModifiedContext = Simplify<
-      inferModifiedInitialRouteContext<typeof route>
-    >;
-
-    expectTypeOf<InitialContext>().toEqualTypeOf<Context>();
-    expectTypeOf<ModifiedContext>().toEqualTypeOf<{
-      db?: "fake-db";
-      meta?: any;
-      session: { username: string };
     }>();
   });
 });
