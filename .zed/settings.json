@@ -1,7 +1,0 @@
-{
-  "formatter": {
-    "language_server": {
-      "name": "biome"
-    }
-  }
-}
