@@ -306,7 +306,9 @@ export function useValidate(route: AnyRoute) {
     }
     validatedRequest.params = validatedParams;
 
-    const validatedSearchParams: Record<string, any> = {};
+    const validatedSearchParams: Record<string, any> = {
+      ...unValidatedRequest.searchParams, // TODO: add a option to whether or not to pass searchParam if their schema is not defined
+    };
     for (const [key, parser] of Object.entries(routeDef.searchParams)) {
       const values = unValidatedRequest.searchParams[key];
       const validatedValues: any[] = [];
