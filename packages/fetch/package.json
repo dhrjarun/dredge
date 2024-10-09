@@ -1,6 +1,6 @@
 {
   "name": "dredge-fetch",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "Fetch client for dredge",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",

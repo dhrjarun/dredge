@@ -1,5 +1,15 @@
 # dredge-types
 
+## 0.5.0
+
+### Minor Changes
+
+- e6b8c75: Remove unwanted fields from route.options like `defaultContext`, `dataTransformer`, `dataSerializers`, `bodyParsers`
+
+### Patch Changes
+
+- 8983a68: Remove dataTransformer option from client
+
 ## 0.4.6
 
 ### Patch Changes

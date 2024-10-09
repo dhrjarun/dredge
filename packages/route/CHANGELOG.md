@@ -1,5 +1,19 @@
 # dredge-route
 
+## 0.5.0
+
+### Minor Changes
+
+- 9e74dfb: SearchParam without scheam defined can be retrieved now
+- e6b8c75: Remove unwanted fields from route.options like `defaultContext`, `dataTransformer`, `dataSerializers`, `bodyParsers`
+
+### Patch Changes
+
+- c7ff717: Fix dredgeRouter not throwing error on duplicate route and more than one dynamic path on same level
+- Updated dependencies [8983a68]
+- Updated dependencies [e6b8c75]
+  - dredge-types@0.5.0
+
 ## 0.4.7
 
 ### Patch Changes
