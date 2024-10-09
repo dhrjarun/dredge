@@ -180,13 +180,6 @@ export function untypedDredgeFetch(
           } as any);
         }
 
-        if (!dataType) return data;
-        const transformer = _options.dataTransformer?.[dataType]?.forResponse;
-
-        if (!transformer) return data;
-
-        data = transformer(data);
-
         return data;
       };
 
@@ -335,21 +328,6 @@ function mergeDefaultOptions(
   defaultOptions: DefaultFetchOptions,
   options: DefaultFetchOptions,
 ) {
-  const dataTransformer = options.dataTransformer || {};
-
-  for (const [key, value] of Object.entries(
-    defaultOptions?.dataTransformer || {},
-  )) {
-    if (!dataTransformer?.[key]) {
-      dataTransformer[key] = value;
-    }
-
-    dataTransformer[key] = {
-      ...value,
-      ...dataTransformer[key],
-    };
-  }
-
   function mergeHooks<T>(
     target: T[] | undefined,
     source?: T[] | undefined,
@@ -391,7 +369,6 @@ function mergeDefaultOptions(
       options.fetch ||
       defaultOptions.fetch ||
       globalThis.fetch.bind(globalThis),
-    dataTransformer,
     hooks,
     referrer: options.referrer ?? defaultOptions.referrer,
     dataSerializers: new MimeStore([

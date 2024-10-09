@@ -28,9 +28,6 @@ export interface DredgeClientOptions {
   searchParams?: Record<string, any | any[]>;
   prefixUrl?: URL | string;
   throwHttpErrors?: boolean;
-  dataTransformer?: {
-    [dataType: string]: DataTransformer;
-  };
 }
 
 export type inferDredgeClientOption<
@@ -56,9 +53,6 @@ export type inferDredgeClientOption<
         responseDataType?: keyof RouteOptions["dataTypes"];
         dataTypes?: {
           [key in keyof RouteOptions["dataTypes"]]?: string;
-        };
-        dataTransformer?: {
-          [key in keyof RouteOptions["dataTypes"]]?: DataTransformer;
         };
       } & ("serverCtx" extends keyof Options
         ? { serverCtx?: RouteOptions["initialContext"] }
@@ -92,7 +86,6 @@ export type DefaultFieldInDirectClientOptions =
   | "prefixUrl"
   | "dataTypes"
   | "dataType"
-  | "dataTransformer"
   | "responseDataType";
 
 export type DefaultDredgeClientOptions = Pick<
