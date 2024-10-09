@@ -84,6 +84,8 @@ export class RoutePath {
 class DredgeRouterClass<Routes extends AnyRoute[] = []>
   implements DredgeRouter
 {
+  // readonly routes: Routes;
+
   root: RoutePath = new RoutePath({
     name: "$root",
   });
@@ -124,12 +126,21 @@ class DredgeRouterClass<Routes extends AnyRoute[] = []>
 
       let current = this.root;
       paths.forEach((name) => {
-        if (!current.hasChild(name)) {
+        const child = current.getChild(name);
+        if (child && child.isParam && child.name !== name.slice(1)) {
+          throw new Error(`Duplicate dynamic path ${name} in the same level`);
+        }
+
+        if (!child) {
           current.addChild(name);
         }
         current = current.getChild(name)!;
       });
 
+      const endRoute = current.getRoute(def.method!);
+      if (endRoute) {
+        throw new Error(`Duplicate method ${def.method} in the same level`);
+      }
       current.setRoute(route);
     });
   }

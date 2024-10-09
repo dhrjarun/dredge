@@ -35,7 +35,7 @@ test("it will return route, if method and path matched", async () => {
     dredgeRoute()
       .path("/post")
       .get()
-      .use((req, res) => {
+      .use((_req, res) => {
         res.end();
       })
       .build(),
@@ -62,4 +62,59 @@ test("it will return route, if method and path matched", async () => {
     method: "post",
     paths: ["post"],
   });
+});
+
+test("it will throw, if more than one dynamic path at same level", async () => {
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a/:b").get().build(),
+      dredgeRoute().path("/a/:c").get().build(),
+    ]),
+  ).toThrowError();
+
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a/:b/c/d").get().build(),
+      dredgeRoute().path("/a/:c/c/d").get().build(),
+    ]),
+  ).toThrowError();
+});
+
+test("it will throw if two or more route are same", () => {
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a").get().build(),
+      dredgeRoute().path("/a").post().build(),
+      dredgeRoute().path("/a/b/c").delete().build(),
+      dredgeRoute().path("/a/b/c").put().build(),
+    ]),
+  ).not.toThrowError();
+
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a").get().build(),
+      dredgeRoute().path("/a").get().build(),
+    ]),
+  ).toThrowError();
+
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a/:b").get().build(),
+      dredgeRoute().path("/a/:b").post().build(),
+    ]),
+  ).not.toThrowError();
+
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a/:b").get().build(),
+      dredgeRoute().path("/a/:b").get().build(),
+    ]),
+  ).toThrowError();
+
+  expect(() =>
+    dredgeRouter([
+      dredgeRoute().path("/a/:b/c/d").get().build(),
+      dredgeRoute().path("/a/:b/c/d").get().build(),
+    ]),
+  ).toThrowError();
 });
