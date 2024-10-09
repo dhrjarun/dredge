@@ -84,7 +84,6 @@ export interface NormalizedFetchOptions
     | "fetch"
     | "params"
     | "throwHttpErrors"
-    | "dataTransformer"
     | "serializeParams"
     | "serializeSearchParams"
   > {
