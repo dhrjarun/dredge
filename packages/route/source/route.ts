@@ -3,8 +3,8 @@ import type {
   AnyUnresolvedRoute,
   RouteBuilderDef,
   UnresolvedRoute,
+  Parser,
 } from "dredge-types";
-import { Parser } from "./parser";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as UnresolvedRoute<
