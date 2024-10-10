@@ -1,64 +1,74 @@
-// zod / typeschema
-export type ParserZodEsque<TInput, TParsedInput> = {
-  _input: TInput;
-  _output: TParsedInput;
+// taken from tRPC codebase
+export type ParserZodEsque<Input, DParsedInput> = {
+  _input: Input;
+  _output: DParsedInput;
 };
 
-export type ParserMyZodEsque<TInput> = {
-  parse: (input: any) => TInput;
+export type ParserValibotEsque<Input, DParsedInput> = {
+  schema: {
+    _types?: {
+      input: Input;
+      output: DParsedInput;
+    };
+  };
 };
 
-export type ParserSuperstructEsque<TInput> = {
-  create: (input: unknown) => TInput;
+export type ParserArkTypeEsque<Input, DParsedInput> = {
+  inferIn: Input;
+  infer: DParsedInput;
 };
 
-export type ParserCustomValidatorEsque<TInput> = (
+export type ParserMyZodEsque<Input> = {
+  parse: (input: any) => Input;
+};
+
+export type ParserSuperstructEsque<Input> = {
+  create: (input: unknown) => Input;
+};
+
+export type ParserCustomValidatorEsque<Input> = (
   input: unknown,
-) => Promise<TInput> | TInput;
+) => Promise<Input> | Input;
 
-export type ParserYupEsque<TInput> = {
-  validateSync: (input: unknown) => TInput;
+export type ParserYupEsque<Input> = {
+  validateSync: (input: unknown) => Input;
 };
 
-export type ParserScaleEsque<TInput> = {
-  assert(value: unknown): asserts value is TInput;
+export type ParserScaleEsque<Input> = {
+  assert(value: unknown): asserts value is Input;
 };
 
-export type NoParser<Input = any> = {
-  _noParserType: Input;
-};
+export type ParserWithoutInput<Input> =
+  | ParserCustomValidatorEsque<Input>
+  | ParserMyZodEsque<Input>
+  | ParserScaleEsque<Input>
+  | ParserSuperstructEsque<Input>
+  | ParserYupEsque<Input>;
 
-export type ParserWithoutInput<TInput> =
-  | ParserCustomValidatorEsque<TInput>
-  | ParserMyZodEsque<TInput>
-  | ParserScaleEsque<TInput>
-  | ParserSuperstructEsque<TInput>
-  | ParserYupEsque<TInput>;
-
-export type ParserWithInputOutput<TInput, TParsedInput> = ParserZodEsque<
-  TInput,
-  TParsedInput
->;
+export type ParserWithInputOutput<Input, DParsedInput> =
+  | ParserZodEsque<Input, DParsedInput>
+  | ParserValibotEsque<Input, DParsedInput>
+  | ParserArkTypeEsque<Input, DParsedInput>;
 
 export type Parser = ParserWithInputOutput<any, any> | ParserWithoutInput<any>;
 
 export type inferParserType<P> = P extends ParserWithoutInput<infer T>
   ? T
-  : P extends ParserWithInputOutput<infer TI, infer TO>
-    ? TO
+  : P extends ParserWithInputOutput<infer _I, infer O>
+    ? O
     : never;
 
-export type inferParser<TParser extends Parser> =
-  TParser extends ParserWithInputOutput<infer $TIn, infer $TOut>
+export type inferParser<DParser extends Parser> =
+  DParser extends ParserWithInputOutput<infer $In, infer $Out>
     ? {
-        in: $TIn;
-        out: $TOut;
+        in: $In;
+        out: $Out;
       }
-    : TParser extends ParserWithoutInput<infer $InOut>
+    : DParser extends ParserWithoutInput<infer $InOut>
       ? {
           in: $InOut;
           out: $InOut;
         }
       : never;
 
-export type ParseFn<TType> = (value: unknown) => Promise<TType> | TType;
+export type ParseFn<Type> = (value: unknown) => Promise<Type> | Type;

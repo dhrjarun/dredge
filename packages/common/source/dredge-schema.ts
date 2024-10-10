@@ -5,14 +5,6 @@ type DredgeSchemaOptions = {
   default?: any;
 };
 
-type DredgeSchemaType =
-  | "string"
-  | "number"
-  | "boolean"
-  | "date"
-  | "array"
-  | "object";
-
 export class DredgeSchema {
   readonly type: string;
   description: string;
@@ -99,6 +91,10 @@ export function otherSchemaToDredgeSchema(schema: any): DredgeSchema | null {
   if (schema?._def?.typeName) {
     return zodSchemaToDredgeSchema(schema);
   }
+  // valibot
+  if (schema.type && schema.kind === "schema") {
+    return valibotSchemaToDredgeSchema(schema);
+  }
 
   // yup
   if (schema.type && typeof schema?.optional === "boolean") {
@@ -133,31 +129,22 @@ function zodSchemaToDredgeSchema(schema: any): DredgeSchema | null {
   return null;
 }
 
-const zodTypeDredgeTypeMap = {
-  ZodString: "string",
-  ZodNumber: "number",
-  ZodBoolean: "boolean",
-  ZodDate: "date",
-  ZodArray: "array",
-  ZodOptional: "optional",
-  ZodNullable: "nullable",
-  ZodDefault: "default",
-};
-
 function handleZodInnerTypes(
   schema: any,
   options: { nullable?: boolean; optional?: boolean; default?: any } = {},
 ): { schema: any } & DredgeSchemaOptions {
-  const type = schema._def.typeName as keyof typeof zodTypeDredgeTypeMap;
+  const type = schema._def.typeName as keyof typeof typeMap;
 
-  if (
-    type === "ZodOptional" ||
-    type === "ZodNullable" ||
-    type === "ZodDefault"
-  ) {
+  const typeMap = {
+    ZodOptional: "optional",
+    ZodNullable: "nullable",
+    ZodDefault: "default",
+  };
+
+  if (type in typeMap) {
     const innerSchema = schema._def.innerType;
 
-    const t = zodTypeDredgeTypeMap[type];
+    const t = typeMap[type];
 
     return handleZodInnerTypes(innerSchema, {
       ...options,
@@ -217,3 +204,54 @@ function yupSchemaToDredgeSchema(schema: any): DredgeSchema | null {
   }
   return null;
 }
+
+function handleValibotInnerTypes(
+  schema: any,
+  options: { nullable?: boolean; optional?: boolean; default?: any } = {},
+): { schema: any } & DredgeSchemaOptions {
+  const type = schema.type as keyof typeof typeMap;
+
+  const typeMap = {
+    optional: "optional",
+    nullable: "nullable",
+  };
+
+  if (type in typeMap) {
+    const innerSchema = schema.wrapped;
+
+    const t = typeMap[type];
+
+    return handleValibotInnerTypes(innerSchema, {
+      ...options,
+      default: schema.default,
+      [t]: true,
+    });
+  }
+
+  return {
+    ...options,
+    schema,
+  };
+}
+
+function valibotSchemaToDredgeSchema(schema: any): DredgeSchema | null {
+  const { schema: _schema, ...options } = handleValibotInnerTypes(schema);
+  const type = _schema.type;
+
+  if (type === "string") {
+    return new DredgeString(options);
+  }
+  if (type === "number") {
+    return new DredgeNumber(options);
+  }
+  if (type === "boolean") {
+    return new DredgeBoolean(options);
+  }
+  if (type === "date") {
+    return new DredgeDate(options);
+  }
+
+  return null;
+}
+
+// TODO: implement arkTypeSchemaToDredgeSchema
