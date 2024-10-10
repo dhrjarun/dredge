@@ -1,5 +1,14 @@
 # dredge-fetch
 
+## 0.5.9
+
+### Patch Changes
+
+- 8983a68: Remove dataTransformer option from client
+- Updated dependencies [8983a68]
+- Updated dependencies [e6b8c75]
+  - dredge-types@0.5.0
+
 ## 0.5.8
 
 ### Patch Changes
