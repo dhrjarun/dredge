@@ -31,6 +31,7 @@
     "lint:fix": "pnpm biome format --write ./source"
   },
   "devDependencies": {
+    "arktype": "2.0.0-rc.15",
     "superstruct": "^2.0.2",
     "ts-essentials": "^9.4.2",
     "valibot": "^0.42.1",
