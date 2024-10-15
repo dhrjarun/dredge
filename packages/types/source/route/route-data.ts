@@ -1,5 +1,5 @@
 import { Parser, inferParserType } from "../parser";
-import { Route, UnresolvedRoute } from "./dredge-route";
+import { Route } from "./dredge-route";
 
 // type OptionalData<Types, T> = { data?: T } & (IsNever<Types> extends false
 //   ? Types extends string
@@ -42,7 +42,7 @@ export type inferRouteEData<R> = R extends Route<
   infer EData extends Parser
 >
   ? inferParserType<EData>
-  : R extends UnresolvedRoute<
+  : R extends Route<
         any,
         any,
         any,
@@ -70,7 +70,7 @@ export type inferRouteOData<R> = R extends Route<
   any
 >
   ? inferParserType<OData>
-  : R extends UnresolvedRoute<
+  : R extends Route<
         any,
         any,
         any,

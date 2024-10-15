@@ -26,8 +26,7 @@ test("all success middleware should run", async () => {
       return res.next({
         data: "dummy-data",
       });
-    })
-    .build();
+    });
 
   const response = await useSuccessMiddlewares(route)({
     method: "get",
@@ -69,8 +68,7 @@ test("all error middleware should run", async () => {
       return res.next({
         data: "dummy-data",
       });
-    })
-    .build();
+    });
 
   const response = await useErrorMiddlewares(route)(new Error("test-error"), {
     method: "get",
@@ -111,8 +109,7 @@ test("res.end() function should skip the rest of the success middleware", async 
         status: 201,
         statusText: "created",
       });
-    })
-    .build();
+    });
 
   const response = await useSuccessMiddlewares(route)({
     method: "get",
@@ -156,8 +153,7 @@ test("res.end() function should skip the rest of the error middleware", async ()
         status: 400,
         statusText: "bad-data",
       });
-    })
-    .build();
+    });
 
   const response = await useErrorMiddlewares(route)(new Error("test-error"), {
     method: "get",
@@ -208,8 +204,7 @@ test("if headerValue for some header is provide null, it should be deleted", asy
     })
     .error((_err, _req, res) => {
       expect(res.header("content-type")).toBe("application/json");
-    })
-    .build();
+    });
 
   await useSuccessMiddlewares(route)({
     method: "get",
@@ -246,8 +241,7 @@ test("content-type header should set corresponding request dataType", async () =
       return res.end({
         data: req.dataType,
       });
-    })
-    .build();
+    });
 
   expect(
     useSuccessMiddlewares(route)({
@@ -298,8 +292,7 @@ test("accept header should set corresponding response dataType and it set corres
       return res.end({
         data: res.dataType,
       });
-    })
-    .build();
+    });
 
   expect(
     useSuccessMiddlewares(route)({

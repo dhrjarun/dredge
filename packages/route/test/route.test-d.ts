@@ -34,8 +34,7 @@ describe("route.options()", () => {
         },
       })
       .path("/test")
-      .get()
-      .build();
+      .get();
 
     type DataTypes = Simplify<inferRouteDataTypes<typeof route>>;
 
@@ -638,25 +637,6 @@ describe("res", () => {
     expectTypeOf<EDataIV>().toBeNever();
   });
 
-  test("OData will be `any` after .build() if it was never before and same with EData", () => {
-    const routeI = dredgeRoute()
-      .path("/test")
-      .get()
-      .use((_req, res) => {
-        return res.next();
-      })
-      .error((_err, _req, res) => {
-        return res.next();
-      });
-
-    expectTypeOf<inferRouteOData<typeof routeI>>().toBeNever();
-    expectTypeOf<inferRouteEData<typeof routeI>>().toBeNever();
-
-    const routeI_built = routeI.build();
-    expectTypeOf<inferRouteOData<typeof routeI_built>>().toBeAny();
-    expectTypeOf<inferRouteEData<typeof routeI_built>>().toBeAny();
-  });
-
   test("res.end and responseData", () => {
     const route = dredgeRoute()
       .path("/test")
@@ -665,8 +645,7 @@ describe("res", () => {
         return res.end({
           data: "this is string" as const,
         });
-      })
-      .build();
+      });
 
     type OData = inferRouteOData<typeof route>;
     expectTypeOf<OData>().toEqualTypeOf<"this is string">();
@@ -681,8 +660,7 @@ describe("res", () => {
         return res.end({
           data: "a",
         });
-      })
-      .build();
+      });
 
     type OData = inferRouteOData<typeof route>;
     expectTypeOf<OData>().toEqualTypeOf<"a" | "b" | "c">();
@@ -708,8 +686,7 @@ describe("res", () => {
       .output(z.enum(["a", "b", "c"]))
       .use((_req, res) => {
         expectTypeOf(res.data).toBeAny();
-      })
-      .build();
+      });
 
     dredgeRoute()
       .path("/test")

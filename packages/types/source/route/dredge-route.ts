@@ -264,8 +264,7 @@ type EndFunction<DataTypes, DT> = {
   ): MiddlewareResult<{}, T>;
 };
 
-export type RouteBuilderDef<isResolved extends boolean = boolean> = {
-  isResolved: isResolved;
+export type RouteBuilderDef = {
   method?: HTTPMethod;
   paths: string[];
   params: Record<string, Parser>;
@@ -298,21 +297,6 @@ export type RouteBuilderDef<isResolved extends boolean = boolean> = {
   >[];
   errorMiddlewares: ErrorMiddlewareFunction<any, any, any, any, any, any>[];
 };
-
-export interface Route<
-  Options,
-  SuccessContext,
-  ErrorContext,
-  Method,
-  Paths,
-  Params,
-  SearchParams,
-  IBody,
-  OBody,
-  EBody,
-> {
-  _def: RouteBuilderDef<true>;
-}
 
 type _inferPathArray<T> = T extends `${infer P}/${infer Rest}`
   ? [P, ..._inferPathArray<Rest>]
@@ -428,7 +412,7 @@ export type BodyFn = {
   <As extends BodyAs>(as: As): Promise<BodyTypesMap[As]>;
 };
 
-export interface UnresolvedRoute<
+export interface Route<
   Options,
   SuccessContext,
   ErrorContext,
@@ -440,13 +424,13 @@ export interface UnresolvedRoute<
   OBody = never,
   EBody = never,
 > {
-  _def: RouteBuilderDef<false>;
+  _def: RouteBuilderDef;
 
   options<const DataTypes extends Record<string, string> = {}>(options?: {
     dataTypes?: DataTypes;
   }): IsNotAllowedDataTypes<DataTypes> extends true
     ? "One or more of dataType is invalid!"
-    : UnresolvedRoute<
+    : Route<
         Merge<
           Options,
           {
@@ -469,7 +453,7 @@ export interface UnresolvedRoute<
 
   path<const T extends string>(
     path: T,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -496,7 +480,7 @@ export interface UnresolvedRoute<
     },
   >(
     arg: T,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -511,7 +495,7 @@ export interface UnresolvedRoute<
 
   searchParams<const T extends { [key: string]: Parser }>(
     queries: T,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -536,7 +520,7 @@ export interface UnresolvedRoute<
       inferParserType<OBody>,
       NewOData
     >,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     Overwrite<SuccessContext, NewContext>,
     ErrorContext,
@@ -562,7 +546,7 @@ export interface UnresolvedRoute<
       inferParserType<EBody>,
       NewEData
     >,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     Overwrite<ErrorContext, NewContext>,
@@ -579,22 +563,9 @@ export interface UnresolvedRoute<
         : EBody
   >;
 
-  build(): Route<
-    Options,
-    SuccessContext,
-    ErrorContext,
-    Method,
-    Paths,
-    Params,
-    SearchParams,
-    IBody,
-    IsNever<OBody> extends true ? ParserWithoutInput<any> : OBody,
-    IsNever<EBody> extends true ? ParserWithoutInput<any> : EBody
-  >;
-
   output<P extends Parser>(
     parser: P,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -610,7 +581,7 @@ export interface UnresolvedRoute<
   method<M extends HTTPMethod, P extends Parser>(
     method: M,
     parser?: P,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -622,7 +593,7 @@ export interface UnresolvedRoute<
     OBody,
     EBody
   >;
-  get(): UnresolvedRoute<
+  get(): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -636,7 +607,7 @@ export interface UnresolvedRoute<
   >;
   post<P extends Parser>(
     parser?: P,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -650,7 +621,7 @@ export interface UnresolvedRoute<
   >;
   put<P extends Parser>(
     parser?: P,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -662,7 +633,7 @@ export interface UnresolvedRoute<
     OBody,
     EBody
   >;
-  delete(): UnresolvedRoute<
+  delete(): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -676,7 +647,7 @@ export interface UnresolvedRoute<
   >;
   patch<P extends Parser>(
     parser?: P,
-  ): UnresolvedRoute<
+  ): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -688,7 +659,7 @@ export interface UnresolvedRoute<
     OBody,
     EBody
   >;
-  head(): UnresolvedRoute<
+  head(): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -704,12 +675,12 @@ export interface UnresolvedRoute<
 
 export type AnyRoute = Route<any, any, any, any, any, any, any, any, any, any>;
 
-export type AnyUnresolvedRoute = UnresolvedRoute<
+export type AnyValidRoute = Route<
   any,
   any,
   any,
-  any,
-  any,
+  string,
+  string[],
   any,
   any,
   any,

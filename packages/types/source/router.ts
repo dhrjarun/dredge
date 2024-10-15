@@ -1,5 +1,5 @@
 import {
-  AnyRoute,
+  AnyValidRoute,
   HasRouteParamPath,
   Route,
   inferRouteGenericPath,
@@ -8,30 +8,39 @@ import {
 import { IsNever, Merge } from "./utils";
 
 export interface DredgeRouter<Routes = []> {
-  find(method: string, path: string[]): AnyRoute | null;
+  find(method: string, path: string[]): AnyValidRoute | null;
 }
 
 export type inferRouterRoutes<T> = T extends DredgeRouter<infer R> ? R : never;
 
 export type _OverwriteRoutes<
-  T extends (AnyRoute | DredgeRouter)[],
-  U extends AnyRoute[] = [],
-> = T extends [infer First, ...infer Rest extends (AnyRoute | DredgeRouter)[]]
-  ? First extends DredgeRouter<infer Rs extends AnyRoute[]>
+  T extends (AnyValidRoute | DredgeRouter)[],
+  U extends AnyValidRoute[] = [],
+> = T extends [
+  infer First,
+  ...infer Rest extends (AnyValidRoute | DredgeRouter)[],
+]
+  ? First extends DredgeRouter<infer Rs extends AnyValidRoute[]>
     ? _OverwriteRoutes<Rest, [...U, ...Rs]>
-    : _OverwriteRoutes<Rest, [...U, First extends AnyRoute ? First : never]>
+    : _OverwriteRoutes<
+        Rest,
+        [...U, First extends AnyValidRoute ? First : never]
+      >
   : U;
 
 export type OverwriteRoutes<
-  T extends (AnyRoute | DredgeRouter)[],
-  U extends AnyRoute[] = [],
+  T extends (AnyValidRoute | DredgeRouter)[],
+  U extends AnyValidRoute[] = [],
 > = ModifyRoutes<_OverwriteRoutes<T, U>>;
 
 export type ModifyRoutes<
-  T extends AnyRoute[],
-  All extends AnyRoute[] = T,
+  T extends AnyValidRoute[],
+  All extends AnyValidRoute[] = T,
   U extends any[] = [],
-> = T extends [infer First extends AnyRoute, ...infer Rest extends AnyRoute[]]
+> = T extends [
+  infer First extends AnyValidRoute,
+  ...infer Rest extends AnyValidRoute[],
+]
   ? HasRouteParamPath<First> extends false
     ? ModifyRoutes<Rest, All, [...U, First]>
     : IsNever<

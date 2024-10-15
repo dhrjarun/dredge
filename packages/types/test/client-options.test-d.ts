@@ -7,9 +7,9 @@ import { z } from "zod";
 
 test("options.method", () => {
   const getPostPutRouter = dredgeRouter([
-    dredgeRoute().path("/a").get().build(),
-    dredgeRoute().path("/b").post().build(),
-    dredgeRoute().path("/c").put().build(),
+    dredgeRoute().path("/a").get(),
+    dredgeRoute().path("/b").post(),
+    dredgeRoute().path("/c").put(),
   ]);
 
   type GetPostPutRouter = inferRouterRoutes<typeof getPostPutRouter>;
@@ -20,9 +20,9 @@ test("options.method", () => {
   >();
 
   const deletePatchHeadRouter = dredgeRouter([
-    dredgeRoute().path("/d").delete().build(),
-    dredgeRoute().path("/e").patch().build(),
-    dredgeRoute().path("/f").head().build(),
+    dredgeRoute().path("/d").delete(),
+    dredgeRoute().path("/e").patch(),
+    dredgeRoute().path("/f").head(),
   ]);
 
   type DeletePatchHeadRouter = inferRouterRoutes<typeof deletePatchHeadRouter>;
@@ -45,8 +45,8 @@ test("options.dataTypes", () => {
   });
 
   const router = dredgeRouter([
-    r.path("/a").get().build(),
-    r.path("/b").post(z.string()).build(),
+    r.path("/a").get(),
+    r.path("/b").post(z.string()),
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
@@ -72,9 +72,9 @@ test("options.dataType and options.responseDataType", () => {
   });
 
   const router = dredgeRouter([
-    r.path("/a").get().build(),
-    r.path("/b").get().build(),
-    r.path("/c").get().build(),
+    r.path("/a").get(),
+    r.path("/b").get(),
+    r.path("/c").get(),
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
@@ -96,15 +96,14 @@ test("options.params", () => {
   const r = dredgeRoute();
 
   const router = dredgeRouter([
-    r.path("/a/:b").get().build(),
+    r.path("/a/:b").get(),
     r
       .path("/c/:d/:e")
       .params({
         d: z.number(),
         e: z.enum(["a", "b"]),
       })
-      .get()
-      .build(),
+      .get(),
     r
       .path("/f/g/:h/:i/:j")
       .params({
@@ -112,9 +111,8 @@ test("options.params", () => {
         i: z.boolean(),
         j: z.date(),
       })
-      .get()
-      .build(),
-    // r.path('/k').get().build(), // TODO: fix this, it causes some unneccary type in params type.
+      .get(),
+    // r.path('/k').get(), // TODO: fix this, it causes some unneccary type in params type.
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
@@ -133,15 +131,14 @@ test("options.searchParams", () => {
   const r = dredgeRoute();
 
   const router = dredgeRouter([
-    r.path("/a").get().build(),
+    r.path("/a").get(),
     r
       .path("/c")
       .searchParams({
         d: z.number(),
         e: z.enum(["a", "b"]),
       })
-      .get()
-      .build(),
+      .get(),
     r
       .path("/f")
       .searchParams({
@@ -149,12 +146,10 @@ test("options.searchParams", () => {
         i: z.boolean(),
         j: z.date(),
       })
-      .get()
-      .build(),
+      .get(),
     r
       .path("/k")
-      .get()
-      .build(), // TODO: fix this
+      .get(), // TODO: fix this
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
@@ -186,13 +181,10 @@ test("options.data", () => {
   });
 
   const router = dredgeRouter([
-    r.path("/a").get().build(),
-    r.path("/c").put(z.number()).build(),
-    r.path("/b").post(z.string()).build(),
-    r
-      .path("/c")
-      .patch(z.object({ a: z.string() }))
-      .build(),
+    r.path("/a").get(),
+    r.path("/c").put(z.number()),
+    r.path("/b").post(z.string()),
+    r.path("/c").patch(z.object({ a: z.string() })),
   ]);
 
   type Routes = inferRouterRoutes<typeof router>;

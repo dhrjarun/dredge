@@ -32,8 +32,7 @@ describe("client.extend", () => {
             status: 200,
             statusText: "ok",
           });
-        })
-        .build(),
+        }),
     ]),
   );
 
@@ -57,8 +56,7 @@ describe("client.extend", () => {
             status: 200,
             statusText: "ok",
           });
-        })
-        .build(),
+        }),
     ]),
   );
 
@@ -189,8 +187,7 @@ test("paramPath should work", async () => {
             status: 200,
             statusText: "ok",
           });
-        })
-        .build(),
+        }),
     ]),
   );
 
@@ -234,8 +231,7 @@ test("throw error if params is empty string", () => {
             status: 200,
             statusText: "ok",
           });
-        })
-        .build(),
+        }),
     ]),
   );
 
@@ -258,6 +254,8 @@ test("throw error if params is empty string", () => {
   }).toThrowError();
 });
 
+// TODO: Remove these comments
+//
 // describe("dataTypes", () => {
 //   const route = dredgeRoute().options({
 //     dataTypes: {
@@ -284,7 +282,7 @@ test("throw error if params is empty string", () => {
 //             statusText: "ok",
 //           });
 //         })
-//         .build(),
+//         ,
 //     ]),
 //   );
 
@@ -389,7 +387,7 @@ test("throw error if params is empty string", () => {
 //             statusText: "Bad Request",
 //           });
 //         })
-//         .build(),
+//         ,
 //     ]),
 //   );
 

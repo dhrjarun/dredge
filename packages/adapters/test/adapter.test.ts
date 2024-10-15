@@ -52,8 +52,7 @@ describe.each(servers)(
                   ...req.data,
                 },
               });
-            })
-            .build(),
+            }),
 
           route
             .path("/error")
@@ -68,8 +67,7 @@ describe.each(servers)(
                   ...req.data,
                 },
               });
-            })
-            .build(),
+            }),
         ]),
       });
 
@@ -114,8 +112,7 @@ describe.each(servers)(
                 status: 200,
                 text: req.data,
               });
-            })
-            .build(),
+            }),
 
           route
             .path("/error")
@@ -128,8 +125,7 @@ describe.each(servers)(
                 status: 500,
                 text: req.data,
               });
-            })
-            .build(),
+            }),
         ]),
       });
 
@@ -180,8 +176,7 @@ describe.each(servers)(
               return res.end({
                 json: data,
               });
-            })
-            .build(),
+            }),
         ]),
       });
 
@@ -206,13 +201,11 @@ describe.each(servers)(
               return res.end({
                 status: 200,
               });
-            })
-            .build(),
+            }),
           dredgeRoute()
             .path("/test-II")
             .get()
-            .use((req, res) => {})
-            .build(),
+            .use((req, res) => {}),
         ]),
       });
 
@@ -239,8 +232,7 @@ describe.each(servers)(
                 status: 200,
                 json: req.param(),
               });
-            })
-            .build(),
+            }),
         ]),
 
         deserializeParams: (params) => {
@@ -294,8 +286,7 @@ describe.each(servers)(
                   multiple: req.searchParams(),
                 },
               });
-            })
-            .build(),
+            }),
         ]),
 
         deserializeSearchParams: (searchParams) => {
@@ -347,8 +338,7 @@ describe.each(servers)(
                 status: 200,
                 text: req.data,
               });
-            })
-            .build(),
+            }),
         ]),
 
         bodyParsers: {
@@ -435,8 +425,7 @@ describe.each(servers)(
                 },
                 data: "",
               });
-            })
-            .build(),
+            }),
         ]),
         dataSerializers: {
           "application/json": ({}) => {
@@ -519,8 +508,7 @@ describe.each(servers)(
               status: 200,
               text: url.pathname,
             });
-          })
-          .build(),
+          }),
 
         route
           .path("/test")
@@ -531,8 +519,7 @@ describe.each(servers)(
               status: 200,
               text: url.pathname,
             });
-          })
-          .build(),
+          }),
       ]);
       await startServer({
         router,
@@ -589,8 +576,7 @@ describe.each(servers)(
               return res.end({
                 status: 400,
               });
-            })
-            .build(),
+            }),
         ]),
       });
 
@@ -629,8 +615,7 @@ describe.each(servers)(
                   multiple: req.searchParams(),
                 },
               });
-            })
-            .build(),
+            }),
         ]),
       });
 
@@ -677,8 +662,7 @@ describe.each(servers)(
               return res.end({
                 status: 400,
               });
-            })
-            .build(),
+            }),
         ]),
       });
 
@@ -726,8 +710,7 @@ describe.each(servers)(
               return res.end({
                 status: 500,
               });
-            })
-            .build(),
+            }),
         ]),
 
         bodyParsers: {},

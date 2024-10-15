@@ -21,7 +21,7 @@ const route = dredgeRoute()
       text: "text/plain",
     },
   })
-  .error((error, req, res) => {
+  .error((_error, _req, res) => {
     return res.end({
       status: 400,
     });
@@ -90,13 +90,12 @@ function findBird(name: string) {
 const GetBirds = route
   .path("/birds")
   .get()
-  .use((req, res) => {
+  .use((_req, res) => {
     return res.end({
       status: 200,
       json: birds,
     });
-  })
-  .build();
+  });
 
 const GetBirdByName = route
   .path("/birds/:name")
@@ -106,32 +105,29 @@ const GetBirdByName = route
       status: 200,
       json: findBird(req.param("name")),
     });
-  })
-  .build();
+  });
 
 const PostBird = route
   .path("/birds")
   .post(z.object({ name: z.string(), color: z.string() }))
-  .use((req, res) => {
+  .use((_req, res) => {
     return res.end({
       status: 200,
       json: {
         created: true,
       },
     });
-  })
-  .build();
+  });
 
 const GetBirdColors = route
   .path("/birds/colors")
   .get()
-  .use((req, res) => {
+  .use((_req, res) => {
     return res.end({
       status: 200,
       json: birds.map((bird) => bird.color),
     });
-  })
-  .build();
+  });
 
 const GetEventByDate = route
   .path("/events/:date")
@@ -144,32 +140,29 @@ const GetEventByDate = route
       status: 200,
       json: findEvent(req.param("date")),
     });
-  })
-  .build();
+  });
 
 const DeleteFruitByName = route
   .path("/fruits/:name")
   .delete()
-  .use((req, res) => {
+  .use((_req, res) => {
     return res.end({
       status: 200,
       json: {
         isDeleted: true,
       },
     });
-  })
-  .build();
+  });
 
 const GetFreshFruits = route
   .path("/fruits/fresh")
-  .use((req, res) => {
+  .use((_req, res) => {
     return res.end({
       status: 200,
       json: fruits.filter((fruit) => fruit.isFresh),
     });
   })
-  .get()
-  .build();
+  .get();
 
 const router = dredgeRouter([
   GetBirds,

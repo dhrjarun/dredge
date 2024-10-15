@@ -16,8 +16,7 @@ test("simple validation", async () => {
       snumber: z.number(),
       sboolean: z.boolean(),
     })
-    .post(z.enum(["a", "b", "c"]))
-    .build();
+    .post(z.enum(["a", "b", "c"]));
 
   const validated = await useValidate(route)({
     method: "POST",
@@ -56,8 +55,7 @@ test("optional searchParam should work", async () => {
       required: z.string(),
       optional: z.string().optional(),
     })
-    .get()
-    .build();
+    .get();
 
   expect(
     useValidate(route)({
@@ -83,8 +81,7 @@ test("unSpecified searchParam should work", async () => {
       i: z.number(),
       o: z.string().optional(),
     })
-    .get()
-    .build();
+    .get();
 
   const validated = await useValidate(route)({
     method: "GET",

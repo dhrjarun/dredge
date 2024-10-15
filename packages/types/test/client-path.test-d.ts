@@ -16,12 +16,12 @@ import {
 
 test("ParamPath only reutrn for route containing dynamic path", () => {
   const testRouter = dredgeRouter([
-    dredgeRoute().path("/a/:b").build(),
-    dredgeRoute().path("/:x/y/z").build(),
-    dredgeRoute().path("/m/n/:o").get().build(),
-    dredgeRoute().path("/a").build(),
-    dredgeRoute().path("/x/y/z").build(),
-    dredgeRoute().path("/x/:y/z").build(),
+    dredgeRoute().path("/a/:b"),
+    dredgeRoute().path("/:x/y/z"),
+    dredgeRoute().path("/m/n/:o").get(),
+    dredgeRoute().path("/a"),
+    dredgeRoute().path("/x/y/z"),
+    dredgeRoute().path("/x/:y/z"),
   ]);
   type TestRouter = typeof testRouter;
 

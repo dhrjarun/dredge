@@ -1,7 +1,7 @@
-import { UnresolvedRoute } from "../../source/route/dredge-route";
+import { Route } from "../../source/route/dredge-route";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
-  return createRouteBuilder() as any as UnresolvedRoute<
+  return createRouteBuilder() as any as Route<
     {
       initialContext: Context;
       modifiedInitialContext: Context;

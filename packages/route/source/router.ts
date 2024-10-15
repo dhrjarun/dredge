@@ -1,4 +1,9 @@
-import type { AnyRoute, DredgeRouter, OverwriteRoutes } from "dredge-types";
+import type {
+  AnyRoute,
+  AnyValidRoute,
+  DredgeRouter,
+  OverwriteRoutes,
+} from "dredge-types";
 
 export class RoutePath {
   name: string;
@@ -141,12 +146,21 @@ class DredgeRouterClass<Routes extends AnyRoute[] = []>
       if (endRoute) {
         throw new Error(`Duplicate method ${def.method} in the same level`);
       }
+
+      const _def = route._def;
+      if (!_def.paths.length) {
+        throw TypeError("Invalid route - Paths are not defined");
+      }
+      if (!_def.method) {
+        throw TypeError("Invalid route - Method is not defined");
+      }
+
       current.setRoute(route);
     });
   }
 }
 
-export function dredgeRouter<const T extends (AnyRoute | DredgeRouter)[]>(
+export function dredgeRouter<const T extends (AnyValidRoute | DredgeRouter)[]>(
   routes: T,
 ): DredgeRouter<OverwriteRoutes<T>> {
   const router = new DredgeRouterClass(routes as any);
