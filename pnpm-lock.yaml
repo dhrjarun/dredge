@@ -193,6 +193,9 @@ importers:
 
   packages/common:
     devDependencies:
+      arktype:
+        specifier: 2.0.0-rc.15
+        version: 2.0.0-rc.15
       superstruct:
         specifier: ^2.0.2
         version: 2.0.2
@@ -342,6 +345,12 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
+
+  '@ark/schema@0.17.0':
+    resolution: {integrity: sha512-k8HhF35UlUjNfyBrYna4YTMTjufu3Ez2mPQ5CMHpEt5Qi15Zze6g5HHlOC79gDAWJ+u2qcp2QY55L+GYY7CLVQ==}
+
+  '@ark/util@0.17.0':
+    resolution: {integrity: sha512-bp17dQitBvkvtiVmb2XeSposr098nZx70h3/tlpfjElbkFeFwkGu6sSUS+jP/FZSIydNby+KBETiKnb235Ua0A==}
 
   '@babel/helper-string-parser@7.24.8':
     resolution: {integrity: sha512-pO9KhhRcuUyGnJWwyEgnRJTSIZHiT+vMD0kPeD+so0l7mxkMT19g3pjY9GTnHySck/hDzq+dtW/4VgnMkippsQ==}
@@ -1468,6 +1477,9 @@ packages:
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
+
+  arktype@2.0.0-rc.15:
+    resolution: {integrity: sha512-jHASe4HqZIzAgwvf7F4u1K9EQE08Ml6m+YGNEkDz4BAkxjSEZxEIev2IBSlMKy3ghN1q6mb8dLUfNaQ4GmgQJg==}
 
   array-flatten@1.1.1:
     resolution: {integrity: sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==}
@@ -3228,6 +3240,12 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.5
       '@jridgewell/trace-mapping': 0.3.25
 
+  '@ark/schema@0.17.0':
+    dependencies:
+      '@ark/util': 0.17.0
+
+  '@ark/util@0.17.0': {}
+
   '@babel/helper-string-parser@7.24.8': {}
 
   '@babel/helper-validator-identifier@7.24.7': {}
@@ -4212,6 +4230,11 @@ snapshots:
       sprintf-js: 1.0.3
 
   argparse@2.0.1: {}
+
+  arktype@2.0.0-rc.15:
+    dependencies:
+      '@ark/schema': 0.17.0
+      '@ark/util': 0.17.0
 
   array-flatten@1.1.1: {}
 

@@ -8,9 +8,9 @@ type DredgeSchemaOptions = {
 export class DredgeSchema {
   readonly type: string;
   description: string;
-  optional: boolean;
-  nullable: boolean;
-  default: any;
+  optional: boolean; // information of optional is not needed to deserialize because, that particular value should not exist hence no need to deserialize
+  nullable: boolean; // nullable will not be supported by param and searhParams
+  default: any; // default as well, will not be needed because it will be provided after validation, but may need in case to error middleware
 
   constructor(type: string, options: DredgeSchemaOptions = {}) {
     this.type = type;
@@ -104,6 +104,10 @@ export function otherSchemaToDredgeSchema(schema: any): DredgeSchema | null {
   // superStruct
   if (schema.type) {
     return superStructSchemaToDredgeSchema(schema);
+  }
+
+  if (schema.extends) {
+    return arkTypeSchemaToDredgeSchema(schema);
   }
 
   return null;
@@ -254,4 +258,24 @@ function valibotSchemaToDredgeSchema(schema: any): DredgeSchema | null {
   return null;
 }
 
-// TODO: implement arkTypeSchemaToDredgeSchema
+export function arkTypeSchemaToDredgeSchema(schema: any): DredgeSchema | null {
+  const options = {
+    nullable: false,
+    optional: schema.meta.optional,
+  };
+
+  if (schema.extends("string")) {
+    return new DredgeString();
+  }
+  if (schema.extends("number")) {
+    return new DredgeNumber(options);
+  }
+  if (schema.extends("boolean")) {
+    return new DredgeBoolean(options);
+  }
+  if (schema.extends("Date")) {
+    return new DredgeDate(options);
+  }
+
+  return null;
+}
