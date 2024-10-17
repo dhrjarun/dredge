@@ -1,13 +1,8 @@
 import { MimeStore, trimSlashes } from "dredge-common";
-import type {
-  AnyUnresolvedRoute,
-  RouteBuilderDef,
-  UnresolvedRoute,
-  Parser,
-} from "dredge-types";
+import type { AnyRoute, RouteBuilderDef, Route, Parser } from "dredge-types";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
-  return createRouteBuilder() as UnresolvedRoute<
+  return createRouteBuilder() as Route<
     {
       initialContext: Context;
       modifiedInitialContext: Context;
@@ -37,7 +32,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
   } = initDef;
 
   const _def: RouteBuilderDef = {
-    isResolved: false,
     dataTransformer,
     middlewares,
     errorMiddlewares,
@@ -258,27 +252,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         oBody: parser,
       });
     },
-
-    build() {
-      const _paths = _def.paths;
-      const _method = _def.method;
-
-      if (!_paths.length) {
-        throw "Paths are not defined";
-      }
-
-      if (!_method) {
-        throw "Method is not defined";
-      }
-
-      return {
-        _def: {
-          ..._def,
-          isResolved: true,
-        },
-      };
-    },
-  } as AnyUnresolvedRoute;
+  } as AnyRoute;
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
   for (const item of aliases) {

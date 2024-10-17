@@ -10,8 +10,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/a/b/c/d" as const,
       });
-    })
-    .build(),
+    }),
 
   dredgeRoute()
     .path("/a/b/c/d")
@@ -20,8 +19,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "DELETE/a/b/c/d" as const,
       });
-    })
-    .build(),
+    }),
 
   dredgeRoute()
     .path("/:a/b/c/d")
@@ -30,8 +28,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/:a/b/c/d" as const,
       });
-    })
-    .build(),
+    }),
 
   dredgeRoute()
     .path("/:a/b/c/d")
@@ -40,8 +37,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "PUT/:a/b/c/d" as const,
       });
-    })
-    .build(),
+    }),
 
   dredgeRoute()
     .path("/a/:b/c/d")
@@ -53,8 +49,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/a/:b/c/d" as const,
       });
-    })
-    .build(),
+    }),
 
   dredgeRoute()
     .path("/a/b/:c/d")
@@ -66,8 +61,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/a/b/:c/d" as const,
       });
-    })
-    .build(),
+    }),
 
   dredgeRoute()
     .path("/a/b/c/:d")
@@ -79,12 +73,11 @@ export const singleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/a/b/c/:d" as const,
       });
-    })
-    .build(),
+    }),
 ]);
 
 export const singleParamAutoRouter = dredgeRouter([
-  dredgeRoute().path("/e/f/g/h").get().build(),
+  dredgeRoute().path("/e/f/g/h").get(),
   dredgeRoute()
     .path("/:e/f/g/h")
     .params({
@@ -95,8 +88,7 @@ export const singleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/:e/f/g/h" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/e/:f/g/h")
     .params({
@@ -107,8 +99,7 @@ export const singleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/e/:f/g/h" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/e/f/:g/h")
     .params({
@@ -119,8 +110,7 @@ export const singleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/e/f/:g/h" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/e/f/g/:h")
     .params({
@@ -131,12 +121,11 @@ export const singleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/e/f/g/:h" as const,
       });
-    })
-    .build(),
+    }),
 ]);
 
 export const doubleParamNonAutoRouter = dredgeRouter([
-  dredgeRoute().path("/s/t/u/v/w/x").get().build(),
+  dredgeRoute().path("/s/t/u/v/w/x").get(),
   dredgeRoute()
     .path("/:s/t/:u/v/w/x")
     .params({
@@ -148,8 +137,7 @@ export const doubleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/:s/t/:u/v/w/x" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/s/:t/u/:v/w/x")
     .params({
@@ -161,8 +149,7 @@ export const doubleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/s/:t/u/:v/w/x" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/s/t/u/v/:w/:x")
     .params({
@@ -174,11 +161,10 @@ export const doubleParamNonAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/s/t/u/v/:w/:x" as const,
       });
-    })
-    .build(),
+    }),
 ]);
 export const doubleParamAutoRouter = dredgeRouter([
-  dredgeRoute().path("/p/q/r/s/t/u").get().build(),
+  dredgeRoute().path("/p/q/r/s/t/u").get(),
   dredgeRoute()
     .path("/:p/q/:r/s/t/u")
     .params({
@@ -190,8 +176,7 @@ export const doubleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/:p/q/:r/s/t/u" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/p/:q/r/:s/t/u")
     .params({
@@ -203,8 +188,7 @@ export const doubleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "/GET/p/:q/r/:s/t/u" as const,
       });
-    })
-    .build(),
+    }),
   dredgeRoute()
     .path("/p/q/r/s/:t/:u")
     .params({
@@ -216,8 +200,7 @@ export const doubleParamAutoRouter = dredgeRouter([
       return res.end({
         data: "GET/p/q/r/s/:t/:u" as const,
       });
-    })
-    .build(),
+    }),
 ]);
 
 export const pathRouter = dredgeRouter([

@@ -3,6 +3,7 @@ import { createClient } from "./helpers/dredge-client";
 import { pathRouter } from "./path-routes";
 
 type PathRouter = typeof pathRouter;
+
 describe("pathRoutes", () => {
   const client = createClient<PathRouter>();
   test("/a/b/c/d", async () => {

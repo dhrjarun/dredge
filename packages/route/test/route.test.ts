@@ -226,18 +226,3 @@ describe("route.<middleware>()", () => {
     expect(route._def.errorMiddlewares[2]).toBe(lastMiddleware);
   });
 });
-
-describe("route.build()", () => {
-  test("if path and method is not there, it should throw", () => {
-    expect(() => {
-      dredgeRoute().path("/test").build();
-    }).toThrowError();
-
-    expect(() => {
-      dredgeRoute().get().build();
-    }).toThrowError();
-
-    const router = dredgeRoute().path("/test").get().build();
-    expect(router._def.isResolved).toBe(true);
-  });
-});
