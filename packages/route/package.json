@@ -32,10 +32,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "dredge-types": "workspace:*",
-    "dredge-common": "workspace:*"
+    "dredge-common": "workspace:*",
+    "dredge-types": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.12.4"
+    "@types/node": "^20.12.4",
+    "arktype": "2.0.0-rc.15",
+    "superstruct": "^2.0.2",
+    "valibot": "^0.42.1",
+    "yup": "^1.4.0"
   }
 }

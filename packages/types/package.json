@@ -9,7 +9,10 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/types"
   },
-  "keywords": ["dredge", "types"],
+  "keywords": [
+    "dredge",
+    "types"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -32,5 +35,12 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.4"
+  },
+  "dependencies": {
+    "arktype": "2.0.0-rc.15",
+    "superstruct": "^2.0.2",
+    "valibot": "^0.42.1",
+    "yup": "^1.4.0",
+    "zod": "^3.22.4"
   }
 }
