@@ -1,5 +1,24 @@
 # dredge-route
 
+## 1.0.0
+
+### Major Changes
+
+- 5f63bcd: `.build()` method is no longer needed in dredgeRoute creation
+
+### Minor Changes
+
+- fe896eb: Implement support for Valibot as parser
+
+### Patch Changes
+
+- Updated dependencies [fe896eb]
+- Updated dependencies [43ffd61]
+- Updated dependencies [5f63bcd]
+- Updated dependencies [0635e0c]
+  - dredge-types@1.0.0
+  - dredge-common@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes

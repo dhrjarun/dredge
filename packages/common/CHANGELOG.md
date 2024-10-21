@@ -1,5 +1,12 @@
 # dredge-common
 
+## 0.6.0
+
+### Minor Changes
+
+- fe896eb: Implement support for Valibot as parser
+- 0635e0c: add support for arktype as parser
+
 ## 0.5.3
 
 ## 0.5.2
