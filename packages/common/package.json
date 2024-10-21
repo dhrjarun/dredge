@@ -1,6 +1,6 @@
 {
   "name": "dredge-common",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Internal common utilities for dredge",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",

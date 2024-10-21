@@ -1,5 +1,19 @@
 # dredge-types
 
+## 1.0.0
+
+### Major Changes
+
+- 5f63bcd: `.build()` method is no longer needed in dredgeRoute creation
+
+### Minor Changes
+
+- fe896eb: Implement support for Valibot as parser
+
+### Patch Changes
+
+- 43ffd61: Fix `inferParserType` issue with `ParserWithInputOutput`
+
 ## 0.5.0
 
 ### Minor Changes
