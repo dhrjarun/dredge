@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "node:fs";
 
 function copyDocsToWeb() {
   if (fs.existsSync("../web/docs")) {

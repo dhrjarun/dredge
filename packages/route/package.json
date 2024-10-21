@@ -10,6 +10,7 @@
     "directory": "packages/route"
   },
   "keywords": ["dredge", "route", "builder", "router"],
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

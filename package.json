@@ -2,6 +2,7 @@
   "name": "dredge",
   "private": true,
   "description": "A rest api builder in typescript",
+  "type": "module",
   "scripts": {
     "lint": "turbo lint --filter dredge-*",
     "lint:fix": "turbo lint:fix dredge-*",
