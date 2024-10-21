@@ -9,10 +9,7 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/types"
   },
-  "keywords": [
-    "dredge",
-    "types"
-  ],
+  "keywords": ["dredge", "types"],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
