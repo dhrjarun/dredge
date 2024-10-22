@@ -11,7 +11,7 @@ test("simple validation", async () => {
       number: z.number(),
       boolean: z.boolean(),
     })
-    .searchParams({
+    .queries({
       sstring: z.string(),
       snumber: z.number(),
       sboolean: z.boolean(),
@@ -21,7 +21,7 @@ test("simple validation", async () => {
   const validated = await useValidate(route)({
     method: "POST",
     url: "",
-    searchParams: {
+    queries: {
       sstring: ["world"],
       snumber: [2],
       sboolean: [false],
@@ -41,7 +41,7 @@ test("simple validation", async () => {
     boolean: true,
   });
 
-  expect(validated.searchParams).toStrictEqual({
+  expect(validated.queries).toStrictEqual({
     sstring: ["world"],
     snumber: [2],
     sboolean: [false],
@@ -51,7 +51,7 @@ test("simple validation", async () => {
 test("optional searchParam should work", async () => {
   const route = dredgeRoute()
     .path("/test")
-    .searchParams({
+    .queries({
       required: z.string(),
       optional: z.string().optional(),
     })
@@ -61,14 +61,14 @@ test("optional searchParam should work", async () => {
     useValidate(route)({
       method: "GET",
       url: "/test?required=i am required",
-      searchParams: {
+      queries: {
         required: ["i am required"],
       },
       params: {},
       headers: {},
     }),
   ).resolves.toMatchObject({
-    searchParams: {
+    queries: {
       required: ["i am required"],
     },
   });
@@ -77,7 +77,7 @@ test("optional searchParam should work", async () => {
 test("unSpecified searchParam should work", async () => {
   const route = dredgeRoute()
     .path("/test")
-    .searchParams({
+    .queries({
       i: z.number(),
       o: z.string().optional(),
     })
@@ -86,7 +86,7 @@ test("unSpecified searchParam should work", async () => {
   const validated = await useValidate(route)({
     method: "GET",
     url: "/test",
-    searchParams: {
+    queries: {
       i: [1],
       a: ["apple"],
       b: ["ball"],
@@ -95,7 +95,7 @@ test("unSpecified searchParam should work", async () => {
     headers: {},
   });
 
-  expect(validated.searchParams).toStrictEqual({
+  expect(validated.queries).toStrictEqual({
     i: [1],
     a: ["apple"],
     b: ["ball"],

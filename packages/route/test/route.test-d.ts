@@ -202,10 +202,10 @@ describe("req", () => {
       });
   });
 
-  test("req.searchParam() and req.searchParams", () => {
+  test("req.query() and req.queries", () => {
     dredgeRoute()
       .path("/test")
-      .searchParams({
+      .queries({
         queryI: z.string(),
         queryII: z.enum(["a", "b"]),
       })
@@ -213,41 +213,39 @@ describe("req", () => {
         paramII: z.enum(["a", "b"]),
       })
       .use((req) => {
-        expectTypeOf(req.searchParam("queryI")).toBeString();
-        expectTypeOf(req.searchParam("queryII")).toEqualTypeOf<"a" | "b">();
-        expectTypeOf(req.searchParam("x")).toBeAny();
+        expectTypeOf(req.query("queryI")).toBeString();
+        expectTypeOf(req.query("queryII")).toEqualTypeOf<"a" | "b">();
+        expectTypeOf(req.query("x")).toBeAny();
 
-        expectTypeOf(req.searchParams("queryI")).toEqualTypeOf<string[]>();
-        expectTypeOf(req.searchParams("queryII")).toEqualTypeOf<
-          ("a" | "b")[]
-        >();
-        expectTypeOf(req.searchParams("x")).toEqualTypeOf<any[]>();
+        expectTypeOf(req.queries("queryI")).toEqualTypeOf<string[]>();
+        expectTypeOf(req.queries("queryII")).toEqualTypeOf<("a" | "b")[]>();
+        expectTypeOf(req.queries("x")).toEqualTypeOf<any[]>();
 
         // https://stackoverflow.com/questions/68799234/typescript-pick-only-specific-method-from-overload-to-be-passed-to-parameterst
         // expectTypeOf(req.searchParam)
         //   .parameter(0)
         //   .toEqualTypeOf<"queryI" | "queryII">();
 
-        expectTypeOf(req.searchParam()).toEqualTypeOf<{
+        expectTypeOf(req.query()).toEqualTypeOf<{
           readonly queryI: string;
           readonly queryII: "a" | "b";
           [x: string]: any;
         }>();
 
-        expectTypeOf(req.searchParams()).toEqualTypeOf<{
+        expectTypeOf(req.queries()).toEqualTypeOf<{
           readonly queryI: string[];
           readonly queryII: ("a" | "b")[];
           [x: string]: any[];
         }>();
       })
       .error((_err, req) => {
-        expectTypeOf(req.searchParam("x")).toBeAny();
-        expectTypeOf(req.searchParams("x")).toEqualTypeOf<any[]>();
+        expectTypeOf(req.query("x")).toBeAny();
+        expectTypeOf(req.queries("x")).toEqualTypeOf<any[]>();
 
-        expectTypeOf(req.searchParam()).toEqualTypeOf<{
+        expectTypeOf(req.query()).toEqualTypeOf<{
           [x: string]: any;
         }>();
-        expectTypeOf(req.searchParams()).toEqualTypeOf<{
+        expectTypeOf(req.queries()).toEqualTypeOf<{
           [x: string]: any[];
         }>();
       });

@@ -1,10 +1,10 @@
 import { Server } from "http";
-import { Client, c } from "./helpers/client";
 import { dredgeRoute, dredgeRouter } from "dredge-route";
 import { afterEach, describe, expect, test } from "vitest";
 import z from "zod";
-import { startServer as nStartServer } from "./helpers/http-server";
+import { Client, c } from "./helpers/client";
 import { startServer as fStartServer } from "./helpers/fetch-server";
+import { startServer as nStartServer } from "./helpers/http-server";
 
 const route = dredgeRoute().options({
   dataTypes: {
@@ -268,12 +268,12 @@ describe.each(servers)(
       });
     });
 
-    test("deserializeSearchParams", async () => {
+    test("deserializeQueries", async () => {
       await startServer({
         router: dredgeRouter([
           route
             .path("/test")
-            .searchParams({
+            .queries({
               a: z.string(),
               b: z.string(),
             })
@@ -282,24 +282,24 @@ describe.each(servers)(
               return res.end({
                 status: 200,
                 json: {
-                  single: req.searchParam(),
-                  multiple: req.searchParams(),
+                  single: req.query(),
+                  multiple: req.queries(),
                 },
               });
             }),
         ]),
 
-        deserializeSearchParams: (searchParams) => {
-          const newSearchParams: Record<string, any> = {};
-          Object.entries(searchParams).forEach(([key, value]) => {
-            newSearchParams[key] = [];
+        deserializeQueries: (queries) => {
+          const newQueries: Record<string, any> = {};
+          Object.entries(queries).forEach(([key, value]) => {
+            newQueries[key] = [];
 
             value.forEach((v) => {
-              newSearchParams[key].push(`ds-${v}`);
+              newQueries[key].push(`ds-${v}`);
             });
           });
 
-          return newSearchParams;
+          return newQueries;
         },
       });
 
@@ -597,7 +597,7 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/test")
-            .searchParams({
+            .queries({
               string: z.string(),
               number: z.number(),
               boolean: z.boolean(),
@@ -609,10 +609,10 @@ describe.each(servers)(
                 status: 200,
                 json: {
                   single: {
-                    ...req.searchParam(),
-                    date: req.searchParam("date").toISOString().split("T")[0],
+                    ...req.query(),
+                    date: req.query("date").toISOString().split("T")[0],
                   },
-                  multiple: req.searchParams(),
+                  multiple: req.queries(),
                 },
               });
             }),
@@ -647,7 +647,7 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/test")
-            .searchParams({
+            .queries({
               string: z.string().optional(),
               number: z.number().optional(),
               boolean: z.boolean().optional(),

@@ -228,9 +228,9 @@ test("serializeParams", async () => {
   );
 });
 
-test("serializeSearchParams", async () => {
+test("serializeQueries", async () => {
   const _client = client.extends({
-    serializeSearchParams: (params) => {
+    serializeQueries: (params) => {
       const newParams: Record<string, string[]> = {};
       Object.entries(params).forEach(([key, value]) => {
         newParams[key] = [];
@@ -243,7 +243,7 @@ test("serializeSearchParams", async () => {
     },
   });
   const response = await _client(":/test", {
-    searchParams: {
+    queries: {
       a: "apple",
       b: ["banana", "ball"],
       c: "carrot",
@@ -261,8 +261,11 @@ test("serializeSearchParams", async () => {
   expect(sp.getAll("b")).toStrictEqual(["s-banana", "s-ball"]);
 });
 
-test("default serializeParams", async () => {});
+test.todo("default serializeParams", async () => {});
 
-test("default serializeSearchParams", async () => {});
+test.todo("default serializeQueries", async () => {});
 
-test("update of mediaType and other params in dataSerializers", async () => {});
+test.todo(
+  "update of mediaType and other params in dataSerializers",
+  async () => {},
+);

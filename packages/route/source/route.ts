@@ -1,5 +1,5 @@
 import { MimeStore, trimSlashes } from "dredge-common";
-import type { AnyRoute, RouteBuilderDef, Route, Parser } from "dredge-types";
+import type { AnyRoute, Parser, Route, RouteBuilderDef } from "dredge-types";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as Route<
@@ -25,7 +25,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     errorMiddlewares = [],
     paths = [],
     params = {},
-    searchParams = {},
+    queries = {},
     dataTypes = {},
     dataTransformer = {},
     ...rest
@@ -37,7 +37,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     errorMiddlewares,
     paths,
     params,
-    searchParams,
+    queries,
     method,
     dataTypes,
     dataSerializers: new MimeStore<any>(),
@@ -90,8 +90,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
         "params",
         "param",
-        "searchParams",
-        "searchParam",
+        "queries",
+        "query",
 
         "get",
         "post",
@@ -179,13 +179,13 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    searchParams: (searchParams) => {
-      const _searchParams = _def.searchParams;
+    queries: (queries) => {
+      const _queries = _def.queries;
 
       // check if it already defined
-      Object.entries(searchParams).forEach(([name]) => {
-        if (_searchParams[name]) {
-          throw `${name} searchParam schema already defined`;
+      Object.entries(queries).forEach(([name]) => {
+        if (_queries[name]) {
+          throw `${name} query schema already defined`;
         }
 
         // validate parser
@@ -193,9 +193,9 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
 
       return createRouteBuilder({
         ..._def,
-        searchParams: {
-          ..._searchParams,
-          ...searchParams,
+        queries: {
+          ..._queries,
+          ...queries,
         },
       });
     },

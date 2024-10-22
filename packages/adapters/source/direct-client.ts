@@ -41,7 +41,7 @@ export function createDirectClient(
       ...mergeDefaultOptions(defaultOptions, options),
       path: getSimplePath(path, options?.params || {}),
       params: options?.params || {},
-      searchParams: normalizeSearchParamObject(options?.searchParams || {}),
+      queries: normalizeSearchParamObject(options?.queries || {}),
     } as NormalizedDirectClientOptions;
 
     for (const item of Object.keys(_options.dataTypes)) {
@@ -86,7 +86,7 @@ export function createDirectClient(
         method: _options.method,
         headers: _options.headers,
         params: _options.params,
-        searchParams: _options.searchParams,
+        queries: _options.queries,
         data: _options.data,
         dataType: _options.dataType,
       };
@@ -154,7 +154,7 @@ export function createDirectClient(
         return (await responsePromise).data();
       };
 
-      for (const [key, value] of Object.entries(dataTypes)) {
+      for (const key of Object.keys(dataTypes)) {
         responsePromise[key] = async () => {
           _options.responseDataType = key;
 
