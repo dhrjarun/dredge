@@ -10,6 +10,8 @@
     "directory": "packages/types"
   },
   "keywords": ["dredge", "types"],
+  "files": ["source", "dist", "package.json"],
+  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

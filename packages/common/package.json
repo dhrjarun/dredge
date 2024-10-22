@@ -9,6 +9,8 @@
     "url": "https://github.com/dhrjarun/dredge.git",
     "directory": "packages/common"
   },
+  "files": ["source", "dist", "package.json"],
+  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

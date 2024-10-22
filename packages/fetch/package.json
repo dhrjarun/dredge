@@ -10,6 +10,8 @@
     "directory": "packages/fetch"
   },
   "keywords": ["dredge", "fetch", "client"],
+  "files": ["source", "dist", "package.json"],
+  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
