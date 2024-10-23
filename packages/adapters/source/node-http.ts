@@ -3,7 +3,7 @@ import { Readable, Stream } from "stream";
 import {
   MimeStore,
   deserializeParams as defaultDeserializeParams,
-  deserializeSearchParams as defaultDeserializeSearchParams,
+  deserializeQueries as defaultDeserializeQueries,
   defaultJSONBodyParser,
   defaultJsonDataSerializer,
   defaultTextBodyParser,
@@ -54,8 +54,8 @@ export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
   dataSerializers?: {
     [key: string]: DataSerializerFunction;
   };
-  deserializeSearchParams?: (
-    searchParams: Record<string, string[]>,
+  deserializeQueries?: (
+    queries: Record<string, string[]>,
     schema: Record<string, any>,
   ) => Record<string, any[]>;
   deserializeParams?: (
@@ -71,8 +71,8 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     router,
     ctx = {},
     prefixUrl,
+    deserializeQueries = defaultDeserializeQueries,
     deserializeParams = defaultDeserializeParams,
-    deserializeSearchParams = defaultDeserializeSearchParams,
   } = options;
 
   const parsedPrefixUrl = new URL(prefixUrl || "relative:///", "relative:///");
@@ -115,20 +115,17 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
     const headers = joinDuplicateHeaders(req.headers || {});
     const params = getPathParams(route._def.paths)(pathArray);
-    const searchParams = searchParamsToObject(url.search);
+    const queries = searchParamsToObject(url.search);
 
     const parsedParams = deserializeParams(params, routeDef.params);
-    const parsedSearchParams = deserializeSearchParams(
-      searchParams,
-      routeDef.searchParams,
-    );
+    const parsedQueries = deserializeQueries(queries, routeDef.queries);
 
     const middlewareRequest: MiddlewareRequest = {
       url: url.href,
       method: req.method || "get",
       headers,
       params: parsedParams,
-      searchParams: parsedSearchParams,
+      queries: parsedQueries,
       data: undefined,
       dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
     };

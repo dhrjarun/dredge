@@ -1,7 +1,7 @@
-export function serializeSearchParams(searchParams: Record<string, any[]>) {
+export function serializeQueries(queries: Record<string, any[]>) {
   const result: Record<string, string[]> = {};
 
-  for (const [key, value] of Object.entries(searchParams)) {
+  for (const [key, value] of Object.entries(queries)) {
     const newValue: any[] = [];
     value.forEach((item) => {
       if (item instanceof Date) newValue.push(item.toISOString());

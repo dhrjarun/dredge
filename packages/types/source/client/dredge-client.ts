@@ -6,7 +6,6 @@ import {
   HTTPMethod,
   inferRouteFirstPath,
   inferRouteMethod,
-  inferRoutePath,
   inferRouteSecondPath,
 } from "../route";
 import { DredgeRouter } from "../router";

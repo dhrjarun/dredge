@@ -1,18 +1,15 @@
 import { expect, test } from "vitest";
-import {
-  serializeParams,
-  serializeSearchParams,
-} from "../source/serialize-params";
+import { serializeParams, serializeQueries } from "../source/serialize-params";
 
-test("serializeSearchParams", () => {
-  const searchParams = {
+test("serializeQueries", () => {
+  const queries = {
     a: [1, 2, 3],
     b: [true, false],
     c: [new Date("2023-01-01"), new Date("2023-02-02")],
     d: ["apple"],
   };
 
-  const result = serializeSearchParams(searchParams);
+  const result = serializeQueries(queries);
 
   expect(result).toStrictEqual({
     a: ["1", "2", "3"],

@@ -1,11 +1,11 @@
 import { inferParserType } from "../parser";
 import { IsNever, MarkOptionalToUndefined, Simplify } from "../utils";
 
-export type inferSearchParamsType<SearchParams> = Simplify<
+export type inferQueriesType<Queries> = Simplify<
   MarkOptionalToUndefined<{
-    [key in keyof SearchParams]:
-      | inferParserType<SearchParams[key]>
-      | inferParserType<SearchParams[key]>[];
+    [key in keyof Queries]:
+      | inferParserType<Queries[key]>
+      | inferParserType<Queries[key]>[];
   }>
 >;
 

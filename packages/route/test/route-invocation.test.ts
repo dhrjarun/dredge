@@ -32,7 +32,7 @@ test("all success middleware should run", async () => {
     method: "get",
     url: "/test",
     params: {},
-    searchParams: {},
+    queries: {},
     headers: {},
   });
 
@@ -74,7 +74,7 @@ test("all error middleware should run", async () => {
     method: "get",
     url: "/test",
     params: {},
-    searchParams: {},
+    queries: {},
     headers: {},
   });
 
@@ -115,7 +115,7 @@ test("res.end() function should skip the rest of the success middleware", async 
     method: "get",
     url: "/test",
     params: {},
-    searchParams: {},
+    queries: {},
     headers: {},
   });
 
@@ -159,7 +159,7 @@ test("res.end() function should skip the rest of the error middleware", async ()
     method: "get",
     url: "/test",
     params: {},
-    searchParams: {},
+    queries: {},
     headers: {},
   });
 
@@ -210,14 +210,14 @@ test("if headerValue for some header is provide null, it should be deleted", asy
     method: "get",
     url: "/test",
     params: {},
-    searchParams: {},
+    queries: {},
     headers: {},
   });
   await useErrorMiddlewares(route)(new Error("test-error"), {
     method: "get",
     url: "/test",
     params: {},
-    searchParams: {},
+    queries: {},
     headers: {},
   });
 });
@@ -248,7 +248,7 @@ test("content-type header should set corresponding request dataType", async () =
       method: "get",
       url: "/test",
       params: {},
-      searchParams: {},
+      queries: {},
       headers: {
         "content-type": "application/json",
       },
@@ -262,7 +262,7 @@ test("content-type header should set corresponding request dataType", async () =
       method: "get",
       url: "/test",
       params: {},
-      searchParams: {},
+      queries: {},
       headers: {
         "content-type":
           "multipart/form-data;boundary=--DredgeBoundary4948584223",
@@ -299,7 +299,7 @@ test("accept header should set corresponding response dataType and it set corres
       method: "get",
       url: "/test",
       params: {},
-      searchParams: {},
+      queries: {},
       headers: {
         accept: "application/json",
       },
@@ -316,7 +316,7 @@ test("accept header should set corresponding response dataType and it set corres
       method: "get",
       url: "/test",
       params: {},
-      searchParams: {},
+      queries: {},
       headers: {
         accept: "application/json",
       },
@@ -333,7 +333,7 @@ test("accept header should set corresponding response dataType and it set corres
       method: "get",
       url: "/test",
       params: {},
-      searchParams: {},
+      queries: {},
       headers: {
         accept: "multipart/form-data",
       },
@@ -350,7 +350,7 @@ test("accept header should set corresponding response dataType and it set corres
       method: "get",
       url: "/test",
       params: {},
-      searchParams: {},
+      queries: {},
       headers: {
         accept: "multipart/form-data",
       },

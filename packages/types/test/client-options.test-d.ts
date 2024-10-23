@@ -1,9 +1,9 @@
 import { expectTypeOf, test } from "vitest";
+import { z } from "zod";
+import { DistributiveIndex, inferRouterRoutes } from "../source";
+import { inferDredgeClientOption } from "../source/client/dredge-client-option";
 import { dredgeRoute } from "./helpers/dredge-route";
 import { dredgeRouter } from "./helpers/dredge-router";
-import { inferDredgeClientOption } from "../source/client/dredge-client-option";
-import { DistributiveIndex, inferRouterRoutes } from "../source";
-import { z } from "zod";
 
 test("options.method", () => {
   const getPostPutRouter = dredgeRouter([
@@ -134,14 +134,14 @@ test("options.searchParams", () => {
     r.path("/a").get(),
     r
       .path("/c")
-      .searchParams({
+      .queries({
         d: z.number(),
         e: z.enum(["a", "b"]),
       })
       .get(),
     r
       .path("/f")
-      .searchParams({
+      .queries({
         h: z.string(),
         i: z.boolean(),
         j: z.date(),
@@ -153,7 +153,7 @@ test("options.searchParams", () => {
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
-  type SearchParams = inferDredgeClientOption<Router[number]>["searchParams"];
+  type SearchParams = inferDredgeClientOption<Router[number]>["queries"];
 
   expectTypeOf<SearchParams>().toEqualTypeOf<
     | Record<string, any>

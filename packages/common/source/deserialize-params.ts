@@ -1,12 +1,12 @@
 import { otherSchemaToDredgeSchema } from "./dredge-schema";
 
-export function deserializeSearchParams(
-  searchParams: Record<string, string[]>,
+export function deserializeQueries(
+  queries: Record<string, string[]>,
   schema: Record<string, any>,
 ) {
   const result: Record<string, any[]> = {};
 
-  for (const [key, value] of Object.entries(searchParams)) {
+  for (const [key, value] of Object.entries(queries)) {
     const sc = schema[key];
     if (sc) {
       const mySchema = otherSchemaToDredgeSchema(sc);

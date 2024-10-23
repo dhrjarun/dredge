@@ -61,7 +61,7 @@ export type isAnyRoute<R> = R extends Route<
   infer Method,
   infer Paths,
   infer Params,
-  infer SearchParams,
+  infer Queries,
   infer IBody,
   infer OBody,
   infer EBody
@@ -72,7 +72,7 @@ export type isAnyRoute<R> = R extends Route<
       | IsAny<Method>
       | IsAny<Paths>
       | IsAny<Params>
-      | IsAny<SearchParams>
+      | IsAny<Queries>
       | IsAny<IBody>
       | IsAny<OBody>
       | IsAny<EBody> extends true
@@ -106,7 +106,7 @@ export type MiddlewareFunction<
   NewContext,
   Method,
   Params,
-  SearchParams,
+  Queries,
   IData,
   OData,
   NewOData,
@@ -132,23 +132,20 @@ export type MiddlewareFunction<
         ): Params extends { [key in T]: any } ? Params[T] : string | undefined;
         <T extends string>(key: T): string | undefined;
       };
-      searchParam: {
-        (): Simplify<SearchParams & Record<string, any>>;
-        <T extends keyof SearchParams>(
+      query: {
+        (): Simplify<Queries & Record<string, any>>;
+        <T extends keyof Queries>(
           key: T,
-        ): SearchParams extends { [key in T]: any } ? SearchParams[T] : any;
+        ): Queries extends { [key in T]: any } ? Queries[T] : any;
         <T extends string>(key: T): any;
       };
-      searchParams: {
+      queries: {
         (): Simplify<
-          { [key in keyof SearchParams]: SearchParams[key][] } & Record<
-            string,
-            any[]
-          >
+          { [key in keyof Queries]: Queries[key][] } & Record<string, any[]>
         >;
-        <T extends keyof SearchParams>(
+        <T extends keyof Queries>(
           key: T,
-        ): SearchParams extends { [key in T]: any } ? SearchParams[T][] : any[];
+        ): Queries extends { [key in T]: any } ? Queries[T][] : any[];
         <T extends string>(key: T): any[];
       };
     },
@@ -191,11 +188,11 @@ export type ErrorMiddlewareFunction<
         <T extends string>(key: T): string | undefined;
         (): Record<string, string>;
       };
-      searchParam: {
+      query: {
         <T extends string>(key: T): any;
         (): Record<string, any>;
       };
-      searchParams: {
+      queries: {
         <T extends string>(key: T): any[];
         (): Record<string, any[]>;
       };
@@ -268,7 +265,7 @@ export type RouteBuilderDef = {
   method?: HTTPMethod;
   paths: string[];
   params: Record<string, Parser>;
-  searchParams: Record<string, Parser>;
+  queries: Record<string, Parser>;
   dataTypes: Record<string, string>;
   defaultContext?: any;
   dataTransformer: Record<
@@ -327,6 +324,8 @@ type NotAllowedDataShortcuts =
   | "param"
   | "searchParams"
   | "searchParam"
+  | "query"
+  | "queries"
   | "get"
   | "post"
   | "put"
@@ -350,8 +349,8 @@ type IsNotAllowedDataTypes<T> = (
   ? false
   : true;
 
-type inferSearchParamType<SearchParams> = Simplify<{
-  [key in keyof SearchParams]: inferParserType<SearchParams[key]>;
+type inferQueriesType<Queries> = Simplify<{
+  [key in keyof Queries]: inferParserType<Queries[key]>;
 }>;
 
 export type BodyAs =
@@ -419,7 +418,7 @@ export interface Route<
   Method = never,
   Paths = [],
   Params = {},
-  SearchParams = {},
+  Queries = {},
   IBody = never,
   OBody = never,
   EBody = never,
@@ -445,7 +444,7 @@ export interface Route<
         Method,
         Paths,
         Params,
-        SearchParams,
+        Queries,
         IBody,
         OBody,
         EBody
@@ -466,7 +465,7 @@ export interface Route<
         ? N
         : never]: never;
     },
-    SearchParams,
+    Queries,
     IBody,
     OBody,
     EBody
@@ -487,13 +486,13 @@ export interface Route<
     Method,
     Paths,
     Omit<Params, keyof T> & T,
-    SearchParams,
+    Queries,
     IBody,
     OBody,
     EBody
   >;
 
-  searchParams<const T extends { [key: string]: Parser }>(
+  queries<const T extends { [key: string]: Parser }>(
     queries: T,
   ): Route<
     Options,
@@ -502,7 +501,7 @@ export interface Route<
     Method,
     Paths,
     Params,
-    Omit<SearchParams, keyof T> & T,
+    Omit<Queries, keyof T> & T,
     IBody,
     OBody,
     EBody
@@ -515,7 +514,7 @@ export interface Route<
       NewContext,
       IsNever<Method> extends true ? string : Method,
       inferParamsType<Params>,
-      inferSearchParamType<SearchParams>,
+      inferQueriesType<Queries>,
       inferParserType<IBody>,
       inferParserType<OBody>,
       NewOData
@@ -527,7 +526,7 @@ export interface Route<
     Method,
     Paths,
     Params,
-    SearchParams,
+    Queries,
     IBody,
     IsNever<NewOData> extends true
       ? OBody
@@ -553,7 +552,7 @@ export interface Route<
     Method,
     Paths,
     Params,
-    SearchParams,
+    Queries,
     IBody,
     OBody,
     IsNever<NewEData> extends true
@@ -572,7 +571,7 @@ export interface Route<
     Method,
     Paths,
     Params,
-    SearchParams,
+    Queries,
     IBody,
     P,
     EBody
@@ -588,7 +587,7 @@ export interface Route<
     M,
     Paths,
     Params,
-    SearchParams,
+    Queries,
     P,
     OBody,
     EBody
@@ -600,7 +599,7 @@ export interface Route<
     "get",
     Paths,
     Params,
-    SearchParams,
+    Queries,
     IBody,
     OBody,
     EBody
@@ -614,7 +613,7 @@ export interface Route<
     "post",
     Paths,
     Params,
-    SearchParams,
+    Queries,
     P,
     OBody,
     EBody
@@ -628,7 +627,7 @@ export interface Route<
     "put",
     Paths,
     Params,
-    SearchParams,
+    Queries,
     P,
     OBody,
     EBody
@@ -640,7 +639,7 @@ export interface Route<
     "delete",
     Paths,
     Params,
-    SearchParams,
+    Queries,
     IBody,
     OBody,
     EBody
@@ -654,7 +653,7 @@ export interface Route<
     "patch",
     Paths,
     Params,
-    SearchParams,
+    Queries,
     P,
     OBody,
     EBody
@@ -666,7 +665,7 @@ export interface Route<
     "head",
     Paths,
     Params,
-    SearchParams,
+    Queries,
     IBody,
     OBody,
     EBody

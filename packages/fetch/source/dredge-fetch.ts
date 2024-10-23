@@ -3,7 +3,7 @@ import {
   defaultJSONBodyParser,
   defaultJsonDataSerializer,
   serializeParams as defaultSerializeParams,
-  serializeSearchParams as defaultSerializeSearchParams,
+  serializeQueries as defaultSerializeQueries,
   defaultTextBodyParser,
   defaultTextDataSerializer,
   getSimplePath,
@@ -47,22 +47,21 @@ export function untypedDredgeFetch(
   const client: any = (path: string, options: FetchOptions = {}) => {
     const extendedOptions = mergeDefaultOptions(defaultOptions, options);
 
-    const normalizedSearchParams = normalizeSearchParamObject(
-      options?.searchParams || {},
+    const normalizedQueries = normalizeSearchParamObject(
+      options?.queries || {},
     );
     const serializedParams = extendedOptions.serializeParams(
       options?.params || {},
     );
-    const serializedSearchParams = extendedOptions.serializeSearchParams(
-      normalizedSearchParams,
-    );
+    const serializedQueries =
+      extendedOptions.serializeQueries(normalizedQueries);
 
     const _options = {
       ...options,
       ...extendedOptions,
       path: getSimplePath(path, serializedParams),
       params: options?.params || {},
-      searchParams: normalizedSearchParams,
+      queries: normalizedQueries,
     } as unknown as NormalizedFetchOptions;
 
     for (const item of Object.keys(_options.dataTypes)) {
@@ -81,7 +80,7 @@ export function untypedDredgeFetch(
       const url = createURL({
         prefixUrl: _options.prefixUrl,
         path: _options.path,
-        searchParams: serializedSearchParams,
+        queries: serializedQueries,
       });
 
       let body: any = null;
@@ -305,9 +304,9 @@ function objectToSearchParams(obj: any): URLSearchParams {
 function createURL(options: {
   prefixUrl: string;
   path: string;
-  searchParams?: Record<string, string | string[]>;
+  queries?: Record<string, string | string[]>;
 }) {
-  let { prefixUrl, path, searchParams = {} } = options;
+  let { prefixUrl, path, queries = {} } = options;
 
   path = trimSlashes(path);
 
@@ -315,7 +314,7 @@ function createURL(options: {
     prefixUrl += "/";
   }
 
-  let search = objectToSearchParams(searchParams).toString();
+  let search = objectToSearchParams(queries).toString();
   let url = prefixUrl + path;
   if (search) {
     url += "?" + search;
@@ -383,10 +382,10 @@ function mergeDefaultOptions(
       options.serializeParams ||
       defaultOptions.serializeParams ||
       defaultSerializeParams,
-    serializeSearchParams:
-      options.serializeSearchParams ||
-      defaultOptions.serializeSearchParams ||
-      defaultSerializeSearchParams,
+    serializeQueries:
+      options.serializeQueries ||
+      defaultOptions.serializeQueries ||
+      defaultSerializeQueries,
   };
 
   return newOptions;

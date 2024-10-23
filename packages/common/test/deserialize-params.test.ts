@@ -1,12 +1,12 @@
-import { expect, test } from "vitest";
-import * as yup from "yup";
 import * as ark from "arktype";
 import * as superStruct from "superstruct";
 import * as v from "valibot";
+import { expect, test } from "vitest";
+import * as yup from "yup";
 import { z } from "zod";
 import {
   deserializeParams,
-  deserializeSearchParams,
+  deserializeQueries,
 } from "../source/deserialize-params";
 
 const schemas = [
@@ -113,8 +113,8 @@ test.each(schemas)("deserializeParams with $name", ({ schema }) => {
   });
 });
 
-test.each(schemas)("deserializeSearchParams with $name", ({ schema }) => {
-  const searchParams = {
+test.each(schemas)("deserializeQueries with $name", ({ schema }) => {
+  const queries = {
     number: ["1", "2", "3"],
     boolean: ["true", "false"],
     date: ["2023-01-01", "2023-02-02"],
@@ -125,7 +125,7 @@ test.each(schemas)("deserializeSearchParams with $name", ({ schema }) => {
     enum: ["a", "b"],
   };
 
-  const result = deserializeSearchParams(searchParams, schema);
+  const result = deserializeQueries(queries, schema);
 
   expect(result).toStrictEqual({
     number: [1, 2, 3],

@@ -7,8 +7,8 @@ import {
   Route,
   inferModifiedInitialRouteContext,
   inferParamsType,
+  inferQueriesType,
   inferRouteDataTypes,
-  inferSearchParamsType,
 } from "../route";
 import { IsNever, Merge, RequiredKeys } from "../utils";
 
@@ -25,7 +25,7 @@ export interface DredgeClientOptions {
   responseDataType?: string;
   headers?: Record<string, string>;
   params?: Record<string, string>;
-  searchParams?: Record<string, any | any[]>;
+  queries?: Record<string, any | any[]>;
   prefixUrl?: URL | string;
   throwHttpErrors?: boolean;
 }
@@ -40,7 +40,7 @@ export type inferDredgeClientOption<
   infer Method,
   any,
   infer Params,
-  infer SearchParams,
+  infer Queries,
   infer IBody,
   any,
   any
@@ -62,13 +62,11 @@ export type inferDredgeClientOption<
             ? Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>>
             : {}
           : {}) &
-        (IsNever<keyof SearchParams> extends true
+        (IsNever<keyof Queries> extends true
           ? {}
-          : IsNever<
-                RequiredKeys<inferSearchParamsType<SearchParams>>
-              > extends true
-            ? { searchParams?: inferSearchParamsType<SearchParams> }
-            : { searchParams: inferSearchParamsType<SearchParams> }) &
+          : IsNever<RequiredKeys<inferQueriesType<Queries>>> extends true
+            ? { queries?: inferQueriesType<Queries> }
+            : { queries: inferQueriesType<Queries> }) &
         (IsNever<keyof Params> extends true
           ? {}
           : { params: inferParamsType<Params> })
