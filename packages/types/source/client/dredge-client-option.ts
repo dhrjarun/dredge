@@ -57,11 +57,7 @@ export type inferDredgeClientOption<
       } & ("serverCtx" extends keyof Options
         ? { serverCtx?: RouteOptions["initialContext"] }
         : {}) &
-        ([Method] extends ["post" | "put" | "patch"]
-          ? IBody extends Parser
-            ? Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>>
-            : {}
-          : {}) &
+        Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>> &
         (IsNever<keyof Queries> extends true
           ? {}
           : IsNever<RequiredKeys<inferQueriesType<Queries>>> extends true

@@ -1,7 +1,7 @@
 import { dredgeRoute, dredgeRouter } from "dredge-route";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { createDirectClient, directClient } from "../source/direct-client";
+import { directClient } from "../source/direct-client";
 
 const route = dredgeRoute();
 const dataTypes = {
@@ -19,7 +19,8 @@ describe("client.extend", () => {
           dataTypes,
         })
         .path("/test")
-        .post(z.any())
+        .post()
+        .input(z.any())
         .use((req, res) => {
           return res.end({
             data: {
@@ -30,31 +31,7 @@ describe("client.extend", () => {
               responseDataType: res.dataType,
             },
             status: 200,
-            statusText: "ok",
-          });
-        }),
-    ]),
-  );
-
-  let unTypedClient = createDirectClient(
-    dredgeRouter([
-      route
-        .options({
-          dataTypes,
-        })
-        .path("/test")
-        .post(z.any())
-        .use((req, res) => {
-          return res.end({
-            data: {
-              headers: req.header(),
-              dataType: req.dataType,
-              ctx: res.ctx,
-              url: req.url,
-              responseDataType: res.dataType,
-            },
-            status: 200,
-            statusText: "ok",
+            statusText: "",
           });
         }),
     ]),

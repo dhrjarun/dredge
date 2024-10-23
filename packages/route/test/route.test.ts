@@ -119,7 +119,7 @@ describe("route.path()", () => {
 });
 
 describe("route.params()", () => {
-  test("params should be added in route._def", () => {
+  test("defines a param", () => {
     const route = dredgeRoute()
       .path("/test/:par")
       .params({ par: (p) => p });
@@ -127,7 +127,7 @@ describe("route.params()", () => {
     assert.property(route._def.params, "par");
   });
 
-  test("param must be defined first in the path", () => {
+  test("throws when a key is defined before defining it in path", () => {
     expect(() =>
       dredgeRoute()
         .path("/test")
@@ -135,7 +135,7 @@ describe("route.params()", () => {
     ).toThrowError("noParam");
   });
 
-  test("one param can only be defined once", () => {
+  test("throws when a key is defined more than once", () => {
     expect(() =>
       dredgeRoute()
         .path("/test/:para")
@@ -161,7 +161,7 @@ describe("route.queries()", () => {
     assert.property(route._def.queries, "SPiii");
   });
 
-  test("one query can only be defined once", () => {
+  test("throws when a key is defined more than once", () => {
     expect(() => {
       dredgeRoute()
         .path("/test")
@@ -174,33 +174,53 @@ describe("route.queries()", () => {
   });
 });
 
+describe("route.input()", () => {
+  test("throws when called more than once", () => {
+    expect(() => {
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .input((v) => v)
+        .input((v) => v);
+    }).toThrowError();
+  });
+});
+
+describe("route.output()", () => {
+  test("throws when called more than once", () => {
+    expect(() => {
+      dredgeRoute()
+        .path("/test")
+        .get()
+        .output((v) => v)
+        .output((v) => v);
+    }).toThrowError();
+  });
+});
+
 describe("route.<method>()", () => {
-  test("should register both method and body parser in _def", () => {
-    const methodsWithoutBody = ["get", "delete", "head"] as const;
+  test("should register method in _def", () => {
+    const methodsWithoutBody = [
+      "get",
+      "delete",
+      "head",
+      "post",
+      "patch",
+      "put",
+    ] as const;
     methodsWithoutBody.forEach((method) => {
       const getRoute = dredgeRoute().path("/test")[method]();
       expect(getRoute._def.method).toBe(method);
     });
-
-    const methodWithBody = ["post", "patch", "put"] as const;
-    const parser = (v: any) => v;
-    methodWithBody.forEach((method) => {
-      const postRoute = dredgeRoute().path("/test")[method](parser);
-      expect(postRoute._def.method).toBe(method);
-      expect(postRoute._def.iBody).toBe(parser);
-    });
   });
 
-  test("method functions can be only called once", () => {
+  test("throws when called more than once", () => {
     expect(() => {
       dredgeRoute().path("/test").get().delete();
     }).toThrowError();
 
     expect(() => {
-      dredgeRoute()
-        .path("/test")
-        .post(() => {})
-        .patch(() => {});
+      dredgeRoute().path("/test").post().patch();
     }).toThrowError();
   });
 });
@@ -215,6 +235,7 @@ describe("route.<middleware>()", () => {
     expect(route._def.middlewares).toHaveLength(2);
     expect(route._def.middlewares[1]).toBe(lastMiddleware);
   });
+
   test("should register error middleware", () => {
     const lastMiddleware = () => {};
     const route = dredgeRoute()

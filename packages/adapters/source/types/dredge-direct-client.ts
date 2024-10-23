@@ -11,7 +11,6 @@ export type DirectClientOptions = DredgeClientOptions & {
   serverCtx?: Record<string, any>;
 };
 
-//TODO: Fix after `&` types
 export interface NormalizedDirectClientOptions
   extends MarkRequired<
     DirectClientOptions,

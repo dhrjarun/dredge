@@ -57,10 +57,10 @@ describe.each(servers)(
           route
             .path("/error")
             .post()
-            .use((req, res) => {
+            .use(() => {
               throw "error";
             })
-            .error((err, req, res) => {
+            .error((_err, req, res) => {
               return res.end({
                 status: 500,
                 json: {
@@ -106,7 +106,8 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/success")
-            .post(z.string())
+            .post()
+            .input(z.string())
             .use((req, res) => {
               return res.end({
                 status: 200,
@@ -116,11 +117,12 @@ describe.each(servers)(
 
           route
             .path("/error")
-            .post(z.string())
-            .use((req, res) => {
+            .post()
+            .input(z.string())
+            .use(() => {
               throw "error";
             })
-            .error((err, req, res) => {
+            .error((_err, req, res) => {
               return res.end({
                 status: 500,
                 text: req.data,
@@ -172,7 +174,7 @@ describe.each(servers)(
             })
             .path("/fruits")
             .get()
-            .use((req, res) => {
+            .use((_req, res) => {
               return res.end({
                 json: data,
               });
@@ -197,23 +199,15 @@ describe.each(servers)(
           dredgeRoute()
             .path("/test-I")
             .get()
-            .use((req, res) => {
+            .use((_req, res) => {
               return res.end({
                 status: 200,
               });
             }),
-          dredgeRoute()
-            .path("/test-II")
-            .get()
-            .use((req, res) => {}),
         ]),
       });
 
       const responseI = await client("test-I", {
-        method: "GET",
-      });
-
-      const responseII = await client("test-I", {
         method: "GET",
       });
 
@@ -303,12 +297,6 @@ describe.each(servers)(
         },
       });
 
-      const text = await (
-        await client("/test?a=apple&b=ball&b=banana&a=airplane", {
-          method: "GET",
-        })
-      ).text();
-
       expect(
         await (
           await client("/test?a=apple&b=ball&b=banana&a=airplane", {
@@ -332,7 +320,8 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/test")
-            .post(z.string())
+            .input(z.any())
+            .post()
             .use((req, res) => {
               return res.end({
                 status: 200,
@@ -416,7 +405,8 @@ describe.each(servers)(
         router: dredgeRouter([
           dredgeRoute()
             .path("/test")
-            .post(z.string())
+            .post()
+            .input(z.string())
             .use((req, res) => {
               return res.end({
                 status: 200,
@@ -572,7 +562,7 @@ describe.each(servers)(
                 json: req.param(),
               });
             })
-            .error((err, req, res) => {
+            .error((_err, _req, res) => {
               return res.end({
                 status: 400,
               });
@@ -653,12 +643,12 @@ describe.each(servers)(
               boolean: z.boolean().optional(),
             })
             .get()
-            .use((req, res) => {
+            .use((_req, res) => {
               return res.end({
                 status: 200,
               });
             })
-            .error((err, req, res) => {
+            .error((_err, _req, res) => {
               return res.end({
                 status: 400,
               });
@@ -696,7 +686,8 @@ describe.each(servers)(
         router: dredgeRouter([
           dredgeRoute()
             .path("/test")
-            .post(z.any())
+            .post()
+            .input(z.any())
             .use((req, res) => {
               return res.end({
                 headers: {
@@ -706,7 +697,7 @@ describe.each(servers)(
                 data: "test",
               });
             })
-            .error((err, req, res) => {
+            .error((_err, _req, res) => {
               return res.end({
                 status: 500,
               });

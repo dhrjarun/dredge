@@ -1,5 +1,5 @@
 import { MimeStore, trimSlashes } from "dredge-common";
-import type { AnyRoute, Parser, Route, RouteBuilderDef } from "dredge-types";
+import type { AnyRoute, RouteBuilderDef, Route } from "dredge-types";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as Route<
@@ -218,26 +218,32 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    method: (method, parser) => {
+    method: (method) => {
       const _method = _def.method;
-      const _parser = _def.iBody;
 
-      if (_method || _parser) {
-        throw "Method and request data schema is already defined";
-      }
-
-      if (parser) {
-        return createRouteBuilder({
-          ..._def,
-          method,
-          iBody: parser,
-        });
+      if (_method) {
+        throw "Method is already defined";
       }
 
       return createRouteBuilder({
         ..._def,
         method,
       });
+    },
+
+    input(parser) {
+      const _parser = _def.iBody;
+
+      if (_parser) {
+        throw "Request data schema is already defined";
+      }
+
+      if (parser) {
+        return createRouteBuilder({
+          ..._def,
+          iBody: parser,
+        });
+      }
     },
 
     output(parser) {
@@ -247,16 +253,18 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         throw "Response data schema is already defined";
       }
 
-      return createRouteBuilder({
-        ..._def,
-        oBody: parser,
-      });
+      if (parser) {
+        return createRouteBuilder({
+          ..._def,
+          oBody: parser,
+        });
+      }
     },
   } as AnyRoute;
 
   const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
   for (const item of aliases) {
-    const fn = (bodyParser?: Parser) => builder.method(item, bodyParser) as any;
+    const fn = () => builder.method(item) as any;
     builder[item] = fn;
   }
 
