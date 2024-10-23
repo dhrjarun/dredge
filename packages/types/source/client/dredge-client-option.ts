@@ -4,6 +4,7 @@ import {
   AnyRouteOptions,
   Data,
   HTTPMethod,
+  OptionalData,
   Route,
   inferModifiedInitialRouteContext,
   inferParamsType,
@@ -57,11 +58,7 @@ export type inferDredgeClientOption<
       } & ("serverCtx" extends keyof Options
         ? { serverCtx?: RouteOptions["initialContext"] }
         : {}) &
-        ([Method] extends ["post" | "put" | "patch"]
-          ? IBody extends Parser
-            ? Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>>
-            : {}
-          : {}) &
+        Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>> &
         (IsNever<keyof SearchParams> extends true
           ? {}
           : IsNever<

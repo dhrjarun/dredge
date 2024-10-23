@@ -16,7 +16,8 @@ test("simple validation", async () => {
       snumber: z.number(),
       sboolean: z.boolean(),
     })
-    .post(z.enum(["a", "b", "c"]));
+    .post()
+    .input(z.enum(["a", "b", "c"]));
 
   const validated = await useValidate(route)({
     method: "POST",

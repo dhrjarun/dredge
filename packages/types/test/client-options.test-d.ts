@@ -46,7 +46,7 @@ test("options.dataTypes", () => {
 
   const router = dredgeRouter([
     r.path("/a").get(),
-    r.path("/b").post(z.string()),
+    r.path("/b").post().input(z.string()),
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
@@ -170,7 +170,6 @@ test("options.searchParams", () => {
     | undefined
   >();
 });
-test.todo("options.data should not exist if method does not suport it");
 test("options.data", () => {
   const r = dredgeRoute().options({
     dataTypes: {
@@ -182,9 +181,12 @@ test("options.data", () => {
 
   const router = dredgeRouter([
     r.path("/a").get(),
-    r.path("/c").put(z.number()),
-    r.path("/b").post(z.string()),
-    r.path("/c").patch(z.object({ a: z.string() })),
+    r.path("/c").put().input(z.number()),
+    r.path("/b").post().input(z.string()),
+    r
+      .path("/c")
+      .patch()
+      .input(z.object({ a: z.string() })),
   ]);
 
   type Routes = inferRouterRoutes<typeof router>;

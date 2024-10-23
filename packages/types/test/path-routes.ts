@@ -32,7 +32,8 @@ export const singleParamNonAutoRouter = dredgeRouter([
 
   dredgeRoute()
     .path("/:a/b/c/d")
-    .put(z.any())
+    .put()
+    .input(z.any())
     .use((_req, res) => {
       return res.end({
         data: "PUT/:a/b/c/d" as const,

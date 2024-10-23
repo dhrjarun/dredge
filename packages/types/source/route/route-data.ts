@@ -1,17 +1,12 @@
 import { Parser, inferParserType } from "../parser";
 import { Route } from "./dredge-route";
+import { IsNever } from "../utils";
 
-// type OptionalData<Types, T> = { data?: T } & (IsNever<Types> extends false
-//   ? Types extends string
-//     ? {
-//         [P in Types]?: T;
-//       }
-//     : {}
-//   : {});
-
-export type Data<Types, T> = undefined extends T
-  ? OptionalData<Types, T>
-  : RequiredData<Types, T>;
+export type Data<Types, T> = IsNever<T> extends true
+  ? OptionalData<Types, any>
+  : undefined extends T
+    ? OptionalData<Types, T>
+    : RequiredData<Types, T>;
 
 export type RequiredData<Types, T> =
   | { data: T }
