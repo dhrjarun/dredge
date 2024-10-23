@@ -578,9 +578,23 @@ export interface Route<
     EBody
   >;
 
-  method<M extends HTTPMethod, P extends Parser>(
-    method: M,
+  input<P extends Parser>(
     parser?: P,
+  ): Route<
+    Options,
+    SuccessContext,
+    ErrorContext,
+    Method,
+    Paths,
+    Params,
+    SearchParams,
+    P,
+    OBody,
+    EBody
+  >;
+
+  method<M extends HTTPMethod>(
+    method: M,
   ): Route<
     Options,
     SuccessContext,
@@ -589,7 +603,7 @@ export interface Route<
     Paths,
     Params,
     SearchParams,
-    P,
+    IBody,
     OBody,
     EBody
   >;
@@ -605,9 +619,7 @@ export interface Route<
     OBody,
     EBody
   >;
-  post<P extends Parser>(
-    parser?: P,
-  ): Route<
+  post(): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -615,13 +627,11 @@ export interface Route<
     Paths,
     Params,
     SearchParams,
-    P,
+    IBody,
     OBody,
     EBody
   >;
-  put<P extends Parser>(
-    parser?: P,
-  ): Route<
+  put(): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -629,7 +639,7 @@ export interface Route<
     Paths,
     Params,
     SearchParams,
-    P,
+    IBody,
     OBody,
     EBody
   >;
@@ -645,9 +655,7 @@ export interface Route<
     OBody,
     EBody
   >;
-  patch<P extends Parser>(
-    parser?: P,
-  ): Route<
+  patch(): Route<
     Options,
     SuccessContext,
     ErrorContext,
@@ -655,7 +663,7 @@ export interface Route<
     Paths,
     Params,
     SearchParams,
-    P,
+    IBody,
     OBody,
     EBody
   >;

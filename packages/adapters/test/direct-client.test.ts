@@ -19,7 +19,8 @@ describe("client.extend", () => {
           dataTypes,
         })
         .path("/test")
-        .post(z.any())
+        .post()
+        .input(z.any())
         .use((req, res) => {
           return res.end({
             data: {
@@ -30,7 +31,7 @@ describe("client.extend", () => {
               responseDataType: res.dataType,
             },
             status: 200,
-            statusText: "ok",
+            statusText: "",
           });
         }),
     ]),
@@ -43,7 +44,8 @@ describe("client.extend", () => {
           dataTypes,
         })
         .path("/test")
-        .post(z.any())
+        .post()
+        .input(z.any())
         .use((req, res) => {
           return res.end({
             data: {

@@ -109,7 +109,8 @@ const GetBirdByName = route
 
 const PostBird = route
   .path("/birds")
-  .post(z.object({ name: z.string(), color: z.string() }))
+  .post()
+  .input(z.object({ name: z.string(), color: z.string() }))
   .use((_req, res) => {
     return res.end({
       status: 200,
