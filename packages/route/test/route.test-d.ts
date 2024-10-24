@@ -93,7 +93,8 @@ describe("req", () => {
       .error((_err, req) => {
         expectTypeOf(req.data).toBeAny();
       })
-      .post(z.string())
+      .post()
+      .input(z.string())
       .error((_err, req) => {
         expectTypeOf(req.data).toBeAny();
       });
@@ -103,7 +104,8 @@ describe("req", () => {
       .error((_err, req) => {
         expectTypeOf(req.data).toBeAny();
       })
-      .put(z.number())
+      .put()
+      .input(z.number())
       .error((_err, req) => {
         expectTypeOf(req.data).toBeAny();
       });
@@ -113,7 +115,8 @@ describe("req", () => {
       .error((_err, req) => {
         expectTypeOf(req.data).toBeAny();
       })
-      .patch(z.null())
+      .patch()
+      .input(z.null())
       .error((_err, req) => {
         expectTypeOf(req.data).toBeAny();
       });
@@ -148,7 +151,8 @@ describe("req", () => {
   test("req.data should have correct type", () => {
     dredgeRoute()
       .path("/test")
-      .post(z.string())
+      .post()
+      .input(z.string())
       .use((req) => {
         expectTypeOf(req.data).not.toBeUndefined();
         expectTypeOf(req.data).toBeString();
@@ -156,7 +160,8 @@ describe("req", () => {
 
     dredgeRoute()
       .path("/test")
-      .put(z.number())
+      .put()
+      .input(z.number())
       .use((req) => {
         expectTypeOf(req.data).not.toBeUndefined();
         expectTypeOf(req.data).toBeNumber();
@@ -164,7 +169,8 @@ describe("req", () => {
 
     dredgeRoute()
       .path("/test")
-      .patch(z.null())
+      .patch()
+      .input(z.null())
       .use((req) => {
         expectTypeOf(req.data).not.toBeUndefined();
         expectTypeOf(req.data).toBeNull();
@@ -649,7 +655,7 @@ describe("res", () => {
     expectTypeOf<OData>().toEqualTypeOf<"this is string">();
   });
 
-  test("res.output and responseData", () => {
+  test("route.output and responseData", () => {
     const route = dredgeRoute()
       .path("/test")
       .get()
