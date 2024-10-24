@@ -119,9 +119,6 @@ route.options({
 })
 ```
 
-## route.build()
-
-As of now, you need to call `build()` to get the route object which you can then pass to `dredgeRouter()`.
 
 ```ts
 import { route } from './route'
@@ -137,5 +134,4 @@ const getPostsRoute = route
 			}
         })
     })
-	.build()
 ```
