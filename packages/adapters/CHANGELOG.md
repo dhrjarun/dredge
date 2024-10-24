@@ -1,5 +1,11 @@
 # dredge-adapters
 
+## 1.0.4
+
+### Patch Changes
+
+- `createFetchRequestHandler` is no longer async function
+
 ## 1.0.3
 
 ### Patch Changes

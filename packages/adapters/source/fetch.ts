@@ -63,7 +63,7 @@ export interface CreateFetchRequestHandlerOptions<Context extends object> {
   ) => Record<string, any>;
 }
 
-export async function createFetchRequestHandler<Context extends object = {}>(
+export function createFetchRequestHandler<Context extends object = {}>(
   options: CreateFetchRequestHandlerOptions<Context>,
 ) {
   const {

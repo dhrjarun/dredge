@@ -10,7 +10,7 @@ export async function startServer(
   opts: Omit<CreateFetchRequestHandlerOptions<any>, "req">,
 ): Promise<Server> {
   const app = new Hono();
-  const handler = await createFetchRequestHandler({
+  const handler = createFetchRequestHandler({
     ...opts,
   });
 
@@ -29,9 +29,6 @@ export async function startServer(
       reject(err);
     });
     server.addListener("listening", () => {
-      const port = (server.address() as any)?.port;
-      const baseUrl = `http://localhost:${port}`;
-
       resolve(server as any);
     });
     server.listen();
