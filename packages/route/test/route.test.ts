@@ -147,26 +147,26 @@ describe("route.params()", () => {
   });
 });
 
-describe("route.searchParams()", () => {
-  test("searchParams should be added in route._def", () => {
+describe("route.queries()", () => {
+  test("queries should be added in route._def", () => {
     const route = dredgeRoute()
       .path("/test")
-      .searchParams({ SPi: () => {}, SPii: () => {} })
-      .searchParams({
+      .queries({ SPi: () => {}, SPii: () => {} })
+      .queries({
         SPiii: (p) => p,
       });
 
-    assert.property(route._def.searchParams, "SPi");
-    assert.property(route._def.searchParams, "SPii");
-    assert.property(route._def.searchParams, "SPiii");
+    assert.property(route._def.queries, "SPi");
+    assert.property(route._def.queries, "SPii");
+    assert.property(route._def.queries, "SPiii");
   });
 
-  test("one searchParam can only be defined once", () => {
+  test("one query can only be defined once", () => {
     expect(() => {
       dredgeRoute()
         .path("/test")
-        .searchParams({ SPi: (p) => p })
-        .searchParams({
+        .queries({ SPi: (p) => p })
+        .queries({
           SPi: (p) => p,
           SPii: (p) => p,
         });

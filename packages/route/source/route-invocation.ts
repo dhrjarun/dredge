@@ -113,11 +113,11 @@ async function handleMiddleware(
     param(key?: string) {
       return paramFn(request.params)(key);
     },
-    searchParam(key?: string) {
-      return paramFn(request.searchParams, true)(key);
+    query(key?: string) {
+      return paramFn(request.queries, true)(key);
     },
-    searchParams(key?: string) {
-      return paramFn(request.searchParams)(key);
+    queries(key?: string) {
+      return paramFn(request.queries)(key);
     },
   };
 
@@ -276,7 +276,7 @@ export type MiddlewareRequest = {
   method: string;
   headers: Record<string, string>;
   params: Record<string, any>;
-  searchParams: Record<string, any[]>;
+  queries: Record<string, any[]>;
   data?: any;
   dataType?: string;
 };
@@ -306,11 +306,11 @@ export function useValidate(route: AnyRoute) {
     }
     validatedRequest.params = validatedParams;
 
-    const validatedSearchParams: Record<string, any> = {
-      ...unValidatedRequest.searchParams, // TODO: add a option to whether or not to pass searchParam if their schema is not defined
+    const validatedQueries: Record<string, any> = {
+      ...unValidatedRequest.queries, // TODO: add an option to whether or not to pass query if their schema is not defined
     };
-    for (const [key, parser] of Object.entries(routeDef.searchParams)) {
-      const values = unValidatedRequest.searchParams[key];
+    for (const [key, parser] of Object.entries(routeDef.queries)) {
+      const values = unValidatedRequest.queries[key];
       const validatedValues: any[] = [];
 
       if (!values) {
@@ -324,9 +324,9 @@ export function useValidate(route: AnyRoute) {
         );
       }
 
-      validatedSearchParams[key] = validatedValues;
+      validatedQueries[key] = validatedValues;
     }
-    validatedRequest.searchParams = validatedSearchParams;
+    validatedRequest.queries = validatedQueries;
 
     let validatedData: unknown;
     if (routeDef.iBody) {

@@ -24,7 +24,7 @@ export interface NormalizedDirectClientOptions
   > {
   path: string;
   prefixUrl?: string;
-  searchParams: Record<string, any[]>;
+  queries: Record<string, any[]>;
 }
 
 export type DefaultDirectClientOptions = DefaultDredgeClientOptions & {
