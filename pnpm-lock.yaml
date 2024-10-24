@@ -42,14 +42,14 @@ importers:
   examples/in-express:
     dependencies:
       dredge-adapters:
-        specifier: ^0.5.9
-        version: 0.5.9
+        specifier: ^1.0.4
+        version: 1.0.4(typescript@5.4.2)
       dredge-fetch:
-        specifier: ^0.5.7
-        version: 0.5.7
+        specifier: ^0.5.10
+        version: 0.5.10(typescript@5.4.2)
       dredge-route:
-        specifier: ^0.4.6
-        version: 0.4.6
+        specifier: ^1.0.0
+        version: 1.0.0(typescript@5.4.2)
     devDependencies:
       '@types/express':
         specifier: ^4.17.21
@@ -58,14 +58,14 @@ importers:
   examples/in-nextjs-app-dir:
     dependencies:
       dredge-adapters:
-        specifier: ^0.5.9
-        version: 0.5.9
+        specifier: ^1.0.4
+        version: 1.0.4(typescript@5.4.2)
       dredge-fetch:
-        specifier: ^0.5.7
-        version: 0.5.7
+        specifier: ^0.5.10
+        version: 0.5.10(typescript@5.4.2)
       dredge-route:
-        specifier: ^0.4.6
-        version: 0.4.6
+        specifier: ^1.0.0
+        version: 1.0.0(typescript@5.4.2)
       next:
         specifier: 14.2.7
         version: 14.2.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -98,14 +98,14 @@ importers:
   examples/in-nextjs-pages-dir:
     dependencies:
       dredge-adapters:
-        specifier: ^0.5.9
-        version: 0.5.9
+        specifier: ^1.0.4
+        version: 1.0.4(typescript@5.4.2)
       dredge-fetch:
-        specifier: ^0.5.7
-        version: 0.5.7
+        specifier: ^0.5.10
+        version: 0.5.10(typescript@5.4.2)
       dredge-route:
-        specifier: ^0.4.6
-        version: 0.4.6
+        specifier: ^1.0.0
+        version: 1.0.0(typescript@5.4.2)
       next:
         specifier: 14.2.7
         version: 14.2.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -138,14 +138,14 @@ importers:
   examples/standalone-server:
     dependencies:
       dredge-adapters:
-        specifier: ^0.5.9
-        version: 0.5.9
+        specifier: ^1.0.4
+        version: 1.0.4(typescript@5.4.2)
       dredge-fetch:
-        specifier: ^0.5.7
-        version: 0.5.7
+        specifier: ^0.5.10
+        version: 0.5.10(typescript@5.4.2)
       dredge-route:
-        specifier: ^0.4.6
-        version: 0.4.6
+        specifier: ^1.0.0
+        version: 1.0.0(typescript@5.4.2)
     devDependencies:
       '@types/node':
         specifier: ^22.5.5
@@ -1739,20 +1739,20 @@ packages:
   dlv@1.1.3:
     resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
 
-  dredge-adapters@0.5.9:
-    resolution: {integrity: sha512-/s54ajS8UeGfZlk6+GL7WYVbmFW7VF7L5s7KvtiuEMh/49WkhOtkJOosrHWB233kSiGrAEyLiwP229Ib2kHahw==}
+  dredge-adapters@1.0.4:
+    resolution: {integrity: sha512-dpeVvkE4rxE6HXudcTS0suo7KaaKOaRT7crv7qc0V7LJb0dLtDm0eYg3iM3IH5D0smB3lM4VRIFWZXdpJS7LHA==}
 
-  dredge-common@0.5.3:
-    resolution: {integrity: sha512-4RFD+USV/DbwMWU3oq0zg/sVL1Ks8zYDfmf+ewDTPs4HlzHoCHIckTT/mF/oP5v9YUXs0zV3iNdmfYla4X4k1A==}
+  dredge-common@0.6.0:
+    resolution: {integrity: sha512-8WGxkMyQ8LTyJffIqT9YGucEi3t9e3+bnF3bselgiWFKDR74+5dNxJhuLUdtl11obWcGbKRDqqienGQ07hwhug==}
 
-  dredge-fetch@0.5.7:
-    resolution: {integrity: sha512-us5dKEr6cjwZm1MCd9ts7I6Jf3nBzKlaqCFZK90oGpYMAqN2wihA71PJArxOzp63jRkiPOertSDSxqpGVy60bg==}
+  dredge-fetch@0.5.10:
+    resolution: {integrity: sha512-KokkfNecEYqcYJssMlntt1/bmgCXvWGFJWW4cy7R3UVR9CYzXJl+5r5EjiEK3LS5X8U8FWBTioCigCmZG3YuCA==}
 
-  dredge-route@0.4.6:
-    resolution: {integrity: sha512-Ti2yLmCBt5kuf+4rtTX5WPVwqKCg9yVmkl7De9L0FiYZEkTTXdqSq1/mGhI4auf6wZp1wn5Ux9I0RPlVZO8T5w==}
+  dredge-route@1.0.0:
+    resolution: {integrity: sha512-34QPHHWc+OCk0zLYyBPHMjqCrHTp3yjOlMegvhwqs17Qt359jLlWTGI2PNJMoQw7IaEx8JhU8noBUR20Qui3Ng==}
 
-  dredge-types@0.4.5:
-    resolution: {integrity: sha512-BIqti24lcXPKZu/vRNciMFQ4zGYjrZ4ySTKXlIVGB2gU9rzye2p8d9ia51La5mJu6jZdSEVOUyD+QuPt1mT+LQ==}
+  dredge-types@1.0.0:
+    resolution: {integrity: sha512-iuuvyq9/zddxBas2pNjZUcZ7OUviBxvJ6+8CcsnSAhmFgmKKQBHyvDQiRioN40Bx2ztuDCvv/Rkr1CYMEMlxpg==}
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
@@ -4475,26 +4475,40 @@ snapshots:
 
   dlv@1.1.3: {}
 
-  dredge-adapters@0.5.9:
+  dredge-adapters@1.0.4(typescript@5.4.2):
     dependencies:
-      dredge-common: 0.5.3
-      dredge-route: 0.4.6
-      dredge-types: 0.4.5
+      dredge-common: 0.6.0
+      dredge-route: 1.0.0(typescript@5.4.2)
+      dredge-types: 1.0.0(typescript@5.4.2)
       parseurl: 1.3.3
+    transitivePeerDependencies:
+      - typescript
 
-  dredge-common@0.5.3: {}
+  dredge-common@0.6.0: {}
 
-  dredge-fetch@0.5.7:
+  dredge-fetch@0.5.10(typescript@5.4.2):
     dependencies:
-      dredge-common: 0.5.3
-      dredge-types: 0.4.5
+      dredge-common: 0.6.0
+      dredge-types: 1.0.0(typescript@5.4.2)
+    transitivePeerDependencies:
+      - typescript
 
-  dredge-route@0.4.6:
+  dredge-route@1.0.0(typescript@5.4.2):
     dependencies:
-      dredge-common: 0.5.3
-      dredge-types: 0.4.5
+      dredge-common: 0.6.0
+      dredge-types: 1.0.0(typescript@5.4.2)
+    transitivePeerDependencies:
+      - typescript
 
-  dredge-types@0.4.5: {}
+  dredge-types@1.0.0(typescript@5.4.2):
+    dependencies:
+      arktype: 2.0.0-rc.15
+      superstruct: 2.0.2
+      valibot: 0.42.1(typescript@5.4.2)
+      yup: 1.4.0
+      zod: 3.22.4
+    transitivePeerDependencies:
+      - typescript
 
   eastasianwidth@0.2.0: {}
 

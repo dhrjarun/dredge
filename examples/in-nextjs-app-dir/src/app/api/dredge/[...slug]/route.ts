@@ -1,14 +1,13 @@
 import { rootRouter } from "@/router";
-import { handleFetchRequest } from "dredge-adapters";
+import { createFetchRequestHandler } from "dredge-adapters";
 
 async function handler(req: Request) {
-  const res = await handleFetchRequest({
-    req,
-    router: rootRouter,
+  const handler = createFetchRequestHandler({
     prefixUrl: "/api/dredge",
+    router: rootRouter,
   });
 
-  return res;
+  return handler(req);
 }
 
 export {
