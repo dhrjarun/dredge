@@ -50,15 +50,15 @@ export default handler;
 ```ts
 // app/api/dredge/[...slug]/route.ts
 import { rootRouter } from "@/router";
-import { handleFetchRequest } from "dredge-adapters";
+import { createFetchRequestHandler } from "dredge-adapters";
 
 async function handler(req: Request) {
-  const res = await handleFetchRequest({
-    req,
-    router: rootRouter,
+  const handler = createFetchRequestHandler({
     prefixUrl: "/api/dredge",
+    router: rootRouter,
   });
 
+  const res = await handler(req);
   return res;
 }
 

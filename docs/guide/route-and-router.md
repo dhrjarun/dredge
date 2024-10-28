@@ -13,7 +13,7 @@ import { dredgeRoute } from 'dredge-route';
 
 const route = dredgeRoute();
 
-const GetUsersRoute = route.path('/users').get().use((req, res) => {}).build()
+const GetUsersRoute = route.path('/users').get().use((req, res) => {})
 ```
 
 ## Router

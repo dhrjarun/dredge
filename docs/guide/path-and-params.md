@@ -11,7 +11,7 @@ const getPostsRoute = route
     .get()
     .use((req, res) => {
         // do something...
-    }).build()
+    })
 ```
 
 ## Params

@@ -17,6 +17,6 @@ const router = dredgeRouter([
                 'Content-Type': 'application/json'
             }
         })
-    }).build()
+    })
 ])
 ```
