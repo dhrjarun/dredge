@@ -9,8 +9,7 @@ export const rootRouter = dredgeRouter([
       return res.end({
         text: "Hello World!",
       });
-    })
-    .build(),
+    }),
 
   route
     .path("/say-my-name/:name")
@@ -21,8 +20,7 @@ export const rootRouter = dredgeRouter([
       return res.end({
         text: `Hello ${name}!`,
       });
-    })
-    .build(),
+    }),
 ]);
 
 export type RootRouter = typeof rootRouter;

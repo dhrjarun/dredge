@@ -11,9 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dredge-adapters": "^0.5.9",
-    "dredge-fetch": "^0.5.7",
-    "dredge-route": "^0.4.6"
+    "dredge-adapters": "^1.0.4",
+    "dredge-fetch": "^0.5.10",
+    "dredge-route": "^1.0.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21"
