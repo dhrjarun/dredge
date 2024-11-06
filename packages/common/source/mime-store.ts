@@ -1,3 +1,5 @@
+import { parseContentType } from "./data-types";
+
 type MimeStoreInit<T = any> = MimeStore<T> | { [key: string]: T };
 
 export class MimeStore<T> {
@@ -53,13 +55,10 @@ export class MimeStore<T> {
     this.map.set(mediaType, payload);
   }
 
-  get(mediaType: string): T | undefined {
-    // const regex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    // if (!regex.test(mediaType)) {
-    //   throw new Error(`Invalid MediaType: ${mediaType}`);
-    // }
-
-    mediaType = mediaType.trim().toLowerCase();
+  get(contentType: string): T | undefined {
+    const ct = parseContentType(contentType.trim());
+    const mediaType = ct?.type;
+    if (!mediaType) return;
 
     let payload = this.map.get(mediaType);
     if (payload) return payload;
