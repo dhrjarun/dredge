@@ -9,12 +9,12 @@ import {
   defaultTextBodyParser,
   defaultTextDataSerializer,
   joinDuplicateHeaders,
+  parseContentType,
   searchParamsToObject,
   trimSlashes,
 } from "dredge-common";
 import {
   MiddlewareRequest,
-  extractContentTypeHeader,
   getDataType,
   getPathParams,
   useErrorMiddlewares,
@@ -32,16 +32,12 @@ type BodyParserFunction = (options: {
   arrayBuffer: () => Promise<ArrayBuffer>;
   buffer: () => Promise<Buffer>;
   blob: () => Promise<Blob>;
-  readonly mediaType: string;
-  readonly boundary?: string;
-  readonly charset?: string;
+  readonly contentType?: string;
 }) => MaybePromise<any>;
 
 type DataSerializerFunction = (options: {
   readonly data: any;
-  mediaType: string;
-  charset?: string;
-  boundary?: string;
+  contentType?: string;
 }) => MaybePromise<string | Readable>;
 
 export interface CreateNodeHttpRequestHandlerOptions<Context extends object> {
@@ -130,37 +126,33 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
       dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
     };
 
-    const contentTypeInfo = extractContentTypeHeader(headers["content-type"]);
-    if (contentTypeInfo?.mediaType) {
-      const bodyParser = bodyParsers.get(contentTypeInfo.mediaType);
-      if (bodyParser) {
-        const data = await bodyParser({
-          body: req,
-          buffer: () => {
-            return toBuffer(req);
-          },
-          text: async () => {
-            const buffer = await toBuffer(req);
-            return new TextDecoder().decode(buffer);
-          },
-          arrayBuffer: async () => {
-            return toArrayBuffer(req);
-          },
-          blob: async () => {
-            const ct = headers["content-type"];
-            const buf = await toArrayBuffer(req);
+    const ct = parseContentType(headers["content-type"]);
+    const bodyParser = bodyParsers.get(ct?.type || "");
+    if (bodyParser) {
+      const data = await bodyParser({
+        body: req,
+        buffer: () => {
+          return toBuffer(req);
+        },
+        text: async () => {
+          const buffer = await toBuffer(req);
+          return new TextDecoder().decode(buffer);
+        },
+        arrayBuffer: async () => {
+          return toArrayBuffer(req);
+        },
+        blob: async () => {
+          const ct = headers["content-type"];
+          const buf = await toArrayBuffer(req);
 
-            return new Blob([buf], {
-              type: ct,
-            });
-          },
+          return new Blob([buf], {
+            type: ct,
+          });
+        },
 
-          mediaType: contentTypeInfo.mediaType!,
-          boundary: contentTypeInfo.boundary,
-          charset: contentTypeInfo.charset,
-        });
-        middlewareRequest.data = data;
-      }
+        contentType: headers["content-type"],
+      });
+      middlewareRequest.data = data;
     }
 
     try {
@@ -180,38 +172,20 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
 
       const dataSerializeOptions = {
         data: middlewareResponse.data,
-        mediaType: undefined as string | undefined,
-        charset: undefined as string | undefined,
-        boundary: undefined as string | undefined,
+        contentType:
+          middlewareResponse.headers["content-type"] ||
+          routeDef.dataTypes[middlewareResponse.dataType || ""],
       };
-      if (middlewareResponse.headers["content-type"]) {
-        const info = extractContentTypeHeader(
-          middlewareResponse.headers["content-type"],
-        );
-        dataSerializeOptions.mediaType = info.mediaType;
-        dataSerializeOptions.charset = info.charset;
-        dataSerializeOptions.boundary = info.boundary;
-      } else if (middlewareResponse.dataType) {
-        dataSerializeOptions.mediaType =
-          routeDef.dataTypes[middlewareResponse.dataType];
-      }
-      if (dataSerializeOptions.mediaType) {
-        const dataSerializer = dataSerializers.get(
-          dataSerializeOptions.mediaType,
-        );
+
+      const ct = parseContentType(dataSerializeOptions.contentType);
+      if (ct?.type) {
+        const dataSerializer = dataSerializers.get(ct.type);
         if (dataSerializer) {
           body = await dataSerializer(dataSerializeOptions as any);
         }
 
-        let contentTypeHeader = dataSerializeOptions.mediaType;
-        if (dataSerializeOptions.boundary) {
-          contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
-        }
-        if (dataSerializeOptions.charset) {
-          contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
-        }
-
-        middlewareRequest.headers["content-type"] = contentTypeHeader;
+        middlewareRequest.headers["content-type"] =
+          dataSerializeOptions.contentType ?? "";
       }
 
       if (middlewareResponse.status) {
@@ -243,38 +217,20 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
       let body: any = null;
       const dataSerializeOptions = {
         data: middlewareResponse.data,
-        mediaType: undefined as string | undefined,
-        charset: undefined as string | undefined,
-        boundary: undefined as string | undefined,
+        contentType:
+          middlewareResponse.headers["content-type"] ||
+          routeDef.dataTypes[middlewareResponse.dataType || ""],
       };
-      if (middlewareResponse.headers["content-type"]) {
-        const info = extractContentTypeHeader(
-          middlewareResponse.headers["content-type"],
-        );
-        dataSerializeOptions.mediaType = info.mediaType;
-        dataSerializeOptions.charset = info.charset;
-        dataSerializeOptions.boundary = info.boundary;
-      } else if (middlewareResponse.dataType) {
-        dataSerializeOptions.mediaType =
-          routeDef.dataTypes[middlewareResponse.dataType];
-      }
-      if (dataSerializeOptions.mediaType) {
-        const dataSerializer = dataSerializers.get(
-          dataSerializeOptions.mediaType,
-        );
+
+      const ct = parseContentType(dataSerializeOptions.contentType);
+      if (ct?.type) {
+        const dataSerializer = dataSerializers.get(ct.type);
         if (dataSerializer) {
           body = await dataSerializer(dataSerializeOptions as any);
         }
 
-        let contentTypeHeader = dataSerializeOptions.mediaType;
-        if (dataSerializeOptions.boundary) {
-          contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
-        }
-        if (dataSerializeOptions.charset) {
-          contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
-        }
-
-        middlewareRequest.headers["content-type"] = contentTypeHeader;
+        middlewareRequest.headers["content-type"] =
+          dataSerializeOptions.contentType ?? "";
       }
 
       if (middlewareResponse.status) {
@@ -335,7 +291,7 @@ async function toBuffer(body: Readable, size: number = 0) {
   }
 }
 
-async function toArrayBuffer(body: Readable, size: number = 0) {
+async function toArrayBuffer(body: Readable) {
   const { buffer, byteOffset, byteLength } = await toBuffer(body);
   return buffer.slice(byteOffset, byteOffset + byteLength);
 }
