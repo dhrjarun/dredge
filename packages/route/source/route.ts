@@ -1,4 +1,4 @@
-import { MimeStore, trimSlashes } from "dredge-common";
+import { trimSlashes } from "dredge-common";
 import type { AnyRoute, RouteBuilderDef, Route } from "dredge-types";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
@@ -27,12 +27,10 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     params = {},
     queries = {},
     dataTypes = {},
-    dataTransformer = {},
     ...rest
   } = initDef;
 
   const _def: RouteBuilderDef = {
-    dataTransformer,
     middlewares,
     errorMiddlewares,
     paths,
@@ -40,8 +38,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     queries,
     method,
     dataTypes,
-    dataSerializers: new MimeStore<any>(),
-    bodyParsers: new MimeStore<any>(),
     ...rest,
   };
 

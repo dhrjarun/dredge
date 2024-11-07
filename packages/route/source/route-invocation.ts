@@ -351,7 +351,6 @@ export function useSuccessMiddlewares(route: AnyRoute) {
     let _response = {
       ...response,
       ctx: {
-        ...routeDef.defaultContext,
         ...response.ctx,
       },
     };
@@ -416,7 +415,6 @@ export function useErrorMiddlewares(route: AnyRoute) {
     let _response = {
       ...response,
       ctx: {
-        ...routeDef.defaultContext,
         ...response.ctx,
       },
     };
