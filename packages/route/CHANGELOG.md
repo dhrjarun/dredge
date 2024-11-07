@@ -1,5 +1,20 @@
 # dredge-route
 
+## 2.0.0
+
+### Major Changes
+
+- f25bb59: replace searchParam(s) to query/queries
+- 4e2aa47: add route.input() and route.output()
+  route.<method>(parser) no longer work
+
+### Patch Changes
+
+- Updated dependencies [f25bb59]
+- Updated dependencies [4e2aa47]
+  - dredge-common@1.0.0
+  - dredge-types@2.0.0
+
 ## 1.0.0
 
 ### Major Changes

@@ -1,5 +1,11 @@
 # dredge-common
 
+## 1.0.0
+
+### Major Changes
+
+- f25bb59: replace searchParam(s) to query/queries
+
 ## 0.6.0
 
 ### Minor Changes

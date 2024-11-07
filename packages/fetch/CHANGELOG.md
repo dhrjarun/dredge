@@ -1,5 +1,18 @@
 # dredge-fetch
 
+## 1.0.0
+
+### Major Changes
+
+- f25bb59: replace searchParam(s) to query/queries
+
+### Patch Changes
+
+- Updated dependencies [f25bb59]
+- Updated dependencies [4e2aa47]
+  - dredge-common@1.0.0
+  - dredge-types@2.0.0
+
 ## 0.5.10
 
 ### Patch Changes
