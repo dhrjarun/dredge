@@ -1,5 +1,13 @@
 # dredge-types
 
+## 2.0.0
+
+### Major Changes
+
+- f25bb59: replace searchParam(s) to query/queries
+- 4e2aa47: add route.input() and route.output()
+  route.<method>(parser) no longer work
+
 ## 1.0.0
 
 ### Major Changes
