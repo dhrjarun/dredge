@@ -11,13 +11,6 @@ import {
 } from "../utils";
 import { HTTPMethod } from "./http";
 
-type MimeStore<T> = {
-  get: (mediaType: string) => T;
-  set: (mediaType: string | string[], payload: T) => void;
-
-  clone: () => MimeStore<T>;
-};
-
 export interface MiddlewareResult<C, Data> {
   ctx: C;
   headers: Record<string, string>; // Header names are lower-case
@@ -248,36 +241,12 @@ type OptionalEndFunction<DataTypes, DT = any> = {
   ): MiddlewareResult<{}, T>;
 };
 
-type EndFunction<DataTypes, DT> = {
-  (): MiddlewareResult<{}, any>;
-
-  <T extends DT>(
-    opts: Data<DataTypes, T> & {
-      dataType?: DataTypes;
-      headers?: Record<string, string | null>;
-      status?: number;
-      statusText?: string;
-    },
-  ): MiddlewareResult<{}, T>;
-};
-
 export type RouteBuilderDef = {
   method?: HTTPMethod;
   paths: string[];
   params: Record<string, Parser>;
   queries: Record<string, Parser>;
   dataTypes: Record<string, string>;
-  defaultContext?: any;
-  dataTransformer: Record<
-    string,
-    {
-      forRequest?: (data: any) => any;
-      forResponse?: (data: any) => any;
-    }
-  >;
-  dataSerializers: MimeStore<DataSerializerFunction>;
-  bodyParsers: MimeStore<BodyParserFunction>;
-
   iBody?: Parser;
   oBody?: Parser;
 
@@ -381,21 +350,6 @@ export type BodyTypes =
   | Blob
   | FormData
   | ArrayBuffer;
-
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
-type DataSerializerFunction = (options: {
-  readonly data: any;
-  readonly mediaType?: string;
-  boundary?: string;
-  charset?: string;
-}) => Promise<BodyTypes> | BodyTypes;
-
-type BodyParserFunction = (options: {
-  readonly body: BodyFn;
-  readonly mediaType?: string;
-  readonly boundary?: string;
-  readonly charset?: string;
-}) => Promise<any>;
 
 export type BodyFn = {
   (): Promise<
