@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { untypedDredgeFetch } from "../source/dredge-fetch";
 import { echoBody, echoUrl } from "./helpers/fetch-implementations";
 
@@ -50,10 +50,10 @@ test("default text bodyParse and stringify", async () => {
   expect(await response.data()).toStrictEqual(data);
 });
 
-test("dataSerializers", async () => {
+describe("dataSerializers", () => {
   let _client = client.extends({
     dataSerializers: {
-      "application/json": async ({}) => {
+      "application/json": () => {
         return "application/json";
       },
       "multipart/*": async ({}) => {
@@ -72,54 +72,90 @@ test("dataSerializers", async () => {
     fetch: echoBody,
   });
 
-  const application_json = await _client("/test", {
-    data: "",
-    method: "post",
-    headers: {
-      "Content-Type": "application/json",
-    },
+  async function assertBodyText(
+    received: Promise<any> | any,
+    expected: string,
+  ) {
+    const text = await (await received).text();
+
+    expect(text).toBe(expected);
+  }
+  function sendDullPostRequestAs(contentType: string) {
+    return _client("/test", {
+      method: "post",
+      data: "any-body",
+      headers: {
+        "Content-Type": contentType,
+      },
+    });
+  }
+
+  test("serialized by `application/json`", async () => {
+    await assertBodyText(
+      sendDullPostRequestAs("application/json"),
+      "application/json",
+    );
   });
 
-  const multipart_ = await _client("/test", {
-    data: "",
-    method: "post",
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+  test("serialized by `multipart/*`", async () => {
+    await assertBodyText(
+      sendDullPostRequestAs(
+        "multipart/form-data;boundary=--DredgeBoundary73638302",
+      ),
+      "multipart/*",
+    );
   });
 
-  const text_plain = await _client("/test", {
-    data: "",
-    method: "post",
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-    },
+  test("serialized by `text/*`", async () => {
+    await assertBodyText(sendDullPostRequestAs("text/html"), "text/*");
   });
 
-  const text_ = await _client("/test", {
-    data: "",
-    method: "post",
-    headers: {
-      "Content-Type": "text/html",
-    },
+  test("serialized by `text/plain`", async () => {
+    await assertBodyText(
+      sendDullPostRequestAs("text/plain;charset=utf-8"),
+      "text/plain",
+    );
   });
 
-  const any = await _client("/test", {
-    data: "",
-    method: "post",
-    headers: {
-      "Content-Type": "image/png; charset=utf-8",
-    },
+  test("serialized by `*/*`", async () => {
+    await assertBodyText(sendDullPostRequestAs("image/png"), "*/*");
   });
 
-  expect(await application_json.text()).toBe("application/json");
-  expect(await multipart_.text()).toBe("multipart/*");
-  expect(await text_plain.text()).toBe("text/plain");
-  expect(await text_.text()).toBe("text/*");
-  expect(await any.text()).toBe("*/*");
+  test("argument.contentType equals content-type header in request", async () => {
+    function parser(options: any) {
+      return options.contentType || "";
+    }
+    _client = _client.extends({
+      dataSerializers: {
+        "application/json": parser,
+        "multipart/*": parser,
+        "text/*": parser,
+        "text/plain": parser,
+        "*/*": parser,
+      },
+    });
+
+    await assertBodyText(
+      sendDullPostRequestAs("application/json"),
+      "application/json",
+    );
+
+    await assertBodyText(
+      sendDullPostRequestAs(
+        "multipart/form-data;boundary=--DredgeBoundary73638302",
+      ),
+      "multipart/form-data;boundary=--DredgeBoundary73638302",
+    );
+
+    await assertBodyText(
+      sendDullPostRequestAs("text/plain;charset=utf-8"),
+      "text/plain;charset=utf-8",
+    );
+    await assertBodyText(sendDullPostRequestAs("image/png"), "image/png");
+  });
 });
 
-test("bodyParsers", async () => {
+describe("bodyParsers", async () => {
   let _client = client.extends({
     bodyParsers: {
       "application/json": async ({}) => {
@@ -151,51 +187,87 @@ test("bodyParsers", async () => {
     },
   });
 
-  const application_json = await _client("/test", {
-    data: "application/json",
-    method: "post",
-    headers: {
-      "Content-Type": "text/plain",
-    },
+  async function assertBodyText(
+    received: Promise<any> | any,
+    expected: string,
+  ) {
+    const text = await (await received).data();
+
+    expect(text).toBe(expected);
+  }
+
+  function receiveResponseAs(contentType: string) {
+    return _client("/test", {
+      data: contentType,
+      method: "post",
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
+  }
+
+  test("parsed by `application/json`", async () => {
+    await assertBodyText(
+      receiveResponseAs("application/json"),
+      "application/json",
+    );
   });
 
-  const multipart_ = await _client("/test", {
-    data: "multipart/form-data; boundary=123",
-    method: "post",
-    headers: {
-      "Content-Type": "text/plain",
-    },
+  test("parsed by `multipart/*`", async () => {
+    await assertBodyText(
+      receiveResponseAs(
+        "multipart/form-data;boundary=--DredgeBoundary73638302",
+      ),
+      "multipart/*",
+    );
   });
 
-  const text_plain = await _client("/test", {
-    data: "text/plain",
-    method: "post",
-    headers: {
-      "Content-Type": "text/plain",
-    },
+  test("parsed by `text/*`", async () => {
+    await assertBodyText(receiveResponseAs("text/html"), "text/*");
   });
 
-  const text_ = await _client("/test", {
-    data: "text/html",
-    method: "post",
-    headers: {
-      "Content-Type": "text/plain",
-    },
+  test("parsed by `text/plain`", async () => {
+    await assertBodyText(
+      receiveResponseAs("text/plain;charset=utf-8"),
+      "text/plain",
+    );
   });
 
-  const any = await _client("/test", {
-    data: "image/png",
-    method: "post",
-    headers: {
-      "Content-Type": "text/plain",
-    },
+  test("parsed by `*/*`", async () => {
+    await assertBodyText(receiveResponseAs("image/png"), "*/*");
   });
 
-  expect(await application_json.data()).toBe("application/json");
-  expect(await multipart_.data()).toBe("multipart/*");
-  expect(await text_plain.data()).toBe("text/plain");
-  expect(await text_.data()).toBe("text/*");
-  expect(await any.data()).toBe("*/*");
+  test("argument.contentType equals content-type header in response", async () => {
+    function parser(options: any) {
+      return options.contentType || "";
+    }
+    _client = _client.extends({
+      bodyParsers: {
+        "application/json": parser,
+        "multipart/*": parser,
+        "text/*": parser,
+        "text/plain": parser,
+        "*/*": parser,
+      },
+    });
+
+    assertBodyText(receiveResponseAs("application/json"), "application/json");
+
+    assertBodyText(
+      receiveResponseAs(
+        "multipart/form-data;boundary=--DredgeBoundary73638302",
+      ),
+      "multipart/form-data;boundary=--DredgeBoundary73638302",
+    );
+
+    assertBodyText(receiveResponseAs("text/html"), "text/html");
+
+    assertBodyText(
+      receiveResponseAs("text/plain;charset=utf-8"),
+      "text/plain;charset=utf-8",
+    );
+    assertBodyText(receiveResponseAs("image/png"), "image/png");
+  });
 });
 
 test("no content-type matches in bodyParser and dataSerializers", async () => {});

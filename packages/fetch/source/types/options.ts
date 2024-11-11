@@ -34,9 +34,7 @@ export interface FetchOptions
 
 type DataSerializerFunction = (options: {
   readonly data: any;
-  mediaType: string;
-  boundary?: string;
-  charset?: string;
+  contentType?: string;
 }) => MaybePromise<
   ArrayBuffer | Blob | string | FormData | ReadableStream<Uint8Array>
 >;
@@ -49,9 +47,7 @@ type BodyParserFunction = (options: {
   arrayBuffer(): Promise<ArrayBuffer>;
   readonly bodyUsed: boolean;
 
-  readonly mediaType: string;
-  readonly boundary?: string;
-  readonly charset?: string;
+  readonly contentType?: string;
 }) => MaybePromise<any>;
 
 export type InitHook = (options: NormalizedFetchOptions) => void;
@@ -65,7 +61,7 @@ export type BeforeRequestHook = (
   | void
   | Promise<globalThis.Request | Response | void>;
 
-export type AfterResponseHook<DataTypes extends string[] = []> = (
+export type AfterResponseHook = (
   options: NormalizedFetchOptions,
   request: globalThis.Request,
   response: globalThis.Response,
