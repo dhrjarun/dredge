@@ -10,6 +10,7 @@ import {
   Simplify,
 } from "../utils";
 import { HTTPMethod } from "./http";
+import { DataTypes } from "../data-types";
 
 export interface MiddlewareResult<C, Data> {
   ctx: C;
@@ -246,7 +247,7 @@ export type RouteBuilderDef = {
   paths: string[];
   params: Record<string, Parser>;
   queries: Record<string, Parser>;
-  dataTypes: Record<string, string>;
+  dataTypes: DataTypes;
   iBody?: Parser;
   oBody?: Parser;
 

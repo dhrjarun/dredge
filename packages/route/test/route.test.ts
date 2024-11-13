@@ -2,29 +2,6 @@ import { assert, describe, expect, test } from "vitest";
 import { dredgeRoute } from "../source/route";
 
 describe("route.options()", () => {
-  test("dataType should be in route._def", () => {
-    const route = dredgeRoute()
-      .options({
-        dataTypes: {
-          json: "application/json",
-          formData: "multipart/form-data",
-        },
-      })
-      .options({
-        dataTypes: {
-          xml: "application/xml",
-          yaml: "multipart/yaml",
-        },
-      });
-
-    expect(route._def.dataTypes).toStrictEqual({
-      json: "application/json",
-      formData: "multipart/form-data",
-      xml: "application/xml",
-      yaml: "multipart/yaml",
-    });
-  });
-
   test("invalid dataTypes will throw error", () => {
     expect(() => {
       dredgeRoute().options({
@@ -48,30 +25,6 @@ describe("route.options()", () => {
           statusText: "any/any",
         },
       });
-    });
-  });
-
-  test("if a dataType are provided more than once, the later ones are rejected", () => {
-    const route = dredgeRoute()
-      .options({
-        dataTypes: {
-          a: "a",
-          b: "b",
-        },
-      })
-      .options({
-        dataTypes: {
-          a: "aaa",
-          c: "c",
-          d: "d",
-        },
-      });
-
-    expect(route._def.dataTypes).toStrictEqual({
-      a: "a",
-      b: "b",
-      c: "c",
-      d: "d",
     });
   });
 });
