@@ -372,67 +372,33 @@ describe.each(servers)(
       test("parsed by `application/json`", async () => {
         await ss();
         await assertBodyText(
-          await client("/test", {
-            method: "POST",
-            body: "any-body",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }),
+          sendDullPostRequestAs("application/json"),
           "application/json",
         );
       });
       test("parsed by `multipart/*`", async () => {
         await ss();
         await assertBodyText(
-          await client("/test", {
-            method: "POST",
-            body: "any-body",
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }),
+          sendDullPostRequestAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
           "multipart/*",
         );
       });
       test("parsed by `text/*`", async () => {
         await ss();
-        await assertBodyText(
-          await client("/test", {
-            method: "POST",
-            body: "any-body",
-            headers: {
-              "Content-Type": "text/html",
-            },
-          }),
-          "text/*",
-        );
+        await assertBodyText(sendDullPostRequestAs("text/html"), "text/*");
       });
       test("parsed by `text/plain`", async () => {
         await ss();
         await assertBodyText(
-          await client("/test", {
-            method: "POST",
-            body: "any-body",
-            headers: {
-              "Content-Type": "text/plain",
-            },
-          }),
+          sendDullPostRequestAs("text/plain;charset=utf-8"),
           "text/plain",
         );
       });
       test("parsed by `*/*`", async () => {
         await ss();
-        await assertBodyText(
-          await client("/test", {
-            method: "POST",
-            body: "any-body",
-            headers: {
-              "Content-Type": "image/png",
-            },
-          }),
-          "*/*",
-        );
+        await assertBodyText(sendDullPostRequestAs("image/png"), "*/*");
       });
 
       test("argument.contentType equals content-type header in request", async () => {
@@ -461,8 +427,8 @@ describe.each(servers)(
         });
 
         await assertBodyText(
-          sendDullPostRequestAs("application/json;charset=utf-8"),
-          "application/json;charset=utf-8",
+          sendDullPostRequestAs("application/json"),
+          "application/json",
         );
 
         await assertBodyText(
@@ -539,24 +505,23 @@ describe.each(servers)(
       test("serialized by `multipart/*`", async () => {
         await ss();
         await assertBodyText(
-          receiveResponseAs("multipart/form-data;boundary=--DredgeBoundary73638302"),
-          "multipart/*"
+          receiveResponseAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
+          "multipart/*",
         );
-      })
+      });
 
       test("serialized by `text/*`", async () => {
         await ss();
-        await assertBodyText(
-          receiveResponseAs("text/html"),
-          "text/*"
-        );
+        await assertBodyText(receiveResponseAs("text/html"), "text/*");
       });
 
       test("serialized by `text/plain`", async () => {
         await ss();
         await assertBodyText(
-          receiveResponseAs("text/plain"),
-          "text/plain"
+          receiveResponseAs("text/plain;charset=utf-8"),
+          "text/plain",
         );
       });
 
@@ -564,7 +529,7 @@ describe.each(servers)(
         await ss();
         await assertBodyText(
           receiveResponseAs("application/x-www-form-urlencoded"),
-          "*/*"
+          "*/*",
         );
       });
 
@@ -597,9 +562,23 @@ describe.each(servers)(
         });
 
         await assertBodyText(
-          receiveResponseAs("application/json;charset=utf-8"),
-          "application/json;charset=utf-8",
+          receiveResponseAs("application/json"),
+          "application/json",
         );
+
+        await assertBodyText(
+          receiveResponseAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
+          "multipart/form-data;boundary=--DredgeBoundary73638302",
+        );
+
+        await assertBodyText(
+          receiveResponseAs("text/plain;charset=utf-8"),
+          "text/plain;charset=utf-8",
+        );
+
+        await assertBodyText(receiveResponseAs("image/png"), "image/png");
       });
     });
 

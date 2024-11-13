@@ -151,14 +151,15 @@ export function createFetchRequestHandler<Context extends object = {}>(
           routeDef.dataTypes[middlewareResponse.dataType || ""],
       };
 
-        const dataSerializer = dataSerializers.get(dataSerializeOptions.contentType || '') ;
-        if (dataSerializer) {
-          body = await dataSerializer(dataSerializeOptions as any);
-        }
+      const dataSerializer = dataSerializers.get(
+        dataSerializeOptions.contentType || "",
+      );
+      if (dataSerializer) {
+        body = await dataSerializer(dataSerializeOptions as any);
+      }
 
-        middlewareRequest.headers["content-type"] =
-          dataSerializeOptions.contentType ?? "";
-      
+      middlewareRequest.headers["content-type"] =
+        dataSerializeOptions.contentType ?? "";
 
       return new Response(body, {
         status: middlewareResponse.status,
@@ -186,13 +187,15 @@ export function createFetchRequestHandler<Context extends object = {}>(
           routeDef.dataTypes[middlewareResponse.dataType || ""],
       };
 
-        const dataSerializer = dataSerializers.get(dataSerializeOptions.contentType || '');
-        if (dataSerializer) {
-          body = await dataSerializer(dataSerializeOptions as any);
-        }
+      const dataSerializer = dataSerializers.get(
+        dataSerializeOptions.contentType || "",
+      );
+      if (dataSerializer) {
+        body = await dataSerializer(dataSerializeOptions as any);
+      }
 
-        middlewareRequest.headers["content-type"] =
-          dataSerializeOptions.contentType ?? "";
+      middlewareRequest.headers["content-type"] =
+        dataSerializeOptions.contentType ?? "";
 
       return new Response(body, {
         headers: middlewareRequest.headers,
