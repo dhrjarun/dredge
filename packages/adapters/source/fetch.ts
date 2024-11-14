@@ -11,7 +11,6 @@ import {
 } from "dredge-common";
 import {
   MiddlewareRequest,
-  extractContentTypeHeader,
   getDataType,
   getPathParams,
   useErrorMiddlewares,
@@ -29,16 +28,12 @@ type BodyParserFunction = (options: {
   formData: () => Promise<FormData>;
   blob: () => Promise<Blob>;
   text: () => Promise<string>;
-  readonly mediaType: string;
-  readonly boundary?: string;
-  readonly charset?: string;
+  readonly contentType?: string;
 }) => MaybePromise<any>;
 
 type DataSerializerFunction = (options: {
   readonly data: any;
-  mediaType: string;
-  charset?: string;
-  boundary?: string;
+  contentType?: string;
 }) => MaybePromise<
   string | ReadableStream<Uint8Array> | ArrayBuffer | Blob | FormData
 >;
@@ -121,23 +116,18 @@ export function createFetchRequestHandler<Context extends object = {}>(
       dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
     };
 
-    const contentTypeInfo = extractContentTypeHeader(headers["content-type"]);
-    if (contentTypeInfo?.mediaType) {
-      const bodyParser = bodyParsers.get(contentTypeInfo.mediaType);
-      if (bodyParser) {
-        const data = await bodyParser({
-          body: req.body,
-          text: req.text.bind(req),
-          arrayBuffer: req.arrayBuffer.bind(req),
-          formData: req.formData.bind(req),
-          blob: req.blob.bind(req),
+    const bodyParser = bodyParsers.get(headers["content-type"] || "");
+    if (bodyParser) {
+      const data = await bodyParser({
+        body: req.body,
+        text: req.text.bind(req),
+        arrayBuffer: req.arrayBuffer.bind(req),
+        formData: req.formData.bind(req),
+        blob: req.blob.bind(req),
 
-          mediaType: contentTypeInfo.mediaType!,
-          boundary: contentTypeInfo.boundary,
-          charset: contentTypeInfo.charset,
-        });
-        middlewareRequest.data = data;
-      }
+        contentType: headers["content-type"],
+      });
+      middlewareRequest.data = data;
     }
 
     try {
@@ -154,42 +144,22 @@ export function createFetchRequestHandler<Context extends object = {}>(
       );
 
       let body: any = null;
-
       const dataSerializeOptions = {
         data: middlewareResponse.data,
-        mediaType: undefined as string | undefined,
-        charset: undefined as string | undefined,
-        boundary: undefined as string | undefined,
+        contentType:
+          middlewareResponse.headers["content-type"] ||
+          routeDef.dataTypes[middlewareResponse.dataType || ""],
       };
-      if (middlewareResponse.headers["content-type"]) {
-        const info = extractContentTypeHeader(
-          middlewareResponse.headers["content-type"],
-        );
-        dataSerializeOptions.mediaType = info.mediaType;
-        dataSerializeOptions.charset = info.charset;
-        dataSerializeOptions.boundary = info.boundary;
-      } else if (middlewareResponse.dataType) {
-        dataSerializeOptions.mediaType =
-          routeDef.dataTypes[middlewareResponse.dataType];
-      }
-      if (dataSerializeOptions.mediaType) {
-        const dataSerializer = dataSerializers.get(
-          dataSerializeOptions.mediaType,
-        );
-        if (dataSerializer) {
-          body = await dataSerializer(dataSerializeOptions as any);
-        }
 
-        let contentTypeHeader = dataSerializeOptions.mediaType;
-        if (dataSerializeOptions.boundary) {
-          contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
-        }
-        if (dataSerializeOptions.charset) {
-          contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
-        }
-
-        middlewareRequest.headers["content-type"] = contentTypeHeader;
+      const dataSerializer = dataSerializers.get(
+        dataSerializeOptions.contentType || "",
+      );
+      if (dataSerializer) {
+        body = await dataSerializer(dataSerializeOptions as any);
       }
+
+      middlewareRequest.headers["content-type"] =
+        dataSerializeOptions.contentType ?? "";
 
       return new Response(body, {
         status: middlewareResponse.status,
@@ -212,39 +182,20 @@ export function createFetchRequestHandler<Context extends object = {}>(
       let body: any = null;
       const dataSerializeOptions = {
         data: middlewareResponse.data,
-        mediaType: undefined as string | undefined,
-        charset: undefined as string | undefined,
-        boundary: undefined as string | undefined,
+        contentType:
+          middlewareResponse.headers["content-type"] ||
+          routeDef.dataTypes[middlewareResponse.dataType || ""],
       };
-      if (middlewareResponse.headers["content-type"]) {
-        const info = extractContentTypeHeader(
-          middlewareResponse.headers["content-type"],
-        );
-        dataSerializeOptions.mediaType = info.mediaType;
-        dataSerializeOptions.charset = info.charset;
-        dataSerializeOptions.boundary = info.boundary;
-      } else if (middlewareResponse.dataType) {
-        dataSerializeOptions.mediaType =
-          routeDef.dataTypes[middlewareResponse.dataType];
-      }
-      if (dataSerializeOptions.mediaType) {
-        const dataSerializer = dataSerializers.get(
-          dataSerializeOptions.mediaType,
-        );
-        if (dataSerializer) {
-          body = await dataSerializer(dataSerializeOptions as any);
-        }
 
-        let contentTypeHeader = dataSerializeOptions.mediaType;
-        if (dataSerializeOptions.boundary) {
-          contentTypeHeader += `;boundary=${dataSerializeOptions.boundary}`;
-        }
-        if (dataSerializeOptions.charset) {
-          contentTypeHeader += `;charset=${dataSerializeOptions.charset}`;
-        }
-
-        middlewareRequest.headers["content-type"] = contentTypeHeader;
+      const dataSerializer = dataSerializers.get(
+        dataSerializeOptions.contentType || "",
+      );
+      if (dataSerializer) {
+        body = await dataSerializer(dataSerializeOptions as any);
       }
+
+      middlewareRequest.headers["content-type"] =
+        dataSerializeOptions.contentType ?? "";
 
       return new Response(body, {
         headers: middlewareRequest.headers,

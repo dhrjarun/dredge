@@ -315,176 +315,271 @@ describe.each(servers)(
       });
     });
 
-    test("parseBody", async () => {
-      await startServer({
-        router: dredgeRouter([
-          route
-            .path("/test")
-            .input(z.any())
-            .post()
-            .use((req, res) => {
-              return res.end({
-                status: 200,
-                text: req.data,
-              });
-            }),
-        ]),
+    async function assertBodyText(
+      received: Promise<any> | any,
+      expected: string,
+    ) {
+      const text = await (await received).text();
+      expect(text).toBe(expected);
+    }
 
-        bodyParsers: {
-          "application/json": ({}) => {
-            return "application/json";
+    describe("bodyParsers", () => {
+      async function ss() {
+        await startServer({
+          router: dredgeRouter([
+            route
+              .path("/test")
+              .input(z.any())
+              .post()
+              .use((req, res) => {
+                return res.end({
+                  status: 200,
+                  text: req.data,
+                });
+              }),
+          ]),
+
+          bodyParsers: {
+            "application/json": ({}) => {
+              return "application/json";
+            },
+            "multipart/*": ({}) => {
+              return "multipart/*";
+            },
+            "text/*": ({}) => {
+              return "text/*";
+            },
+            "text/plain": ({}) => {
+              return "text/plain";
+            },
+            "*/*": ({}) => {
+              return "*/*";
+            },
           },
-          "multipart/*": ({}) => {
-            return "multipart/*";
+        });
+      }
+
+      async function sendDullPostRequestAs(contentType: string) {
+        return await client("/test", {
+          method: "POST",
+          body: "any-body",
+          headers: {
+            "Content-Type": contentType,
           },
-          "text/*": ({}) => {
-            return "text/*";
+        });
+      }
+
+      test("parsed by `application/json`", async () => {
+        await ss();
+        await assertBodyText(
+          sendDullPostRequestAs("application/json"),
+          "application/json",
+        );
+      });
+      test("parsed by `multipart/*`", async () => {
+        await ss();
+        await assertBodyText(
+          sendDullPostRequestAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
+          "multipart/*",
+        );
+      });
+      test("parsed by `text/*`", async () => {
+        await ss();
+        await assertBodyText(sendDullPostRequestAs("text/html"), "text/*");
+      });
+      test("parsed by `text/plain`", async () => {
+        await ss();
+        await assertBodyText(
+          sendDullPostRequestAs("text/plain;charset=utf-8"),
+          "text/plain",
+        );
+      });
+      test("parsed by `*/*`", async () => {
+        await ss();
+        await assertBodyText(sendDullPostRequestAs("image/png"), "*/*");
+      });
+
+      test("argument.contentType equals content-type header in request", async () => {
+        function parser(options: any) {
+          return options.contentType || "";
+        }
+        await startServer({
+          router: dredgeRouter([
+            route
+              .path("/test")
+              .input(z.any())
+              .post()
+              .use((req, res) => {
+                return res.end({
+                  status: 200,
+                  text: req.data,
+                });
+              }),
+          ]),
+          bodyParsers: {
+            "application/json": parser,
+            "multipart/*": parser,
+            "text/plain": parser,
+            "*/*": parser,
           },
-          "text/plain": ({}) => {
-            return "text/plain";
-          },
-          "*/*": ({}) => {
-            return "*/*";
-          },
-        },
+        });
+
+        await assertBodyText(
+          sendDullPostRequestAs("application/json"),
+          "application/json",
+        );
+
+        await assertBodyText(
+          sendDullPostRequestAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
+          "multipart/form-data;boundary=--DredgeBoundary73638302",
+        );
+
+        await assertBodyText(
+          sendDullPostRequestAs("text/plain;charset=utf-8"),
+          "text/plain;charset=utf-8",
+        );
+        await assertBodyText(sendDullPostRequestAs("image/png"), "image/png");
       });
-
-      const application_json = await client("/test", {
-        method: "POST",
-        body: "any-body",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const multipart_ = await client("/test", {
-        method: "POST",
-        body: "any-body",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const text_plain = await client("/test", {
-        method: "POST",
-        body: "any-body",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
-
-      const text_ = await client("/test", {
-        method: "POST",
-        body: "any-body",
-        headers: {
-          "Content-Type": "text/html",
-        },
-      });
-
-      const any = await client("/test", {
-        method: "POST",
-        body: "any-body",
-        headers: {
-          "Content-Type": "image/png",
-        },
-      });
-
-      expect(await application_json.text()).toBe("application/json");
-
-      expect(await multipart_.text()).toBe("multipart/*");
-
-      expect(await text_plain.text()).toBe("text/plain");
-
-      expect(await text_.text()).toBe("text/*");
-
-      expect(await any.text()).toBe("*/*");
     });
 
-    test("serializeData", async () => {
-      await startServer({
-        router: dredgeRouter([
-          dredgeRoute()
-            .path("/test")
-            .post()
-            .input(z.string())
-            .use((req, res) => {
-              return res.end({
-                status: 200,
-                headers: {
-                  "Content-Type": req.data || req.header("accept") || "",
-                },
-                data: "",
-              });
-            }),
-        ]),
-        dataSerializers: {
-          "application/json": ({}) => {
-            return "application/json";
+    describe("dataSerializers", () => {
+      async function ss() {
+        await startServer({
+          router: dredgeRouter([
+            dredgeRoute()
+              .path("/test")
+              .post()
+              .input(z.string())
+              .use((req, res) => {
+                return res.end({
+                  status: 200,
+                  headers: {
+                    "Content-Type": req.data || req.header("accept") || "",
+                  },
+                  data: "",
+                });
+              }),
+          ]),
+          dataSerializers: {
+            "application/json": () => {
+              return "application/json";
+            },
+            "multipart/*": ({}) => {
+              return "multipart/*";
+            },
+            "text/*": ({}) => {
+              return "text/*";
+            },
+            "text/plain": ({}) => {
+              return "text/plain";
+            },
+            "*/*": ({}) => {
+              return "*/*";
+            },
           },
-          "multipart/*": ({}) => {
-            return "multipart/*";
+        });
+      }
+
+      async function receiveResponseAs(contentType: string) {
+        return await client("/test", {
+          method: "POST",
+          body: contentType,
+          headers: {
+            "Content-Type": "text/plain",
           },
-          "text/*": ({}) => {
-            return "text/*";
+        });
+      }
+
+      test("serialized by `application/json`", async () => {
+        await ss();
+        await assertBodyText(
+          receiveResponseAs("application/json"),
+          "application/json",
+        );
+      });
+
+      test("serialized by `multipart/*`", async () => {
+        await ss();
+        await assertBodyText(
+          receiveResponseAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
+          "multipart/*",
+        );
+      });
+
+      test("serialized by `text/*`", async () => {
+        await ss();
+        await assertBodyText(receiveResponseAs("text/html"), "text/*");
+      });
+
+      test("serialized by `text/plain`", async () => {
+        await ss();
+        await assertBodyText(
+          receiveResponseAs("text/plain;charset=utf-8"),
+          "text/plain",
+        );
+      });
+
+      test("serialized by `*/*`", async () => {
+        await ss();
+        await assertBodyText(
+          receiveResponseAs("application/x-www-form-urlencoded"),
+          "*/*",
+        );
+      });
+
+      test("argument.contentType equals accept header in response", async () => {
+        function serializer(options: any) {
+          return options.contentType || "";
+        }
+        await startServer({
+          router: dredgeRouter([
+            dredgeRoute()
+              .path("/test")
+              .post()
+              .input(z.string())
+              .use((req, res) => {
+                return res.end({
+                  status: 200,
+                  headers: {
+                    "Content-Type": req.data || req.header("accept") || "",
+                  },
+                  data: "",
+                });
+              }),
+          ]),
+          dataSerializers: {
+            "application/json": serializer,
+            "multipart/*": serializer,
+            "text/plain": serializer,
+            "*/*": serializer,
           },
-          "text/plain": ({}) => {
-            return "text/plain";
-          },
-          "*/*": ({}) => {
-            return "*/*";
-          },
-        },
+        });
+
+        await assertBodyText(
+          receiveResponseAs("application/json"),
+          "application/json",
+        );
+
+        await assertBodyText(
+          receiveResponseAs(
+            "multipart/form-data;boundary=--DredgeBoundary73638302",
+          ),
+          "multipart/form-data;boundary=--DredgeBoundary73638302",
+        );
+
+        await assertBodyText(
+          receiveResponseAs("text/plain;charset=utf-8"),
+          "text/plain;charset=utf-8",
+        );
+
+        await assertBodyText(receiveResponseAs("image/png"), "image/png");
       });
-
-      const application_json = await client("/test", {
-        method: "POST",
-        body: "application/json",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
-
-      const multipart_ = await client("/test", {
-        method: "POST",
-        body: "multipart/form-data",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
-
-      const text_plain = await client("/test", {
-        method: "POST",
-        body: "text/plain",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
-
-      const text_ = await client("/test", {
-        method: "POST",
-        body: "text/html",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
-
-      const any = await client("/test", {
-        method: "POST",
-        body: "image/png",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
-
-      expect(await application_json.text()).toBe("application/json");
-
-      expect(await multipart_.text()).toBe("multipart/*");
-
-      expect(await text_plain.text()).toBe("text/plain");
-
-      expect(await text_.text()).toBe("text/*");
-
-      expect(await any.text()).toBe("*/*");
     });
 
     test("prefixUrl", async () => {
