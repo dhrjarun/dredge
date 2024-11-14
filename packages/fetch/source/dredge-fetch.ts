@@ -10,6 +10,7 @@ import {
   mergeHeaders,
   normalizeSearchParamObject,
   trimSlashes,
+  parseContentType,
 } from "dredge-common";
 import { HTTPError } from "./errors/HTTPError";
 import { AnyDredgeFetchClient, DredgeFetchClient } from "./types/client";
@@ -84,41 +85,25 @@ export function untypedDredgeFetch(
       });
 
       let body: any = null;
-
-      const dataSerializerInfo = {
+      const dataSerializeOptions = {
         data: _options.data,
-        mediaType: undefined as string | undefined,
-        charset: undefined as string | undefined,
-        boundary: undefined as string | undefined,
+        contentType:
+          _options.headers.get("content-type") ||
+          _options.dataTypes[_options.dataType || ""],
       };
-      if (_options.headers.get("content-type")) {
-        const info = extractContentTypeHeader(
-          _options.headers.get("content-type"),
-        );
-        dataSerializerInfo.mediaType = info.mediaType;
-        dataSerializerInfo.charset = info.charset;
-        dataSerializerInfo.boundary = info.boundary;
-      } else if (_options.dataType) {
-        dataSerializerInfo.mediaType = _options.dataTypes[_options.dataType];
-      }
-      if (dataSerializerInfo.mediaType) {
-        const dataSerializer = _options.dataSerializers.get(
-          dataSerializerInfo.mediaType,
-        );
+
+      const ct = parseContentType(dataSerializeOptions.contentType);
+      if (ct?.type) {
+        const dataSerializer = _options.dataSerializers.get(ct.type);
 
         if (dataSerializer) {
-          body = await dataSerializer(dataSerializerInfo as any);
+          body = await dataSerializer(dataSerializeOptions as any);
         }
 
-        let contentTypeHeader = dataSerializerInfo.mediaType;
-        if (dataSerializerInfo.boundary) {
-          contentTypeHeader += `;boundary=${dataSerializerInfo.boundary}`;
-        }
-        if (dataSerializerInfo.charset) {
-          contentTypeHeader += `;charset=${dataSerializerInfo.charset}`;
-        }
-
-        _options.headers.set("content-type", contentTypeHeader);
+        _options.headers.set(
+          "content-type",
+          dataSerializeOptions.contentType || "",
+        );
       }
 
       request = new globalThis.Request(url, {
@@ -158,19 +143,13 @@ export function untypedDredgeFetch(
       (response as any).dataType = dataType;
 
       (response as any).data = async () => {
-        const bodyParserInfo = extractContentTypeHeader(
-          response.headers.get("content-type"),
-        );
-        const bodyParser = bodyParserInfo?.mediaType
-          ? _options.bodyParsers.get(bodyParserInfo.mediaType)
-          : undefined;
+        const ct = parseContentType(response.headers.get("content-type"));
+        const bodyParser = _options.bodyParsers.get(ct?.type || "");
         let data: any = undefined;
+
         if (bodyParser) {
           data = await bodyParser({
-            mediaType: bodyParserInfo.mediaType,
-            boundary: bodyParserInfo.boundary,
-            charset: bodyParserInfo.charset,
-
+            contentType: response.headers.get("content-type"),
             body: response.body,
             text: response.text.bind(response),
             arrayBuffer: response.arrayBuffer.bind(response),
@@ -414,28 +393,6 @@ function getContentTypeHeader(options: {
 
     return mime;
   };
-}
-
-function extractContentTypeHeader(contentType?: string | null) {
-  const data: Record<string, string | undefined> = {
-    charset: undefined,
-    boundary: undefined,
-    mediaType: undefined,
-  };
-  if (!contentType) return data;
-
-  const splitted = contentType.trim().split(";");
-
-  data.mediaType = splitted[0];
-
-  for (const item of splitted.slice(1)) {
-    const [key, value] = item.trim().split("=");
-    if (key) {
-      data[key] = value;
-    }
-  }
-
-  return data;
 }
 
 function getAcceptHeader(options: {
