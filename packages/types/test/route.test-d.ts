@@ -43,8 +43,8 @@ describe("route.options()", () => {
   });
 });
 
-describe("req", () => {
-  test("data should be any, if middleware is defined before defining the method", () => {
+describe("req.data", () => {
+  test("infers `any` when middleware is defined before defining method", () => {
     dredgeRoute()
       .path("/test")
       .use((req) => {
@@ -52,7 +52,7 @@ describe("req", () => {
       });
   });
 
-  test("req.data for get, delete and head should be undefined", () => {
+  test("infers `undefined` when method is get, delete or head", () => {
     dredgeRoute()
       .path("/test")
       .get()
@@ -84,7 +84,7 @@ describe("req", () => {
       });
   });
 
-  test("req.data should always be any in error for method which takes data", () => {
+  test("infers `any` for error middleware", () => {
     dredgeRoute()
       .path("/test")
       .error((_err, req) => {
@@ -119,7 +119,7 @@ describe("req", () => {
       });
   });
 
-  test("req.data for post, put and patch should be any, if parser is not given", () => {
+  test("infers `any` when parser is not provided and method is post, put or patch", () => {
     dredgeRoute()
       .path("/test")
       .post()
@@ -145,7 +145,7 @@ describe("req", () => {
       });
   });
 
-  test("req.data should have correct type", () => {
+  test("infers the type provided to input for usual middleware", () => {
     dredgeRoute()
       .path("/test")
       .post()
@@ -173,7 +173,9 @@ describe("req", () => {
         expectTypeOf(req.data).toBeNull();
       });
   });
+});
 
+describe("req", () => {
   test("req.param()", () => {
     dredgeRoute()
       .path("/test/:paramI/a/:paramII")
@@ -340,16 +342,23 @@ describe("req", () => {
 });
 
 describe("res", () => {
-  test("res.header", () => {
+  test("res.header() returns `Record<string, string>` when given no argument", () => {
     dredgeRoute()
       .use((_req, res) => {
         expectTypeOf(res.header()).toEqualTypeOf<Record<string, string>>();
+      })
+      .error((_err, _req, res) => {
+        expectTypeOf(res.header()).toEqualTypeOf<Record<string, string>>();
+      });
+  });
+  test("res.header() returns `string | undefined` when given a string argument", () => {
+    dredgeRoute()
+      .use((_req, res) => {
         expectTypeOf(res.header("content-type")).toEqualTypeOf<
           string | undefined
         >();
       })
       .error((_err, _req, res) => {
-        expectTypeOf(res.header()).toEqualTypeOf<Record<string, string>>();
         expectTypeOf(res.header("content-type")).toEqualTypeOf<
           string | undefined
         >();
@@ -638,7 +647,7 @@ describe("res", () => {
     expectTypeOf<EDataIV>().toBeNever();
   });
 
-  test("res.end and responseData", () => {
+  test("responseData infers the type provided to res.end() when output has not been called", () => {
     const route = dredgeRoute()
       .path("/test")
       .get()
@@ -652,7 +661,7 @@ describe("res", () => {
     expectTypeOf<OData>().toEqualTypeOf<"this is string">();
   });
 
-  test("route.output and responseData", () => {
+  test("responseData infers the type provided to route.output()", () => {
     const route = dredgeRoute()
       .path("/test")
       .get()
@@ -667,7 +676,7 @@ describe("res", () => {
     expectTypeOf<OData>().toEqualTypeOf<"a" | "b" | "c">();
   });
 
-  test("res.data should always be `any`", () => {
+  test("res.data infers `any`", () => {
     dredgeRoute()
       .path("/test")
       .get()
@@ -707,16 +716,26 @@ describe("res", () => {
       });
   });
 
-  test("res.status and res.statusText", () => {
+  test("res.status infers `number | undefined`", () => {
     dredgeRoute()
       .path("/test")
       .get()
       .use((_req, res) => {
         expectTypeOf(res.status).toEqualTypeOf<number | undefined>();
-        expectTypeOf(res.statusText).toEqualTypeOf<string | undefined>();
       })
       .error((_err, _req, res) => {
         expectTypeOf(res.status).toEqualTypeOf<number | undefined>();
+      });
+  });
+
+  test("res.statusText infers `string | undefined`", () => {
+    dredgeRoute()
+      .path("/test")
+      .get()
+      .use((_req, res) => {
+        expectTypeOf(res.statusText).toEqualTypeOf<string | undefined>();
+      })
+      .error((_err, _req, res) => {
         expectTypeOf(res.statusText).toEqualTypeOf<string | undefined>();
       });
   });
