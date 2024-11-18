@@ -11,7 +11,6 @@ import {
 } from "dredge-common";
 import {
   MiddlewareRequest,
-  getDataType,
   getPathParams,
   useErrorMiddlewares,
   useSuccessMiddlewares,
@@ -113,7 +112,6 @@ export function createFetchRequestHandler<Context extends object = {}>(
       params: parsedParams,
       queries: parsedQueries,
       data: undefined,
-      dataType: getDataType(route._def.dataTypes)(headers["content-type"]),
     };
 
     const bodyParser = bodyParsers.get(headers["content-type"] || "");
@@ -136,9 +134,6 @@ export function createFetchRequestHandler<Context extends object = {}>(
         validatedRequest,
         {
           headers: {},
-          dataType: getDataType(route._def.dataTypes)(
-            validatedRequest.headers["accept"],
-          ),
           ctx,
         },
       );
@@ -146,9 +141,7 @@ export function createFetchRequestHandler<Context extends object = {}>(
       let body: any = null;
       const dataSerializeOptions = {
         data: middlewareResponse.data,
-        contentType:
-          middlewareResponse.headers["content-type"] ||
-          routeDef.dataTypes[middlewareResponse.dataType || ""],
+        contentType: middlewareResponse.headers["content-type"],
       };
 
       const dataSerializer = dataSerializers.get(
@@ -172,9 +165,6 @@ export function createFetchRequestHandler<Context extends object = {}>(
         middlewareRequest,
         {
           headers: {},
-          dataType: getDataType(route._def.dataTypes)(
-            middlewareRequest.headers["accept"],
-          ),
           ctx,
         },
       );
@@ -182,9 +172,7 @@ export function createFetchRequestHandler<Context extends object = {}>(
       let body: any = null;
       const dataSerializeOptions = {
         data: middlewareResponse.data,
-        contentType:
-          middlewareResponse.headers["content-type"] ||
-          routeDef.dataTypes[middlewareResponse.dataType || ""],
+        contentType: middlewareResponse.headers["content-type"],
       };
 
       const dataSerializer = dataSerializers.get(

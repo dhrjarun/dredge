@@ -3,8 +3,44 @@ import {
   parseContentType,
   parseAccept,
   sortAcceptByQFactor,
+  DataTypes,
 } from "../source/data-types";
 import { describe, expect, test } from "vitest";
+
+describe("DataTypes", () => {
+  const dataTypes = new DataTypes({
+    json: "application/json;charset=utf-8",
+    text: "text/plain;charset=utf-8",
+    form: "multipart/form-data;boundary=--DredgeBoundary4948584223",
+  });
+
+  test("returns contentType header", () => {
+    expect(dataTypes.getContentTypeHeader("json")).toBe(
+      "application/json;charset=utf-8",
+    );
+  });
+  test("returns accept header", () => {
+    expect(dataTypes.getAcceptHeader("json")).toBe("application/json");
+  });
+  test("returns dataType name when given contentType header", () => {
+    expect(
+      dataTypes.getDataTypeFromContentType("application/json;param=value"),
+    ).toBe("json");
+  });
+  test("returns dataType name when given accept header", () => {
+    expect(dataTypes.getDataTypeFromAccept("application/json,text/plain")).toBe(
+      "json",
+    );
+  });
+
+  test("returns record", () => {
+    expect(dataTypes.toRecord()).toStrictEqual({
+      json: "application/json;charset=utf-8",
+      text: "text/plain;charset=utf-8",
+      form: "multipart/form-data;boundary=--DredgeBoundary4948584223",
+    });
+  });
+});
 
 describe("parseContentType", () => {
   test("returns type and no param", () => {

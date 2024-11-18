@@ -1,3 +1,84 @@
+export class DataTypes {
+  private keyAndCtMap = new Map<
+    string,
+    {
+      type?: string;
+      params: Record<string, string>;
+      value: string;
+    }
+  >();
+
+  private mediaAndKeyMap = new Map<string, string>();
+
+  constructor(dataTypesInit: Record<string, string> = {}) {
+    for (const [key, value] of Object.entries(dataTypesInit)) {
+      if (!validateDataTypeName(key)) {
+        throw new TypeError(`Invalid data type name: ${key}`);
+      }
+
+      const ct = parseContentType(value);
+      if (!ct?.type) {
+        throw new TypeError(`Invalid content type: ${value}`);
+      }
+
+      this.keyAndCtMap.set(key, {
+        ...ct,
+        value,
+      });
+      this.mediaAndKeyMap.set(ct.type, key);
+    }
+  }
+
+  keys() {
+    return Array.from(this.keyAndCtMap.keys());
+  }
+
+  toRecord() {
+    const record: Record<string, string> = {};
+
+    for (const [key, { value }] of this.keyAndCtMap.entries()) {
+      record[key] = value;
+    }
+
+    return record;
+  }
+
+  getContentTypeHeader(dataType: string) {
+    const ct = this.keyAndCtMap.get(dataType);
+    if (!ct) return;
+
+    return ct.value;
+  }
+
+  getAcceptHeader(dataType: string) {
+    const ct = this.keyAndCtMap.get(dataType);
+    if (!ct) return;
+
+    return ct.type;
+  }
+
+  getDataTypeFromContentType(contentType: string) {
+    const ct = parseContentType(contentType);
+    if (!ct?.type) return;
+
+    const dataType = this.mediaAndKeyMap.get(ct.type);
+    if (!dataType) return;
+
+    return dataType;
+  }
+
+  getDataTypeFromAccept(accept: string) {
+    const accepts = parseAccept(accept);
+    const sortedAccepts = sortAcceptByQFactor(accepts);
+
+    for (const item of sortedAccepts) {
+      const dataType = this.mediaAndKeyMap.get(item.type);
+      if (!dataType) continue;
+      return dataType;
+    }
+  }
+}
+
 export function validateContentType(contentType: any) {
   if (!contentType) return false;
 
@@ -113,7 +194,6 @@ export function sortAcceptByQFactor(
   return accepts.sort((a, b) => {
     const aQ = Number(a.params.q ?? "1");
     const bQ = Number(b.params.q ?? "1");
-    console.log("a and b", a, b, aQ, bQ);
 
     if (aQ === bQ) {
       return 0;
