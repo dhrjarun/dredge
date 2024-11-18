@@ -1,12 +1,9 @@
-import {
-  Simplify,
-  inferRouteDataTypes,
-  inferRouteEData,
-  inferRouteOData,
-} from "dredge-types";
+import { inferRouteEData, inferRouteOData } from "../source/route/route-data";
+import { inferRouteDataTypes } from "../source/route/route-options";
+import { Simplify } from "../source/utils";
 import { describe, expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import { dredgeRoute } from "../source/route";
+import { dredgeRoute } from "./helpers/dredge-route";
 
 describe("route.options()", () => {
   test("invalid dataType should return string type", () => {
