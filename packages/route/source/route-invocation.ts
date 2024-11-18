@@ -1,4 +1,4 @@
-import { mergeDredgeHeaders } from "dredge-common";
+import { DataTypes, mergeDredgeHeaders } from "dredge-common";
 import type { AnyRoute, MiddlewareResult, Parser } from "dredge-types";
 import { getParseFn } from "./parser";
 
@@ -8,7 +8,7 @@ function nextEndFunction(
     ctx: {},
     headers: {},
   },
-  dataTypes: Record<string, string> = {},
+  dataTypes: DataTypes = new DataTypes(),
 ) {
   const generatedHeaders: Record<string, string> = {};
 
@@ -16,7 +16,7 @@ function nextEndFunction(
     return previousRes;
   }
 
-  const dataTypeKeys = ["data", ...Object.keys(dataTypes)];
+  const dataTypeKeys = ["data", ...dataTypes.keys()];
   let data: any = previousRes?.data;
   let dataType = res.dataType ?? previousRes?.dataType;
 
@@ -30,13 +30,13 @@ function nextEndFunction(
     }
   }
 
-  const dataTypeFromHeader = getDataType(dataTypes)(
-    res?.headers?.["content-type"],
+  const dataTypeFromHeader = dataTypes.getDataTypeFromContentType(
+    res?.headers?.["content-type"] || "",
   );
   if (dataTypeFromHeader) {
     dataType = dataTypeFromHeader;
   } else if (dataType) {
-    const ct = getContentTypeHeader(dataTypes)(dataType);
+    const ct = dataTypes.getContentTypeHeader(dataType);
     if (ct) {
       generatedHeaders["content-type"] = ct;
     }
@@ -88,7 +88,7 @@ async function handleMiddleware(
     request: MiddlewareRequest;
     response: MiddlewareResponse & { [key: string]: any };
   },
-  dataTypes: Record<string, string> = {},
+  dataTypes: DataTypes,
 ): Promise<MiddlewareResult<any, any> | void> {
   const { request, response, error, isError = false } = payload;
 
@@ -195,66 +195,6 @@ function getValidatorFn(parser: Parser, step: ValidationType) {
 
 type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
 
-export function getDataType(dataTypes: Record<string, string>) {
-  return (acceptOrContentTypeHeader?: string) => {
-    if (!acceptOrContentTypeHeader) return;
-
-    const mime = acceptOrContentTypeHeader.trim().split(";")[0];
-    if (!mime) return;
-    // const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    // if(mimeRegex.test(mime)) return;
-
-    for (const [key, value] of Object.entries(dataTypes)) {
-      if (value == mime) {
-        return key;
-      }
-    }
-  };
-}
-
-export function extractContentTypeHeader(contentType?: string) {
-  const info: Record<string, string | undefined> = {
-    charset: undefined,
-    boundary: undefined,
-    mediaType: undefined,
-  };
-  if (!contentType) return info;
-
-  const splitted = contentType.trim().split(";");
-
-  info["mediaType"] = splitted[0];
-
-  for (const item of splitted.slice(1)) {
-    const [key, value] = item.trim().split("=");
-    if (key) {
-      info[key] = value;
-    }
-  }
-
-  return info;
-}
-
-function getContentTypeHeader(dataTypes: Record<string, string>) {
-  return (dataType?: string) => {
-    if (!dataType) return;
-    if (!(dataType in dataTypes)) return;
-
-    const mime = dataTypes[dataType]?.trim().toLowerCase();
-
-    if (!mime) return;
-    const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    if (!mimeRegex.test(mime)) return;
-
-    // const [mimeType] = mime.split("/");
-
-    // if (mimeType?.includes("multipart")) {
-    //   return boundary ? `${mime};boundary=${boundary}` : undefined;
-    // }
-
-    return mime;
-  };
-}
-
 export function getPathParams(routePath: string[]) {
   return (pathArray: string[]) => {
     const params: Record<string, string> = routePath.reduce(
@@ -359,15 +299,14 @@ export function useSuccessMiddlewares(route: AnyRoute) {
       ...validatedRequest,
     };
 
+    const dataTypes = routeDef.dataTypes;
+    const contentType = validatedRequest.headers["content-type"] || "";
+    const accept = validatedRequest.headers["accept"] || "";
     if (!request.dataType) {
-      request.dataType = getDataType(routeDef.dataTypes)(
-        validatedRequest.headers["content-type"],
-      );
+      request.dataType = dataTypes.getDataTypeFromContentType(contentType);
     }
     if (!_response.dataType) {
-      _response.dataType = getDataType(routeDef.dataTypes)(
-        validatedRequest.headers["accept"],
-      );
+      _response.dataType = dataTypes.getDataTypeFromAccept(accept);
     }
 
     for (const fn of routeDef.middlewares) {
@@ -378,7 +317,7 @@ export function useSuccessMiddlewares(route: AnyRoute) {
           request,
           response: _response,
         },
-        routeDef.dataTypes,
+        routeDef.dataTypes as any,
       );
 
       if (!middlewareResult) {
@@ -407,9 +346,6 @@ export function useErrorMiddlewares(route: AnyRoute) {
   ) => {
     const request = {
       ...unValidatedRequest,
-      dataType: getDataType(routeDef.dataTypes)(
-        unValidatedRequest.headers["content-type"],
-      ),
     };
 
     let _response = {
@@ -419,15 +355,15 @@ export function useErrorMiddlewares(route: AnyRoute) {
       },
     };
 
+    const dataTypes = routeDef.dataTypes;
+    const contentType = unValidatedRequest.headers["content-type"] || "";
+    const accept = unValidatedRequest.headers["accept"] || "";
+
     if (!request.dataType) {
-      request.dataType = getDataType(routeDef.dataTypes)(
-        unValidatedRequest.headers["content-type"],
-      );
+      request.dataType = dataTypes.getDataTypeFromContentType(contentType);
     }
     if (!_response.dataType) {
-      _response.dataType = getDataType(routeDef.dataTypes)(
-        request.headers["accept"],
-      );
+      _response.dataType = dataTypes.getDataTypeFromAccept(accept);
     }
 
     for (const fn of errorMiddlewares) {
@@ -439,7 +375,7 @@ export function useErrorMiddlewares(route: AnyRoute) {
           request,
           response: _response,
         },
-        routeDef.dataTypes,
+        dataTypes as any,
       );
 
       if (!middlewareResult) {

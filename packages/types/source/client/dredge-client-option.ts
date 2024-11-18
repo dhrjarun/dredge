@@ -1,4 +1,4 @@
-import { Parser, inferParserType } from "../parser";
+import { inferParserType } from "../parser";
 import {
   AnyRoute,
   AnyRouteOptions,

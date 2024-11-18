@@ -1,6 +1,5 @@
 import {
-  getAcceptHeader,
-  getContentTypeHeader,
+  DataTypes,
   getSimplePath,
   mergeDredgeHeaders,
   normalizeSearchParamObject,
@@ -59,9 +58,11 @@ export function createDirectClient(
       throw "not-found";
     }
 
+    const dataTypes = new DataTypes(_options.dataTypes);
+
     async function fn() {
-      const contentTypeHeader = getContentTypeHeader(_options.dataTypes)(
-        _options.dataType,
+      const contentTypeHeader = dataTypes.getContentTypeHeader(
+        _options.dataType || "",
       );
       if (!_options.headers["content-type"] && !!contentTypeHeader) {
         _options.headers["content-type"] = contentTypeHeader;
@@ -70,8 +71,8 @@ export function createDirectClient(
       // Delay the fetch so that body method shortcut can set the responseDataType
       await Promise.resolve();
 
-      const acceptHeader = getAcceptHeader(_options.dataTypes)(
-        _options.responseDataType,
+      const acceptHeader = dataTypes.getAcceptHeader(
+        _options.responseDataType || "",
       );
       if (!_options.headers["accept"] && !!acceptHeader) {
         _options.headers["accept"] = acceptHeader;

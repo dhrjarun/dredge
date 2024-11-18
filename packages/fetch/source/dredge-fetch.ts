@@ -11,6 +11,8 @@ import {
   normalizeSearchParamObject,
   trimSlashes,
   parseContentType,
+  DataTypes,
+  objectToSearchParams,
 } from "dredge-common";
 import { HTTPError } from "./errors/HTTPError";
 import { AnyDredgeFetchClient, DredgeFetchClient } from "./types/client";
@@ -76,6 +78,7 @@ export function untypedDredgeFetch(
 
     let request: any = null;
     let response: any = null;
+    const dataTypes = new DataTypes(_options.dataTypes);
 
     async function fetchResponse() {
       const url = createURL({
@@ -89,7 +92,7 @@ export function untypedDredgeFetch(
         data: _options.data,
         contentType:
           _options.headers.get("content-type") ||
-          _options.dataTypes[_options.dataType || ""],
+          dataTypes.getContentTypeHeader(_options.dataType || ""),
       };
 
       const ct = parseContentType(dataSerializeOptions.contentType);
@@ -136,8 +139,8 @@ export function untypedDredgeFetch(
     }
 
     async function createDredgeResponse(response: globalThis.Response) {
-      const dataType = getDataType({ dataTypes: _options.dataTypes })(
-        response.headers.get("content-type"),
+      const dataType = dataTypes.getDataTypeFromContentType(
+        response.headers.get("content-type") || "",
       );
 
       (response as any).dataType = dataType;
@@ -188,10 +191,9 @@ export function untypedDredgeFetch(
 
     async function fn() {
       try {
-        const contentTypeHeader = getContentTypeHeader({
-          dataTypes: _options.dataTypes,
-          boundary: "--DredgeBoundary",
-        })(_options.dataType);
+        const contentTypeHeader = dataTypes.getContentTypeHeader(
+          _options.dataType || "",
+        );
         if (!_options.headers.get("content-type") && !!contentTypeHeader) {
           _options.headers.set("content-type", contentTypeHeader);
         }
@@ -199,9 +201,9 @@ export function untypedDredgeFetch(
         // Delay the fetch so that body method shortcuts can set the responseDataType
         await Promise.resolve();
 
-        const acceptHeader = getAcceptHeader({
-          dataTypes: _options.dataTypes,
-        })(_options.responseDataType);
+        const acceptHeader = dataTypes.getAcceptHeader(
+          _options.responseDataType || "",
+        );
         if (!_options.headers.get("accept") && !!acceptHeader) {
           _options.headers.set("accept", acceptHeader);
         }
@@ -264,20 +266,6 @@ export function untypedDredgeFetch(
   };
 
   return client;
-}
-
-function objectToSearchParams(obj: any): URLSearchParams {
-  const searchParams = new URLSearchParams();
-  Object.entries(obj).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      for (const v of value) {
-        searchParams.append(key, typeof v === "string" ? v : "");
-      }
-      return;
-    }
-    searchParams.append(key, typeof value === "string" ? value : "");
-  });
-  return searchParams;
 }
 
 function createURL(options: {
@@ -368,64 +356,4 @@ function mergeDefaultOptions(
   };
 
   return newOptions;
-}
-
-function getContentTypeHeader(options: {
-  dataTypes: Record<string, string>;
-  boundary?: string;
-}) {
-  const { dataTypes, boundary } = options;
-  return (dataType?: string) => {
-    if (!dataType) return;
-    if (!(dataType in dataTypes)) return;
-
-    const mime = dataTypes[dataType]?.trim().toLowerCase();
-
-    if (!mime) return;
-    const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    if (!mimeRegex.test(mime)) return;
-
-    const [mimeType] = mime.split("/");
-
-    if (mimeType?.includes("multipart")) {
-      return boundary ? `${mime};boundary=${boundary}` : undefined;
-    }
-
-    return mime;
-  };
-}
-
-function getAcceptHeader(options: {
-  dataTypes: Record<string, string>;
-}) {
-  const { dataTypes } = options;
-  return (dataType?: string) => {
-    if (!dataType) return;
-    if (!(dataType in dataTypes)) return;
-
-    const mime = dataTypes[dataType]?.trim().toLowerCase();
-
-    if (!mime) return;
-    const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    if (!mimeRegex.test(mime)) return;
-
-    return mime;
-  };
-}
-
-function getDataType(options: { dataTypes: Record<string, string> }) {
-  return (acceptOrContentTypeHeader?: string | null) => {
-    if (!acceptOrContentTypeHeader) return;
-
-    const mime = acceptOrContentTypeHeader.trim().split(";")[0];
-    if (!mime) return;
-    // const mimeRegex = /[a-zA-Z\-]+\/[a-zA-z\-]+/g;
-    // if(mimeRegex.test(mime)) return;
-
-    for (const [key, value] of Object.entries(options.dataTypes)) {
-      if (value == mime) {
-        return key;
-      }
-    }
-  };
 }

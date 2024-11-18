@@ -1,4 +1,4 @@
-import { trimSlashes } from "dredge-common";
+import { DataTypes, trimSlashes, validateDataTypeName } from "dredge-common";
 import type { AnyRoute, RouteBuilderDef, Route } from "dredge-types";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
@@ -26,7 +26,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     paths = [],
     params = {},
     queries = {},
-    dataTypes = {},
+    dataTypes = new DataTypes(),
     ...rest
   } = initDef;
 
@@ -45,68 +45,12 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     _def,
 
     options: (options = {}) => {
-      const _dataTypes = _def.dataTypes || {};
+      const _dataTypes = _def.dataTypes.toRecord();
       const { dataTypes = {} } = options;
 
-      const newDataTypes: Record<string, string> = {
-        ...dataTypes,
+      const newDataTypes = new DataTypes({
         ..._dataTypes,
-      };
-
-      function findMediaType(dataType: string | string[]) {
-        if (Array.isArray(dataType)) {
-          const mediaType = dataType.map((type) => {
-            const item = newDataTypes[type as string];
-            if (!item) {
-              throw `Invalid DataType: ${type}`;
-            }
-
-            return item;
-          });
-
-          return mediaType;
-        }
-        const mediaType = newDataTypes[dataType];
-        if (!mediaType) {
-          throw `Invalid DataType: ${dataType}`;
-        }
-        return mediaType;
-      }
-
-      const notAllowedDataTypes = [
-        "url",
-        "method",
-        "headers",
-        "body",
-        "baseUrl",
-
-        "status",
-        "statusText",
-        "data",
-
-        "params",
-        "param",
-        "queries",
-        "query",
-
-        "get",
-        "post",
-        "put",
-        "delete",
-        "patch",
-        "head",
-
-        "dataType",
-        "responseDataType",
-
-        "context",
-        "ctx",
-      ];
-
-      Object.keys(notAllowedDataTypes)?.forEach((item) => {
-        if (notAllowedDataTypes.includes(item)) {
-          throw `Invalid DataType: ${item}`;
-        }
+        ...dataTypes,
       });
 
       return createRouteBuilder({
@@ -162,8 +106,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         if (!_paths.includes(`:${path}`)) {
           throw `Param '${path}' is not defined`;
         }
-
-        // validate parser
       });
 
       return createRouteBuilder({
@@ -183,8 +125,6 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
         if (_queries[name]) {
           throw `${name} query schema already defined`;
         }
-
-        // validate parser
       });
 
       return createRouteBuilder({
