@@ -1,9 +1,17 @@
 import { expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import { DistributiveIndex, inferRouterRoutes } from "../source";
+import { inferRouterRoutes } from "../source";
 import { inferDredgeClientOption } from "../source/client/dredge-client-option";
 import { dredgeRoute } from "./helpers/dredge-route";
 import { dredgeRouter } from "./helpers/dredge-router";
+
+const r = dredgeRoute().options({
+  dataTypes: {
+    json: "application/json",
+    form: "application/x-www-form-urlencoded",
+    text: "text/plain",
+  },
+});
 
 test("options.method", () => {
   const getPostPutRouter = dredgeRouter([
@@ -36,14 +44,6 @@ test("options.method", () => {
 });
 
 test("options.dataTypes", () => {
-  const r = dredgeRoute().options({
-    dataTypes: {
-      json: "application/json",
-      form: "application/x-www-form-urlencoded",
-      text: "text/plain",
-    },
-  });
-
   const router = dredgeRouter([
     r.path("/a").get(),
     r.path("/b").post().input(z.string()),
@@ -63,14 +63,6 @@ test("options.dataTypes", () => {
 });
 
 test("options.dataType and options.responseDataType", () => {
-  const r = dredgeRoute().options({
-    dataTypes: {
-      json: "application/json",
-      form: "application/x-www-form-urlencoded",
-      text: "text/plain",
-    },
-  });
-
   const router = dredgeRouter([
     r.path("/a").get(),
     r.path("/b").get(),
@@ -92,7 +84,7 @@ test.todo(
   "options.params should not exist if there are none defined in the route",
 );
 
-test("options.params", () => {
+test("options.params infers based on schema passed to r.params()", () => {
   const r = dredgeRoute();
 
   const router = dredgeRouter([
@@ -112,7 +104,7 @@ test("options.params", () => {
         j: z.date(),
       })
       .get(),
-    // r.path('/k').get(), // TODO: fix this, it causes some unneccary type in params type.
+    // r.path("/k").get(), // TODO: fix this, it causes some unneccary type in params type. I think it is due to Merge
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
@@ -127,11 +119,10 @@ test("options.params", () => {
   >();
 });
 
-test("options.searchParams", () => {
+test("options.queries infers based on schema passed to r.queries()", () => {
   const r = dredgeRoute();
 
   const router = dredgeRouter([
-    r.path("/a").get(),
     r
       .path("/c")
       .queries({
@@ -147,18 +138,13 @@ test("options.searchParams", () => {
         j: z.date(),
       })
       .get(),
-    r
-      .path("/k")
-      .get(), // TODO: fix this
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
-  type SearchParams = inferDredgeClientOption<Router[number]>["queries"];
+  type Queries = inferDredgeClientOption<Router[number]>["queries"];
 
-  expectTypeOf<SearchParams>().toEqualTypeOf<
-    | Record<string, any>
+  expectTypeOf<Queries>().toEqualTypeOf<
     | {
-        // TODO: see what to do with this, and where Record and undefined is coming from
         readonly d: number | number[];
         readonly e: "a" | "b" | ("a" | "b")[];
       }
@@ -167,45 +153,63 @@ test("options.searchParams", () => {
         readonly i: boolean | boolean[];
         readonly j: Date | Date[];
       }
-    | undefined
   >();
 });
-test("options.data", () => {
-  const r = dredgeRoute().options({
-    dataTypes: {
-      json: "application/json",
-      form: "application/x-www-form-urlencoded",
-      text: "text/plain",
-    },
-  });
 
+test("options.data and options.<dataTypes> alternatives infers `any` when given no schema to r.input() and dataTypes is defined", async () => {
+  const router = dredgeRouter([r.path("/a").get()]);
+
+  type Router = inferRouterRoutes<typeof router>;
+  type Options = inferDredgeClientOption<Router[number]>;
+
+  expectTypeOf<Options["data"]>().toEqualTypeOf<any>();
+  expectTypeOf<Options["json"]>().toEqualTypeOf<any>();
+  expectTypeOf<Options["form"]>().toEqualTypeOf<any>();
+  expectTypeOf<Options["text"]>().toEqualTypeOf<any>();
+});
+
+test("options.data infers `any` when given no schema to r.input()", async () => {
+  const router = dredgeRouter([r.path("/a").get()]);
+
+  type Router = inferRouterRoutes<typeof router>;
+  type Options = inferDredgeClientOption<Router[number]>;
+
+  expectTypeOf<Options["data"]>().toEqualTypeOf<any>();
+  expectTypeOf<Options["json"]>().toEqualTypeOf<any>();
+  expectTypeOf<Options["form"]>().toEqualTypeOf<any>();
+  expectTypeOf<Options["text"]>().toEqualTypeOf<any>();
+});
+
+test("options.data and options.<dataTypes> alternatives infers based on schema passed to r.input() when dataType is defined", async () => {
   const router = dredgeRouter([
-    r.path("/a").get(),
-    r.path("/c").put().input(z.number()),
-    r.path("/b").post().input(z.string()),
-    r
+    dredgeRoute().path("/a").get().input(z.string()),
+    dredgeRoute().path("/b").post().input(z.number()),
+    dredgeRoute()
       .path("/c")
-      .patch()
+      .put()
       .input(z.object({ a: z.string() })),
   ]);
 
-  type Routes = inferRouterRoutes<typeof router>;
-  type Options = inferDredgeClientOption<Routes[number]>;
+  type Router = inferRouterRoutes<typeof router>;
+  type Options = inferDredgeClientOption<Router[number]>;
 
   type ExpectedData = string | number | { a: string };
-  expectTypeOf<
-    DistributiveIndex<Options, "data">
-  >().toEqualTypeOf<ExpectedData>();
+  expectTypeOf<Options["data"]>().toEqualTypeOf<ExpectedData>();
+});
 
-  expectTypeOf<
-    DistributiveIndex<Options, "json">
-  >().toEqualTypeOf<ExpectedData>();
+test("options.data infers based on schema passed to r.input() when", async () => {
+  const router = dredgeRouter([
+    dredgeRoute().path("/a").get().input(z.string()),
+    dredgeRoute().path("/b").post().input(z.number()),
+    dredgeRoute()
+      .path("/c")
+      .put()
+      .input(z.object({ a: z.string() })),
+  ]);
 
-  expectTypeOf<
-    DistributiveIndex<Options, "form">
-  >().toEqualTypeOf<ExpectedData>();
+  type Router = inferRouterRoutes<typeof router>;
+  type Options = inferDredgeClientOption<Router[number]>;
 
-  expectTypeOf<
-    DistributiveIndex<Options, "text">
-  >().toEqualTypeOf<ExpectedData>();
+  type ExpectedData = string | number | { a: string };
+  expectTypeOf<Options["data"]>().toEqualTypeOf<ExpectedData>();
 });

@@ -1,13 +1,13 @@
+import z from "zod";
 import { dredgeRoute } from "./helpers/dredge-route";
 import { dredgeRouter } from "./helpers/dredge-router";
-import z from "zod";
 
 export const singleParamNonAutoRouter = dredgeRouter([
   dredgeRoute()
     .path("/a/b/c/d")
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/a/b/c/d" as const,
       });
     }),
@@ -16,7 +16,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
     .path("/a/b/c/d")
     .delete()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "DELETE/a/b/c/d" as const,
       });
     }),
@@ -25,7 +25,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
     .path("/:a/b/c/d")
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/:a/b/c/d" as const,
       });
     }),
@@ -35,7 +35,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
     .put()
     .input(z.any())
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "PUT/:a/b/c/d" as const,
       });
     }),
@@ -47,7 +47,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
       b: z.number(),
     })
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/a/:b/c/d" as const,
       });
     }),
@@ -59,7 +59,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/a/b/:c/d" as const,
       });
     }),
@@ -71,7 +71,7 @@ export const singleParamNonAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/a/b/c/:d" as const,
       });
     }),
@@ -86,7 +86,7 @@ export const singleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/:e/f/g/h" as const,
       });
     }),
@@ -97,7 +97,7 @@ export const singleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/e/:f/g/h" as const,
       });
     }),
@@ -108,7 +108,7 @@ export const singleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/e/f/:g/h" as const,
       });
     }),
@@ -119,7 +119,7 @@ export const singleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/e/f/g/:h" as const,
       });
     }),
@@ -135,7 +135,7 @@ export const doubleParamNonAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/:s/t/:u/v/w/x" as const,
       });
     }),
@@ -147,7 +147,7 @@ export const doubleParamNonAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/s/:t/u/:v/w/x" as const,
       });
     }),
@@ -159,7 +159,7 @@ export const doubleParamNonAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/s/t/u/v/:w/:x" as const,
       });
     }),
@@ -174,7 +174,7 @@ export const doubleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/:p/q/:r/s/t/u" as const,
       });
     }),
@@ -186,7 +186,7 @@ export const doubleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "/GET/p/:q/r/:s/t/u" as const,
       });
     }),
@@ -198,7 +198,7 @@ export const doubleParamAutoRouter = dredgeRouter([
     })
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: "GET/p/q/r/s/:t/:u" as const,
       });
     }),

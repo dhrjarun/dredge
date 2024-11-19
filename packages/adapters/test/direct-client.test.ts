@@ -22,7 +22,7 @@ describe("client.extend", () => {
         .post()
         .input(z.any())
         .use((req, res) => {
-          return res.end({
+          return res.up({
             data: {
               headers: req.header(),
               dataType: req.dataType,
@@ -157,7 +157,7 @@ test("paramPath should work", async () => {
         .path("/test/:PI/:PII")
         .get()
         .use((req, res) => {
-          return res.end({
+          return res.up({
             data: {
               path: req.url,
             },
@@ -201,7 +201,7 @@ test("throw error if params is empty string", () => {
         .path("/test/:PI/:PII")
         .get()
         .use((req, res) => {
-          return res.end({
+          return res.up({
             data: {
               path: req.url,
             },
@@ -247,7 +247,7 @@ test("throw error if params is empty string", () => {
 //         .path("/test")
 //         .post(z.any())
 //         .use((req, res) => {
-//           return res.end({
+//           return res.up({
 //             data: {
 //               reqContentType: req.header("content-type"),
 //               reqDataType: req.dataType,
@@ -358,7 +358,7 @@ test("throw error if params is empty string", () => {
 //         .get()
 //         .use((req, res) => {
 //           console.log("status", req.param("status"));
-//           return res.end({
+//           return res.up({
 //             data: null,
 //             status: req.param("status"),
 //             statusText: "Bad Request",

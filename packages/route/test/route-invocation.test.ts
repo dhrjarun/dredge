@@ -5,26 +5,26 @@ import {
   useSuccessMiddlewares,
 } from "../source/route-invocation";
 
-describe("res.next()", () => {
+describe("res.up()", () => {
   test("executes all success middlewares", async () => {
     const route = dredgeRoute()
       .path("/test")
       .get()
       .use((_req, res) => {
-        return res.next({
+        res.up({
           headers: {
             "Content-Type": "application/json",
           },
         });
       })
       .use((_req, res) => {
-        return res.next({
+        res.up({
           status: 200,
           statusText: "ok",
         });
       })
       .use((_req, res) => {
-        return res.next({
+        return res.up({
           data: "dummy-data",
         });
       });
@@ -52,20 +52,20 @@ describe("res.next()", () => {
         throw "any";
       })
       .error((_err, _req, res) => {
-        return res.next({
+        res.up({
           headers: {
             "Content-Type": "application/json",
           },
         });
       })
       .error((_err, _req, res) => {
-        return res.next({
+        res.up({
           status: 404,
           statusText: "not-found",
         });
       })
       .error((_err, _req, res) => {
-        return res.next({
+        return res.up({
           data: "dummy-data",
         });
       });
@@ -90,34 +90,34 @@ describe("res.next()", () => {
       .path("/test")
       .get()
       .use((_req, res) => {
-        return res.next({
+        res.up({
+          status: 403,
+          statusText: "not-ok",
           headers: {
             "content-Type": "application/json",
           },
         });
-      })
-      .use((_req, res) => {
         expect(res.header("content-type")).toBe("application/json");
-      })
-      .use((_req, res) => {
-        return res.next({
+        res.up({
           headers: {
             "content-type": null,
           },
         });
-      })
-      .use((_req, res) => {
         expect(res.header("content-type")).toBeNull();
       })
       .error((_err, _req, res) => {
-        return res.next({
+        res.up({
           headers: {
             "content-Type": "application/json",
           },
         });
-      })
-      .error((_err, _req, res) => {
         expect(res.header("content-type")).toBe("application/json");
+        res.up({
+          headers: {
+            "content-type": null,
+          },
+        });
+        expect(res.header("content-type")).toBeNull();
       });
 
     await useSuccessMiddlewares(route)({
@@ -135,7 +135,6 @@ describe("res.next()", () => {
       headers: {},
     });
   });
-
   test("sets content-type header based on dataType", async () => {
     const r = dredgeRoute().options({
       dataTypes: {
@@ -149,12 +148,12 @@ describe("res.next()", () => {
       .path("/text")
       .get()
       .use((_req, res) => {
-        return res.end({
+        return res.up({
           text: "Text",
         });
       })
       .error((_err, _req, res) => {
-        return res.end({
+        return res.up({
           text: "Text",
         });
       });
@@ -163,14 +162,14 @@ describe("res.next()", () => {
       .path("/form")
       .get()
       .use((_req, res) => {
-        return res.end({
+        return res.up({
           form: {
             data: "form",
           },
         });
       })
       .error((_err, _req, res) => {
-        return res.end({
+        return res.up({
           form: {
             data: "form",
           },
@@ -237,92 +236,6 @@ describe("res.next()", () => {
   });
 });
 
-describe("res.end()", () => {
-  test("skips the rest of success middlewares", async () => {
-    const route = dredgeRoute()
-      .path("/test")
-      .get()
-      .use((_req, res) => {
-        return res.next({
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-      })
-      .use((_req, res) => {
-        return res.end({
-          status: 200,
-          statusText: "ok",
-        });
-      })
-      .use((_req, res) => {
-        return res.next({
-          data: "dummy-data",
-          status: 201,
-          statusText: "created",
-        });
-      });
-
-    const response = await useSuccessMiddlewares(route)({
-      method: "get",
-      url: "/test",
-      params: {},
-      queries: {},
-      headers: {},
-    });
-
-    expect(response.headers).toStrictEqual({
-      "content-type": "application/json",
-    });
-    expect(response.status).toBe(200);
-    expect(response.statusText).toBe("ok");
-    expect(response.data).toBe(undefined);
-  });
-  test("skips the rest of error middleware", async () => {
-    const route = dredgeRoute()
-      .path("/test")
-      .get()
-      .use(() => {
-        throw "any";
-      })
-      .error((_err, _req, res) => {
-        return res.next({
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-      })
-      .error((_err, _req, res) => {
-        return res.end({
-          status: 404,
-          statusText: "not-found",
-        });
-      })
-      .error((_err, _req, res) => {
-        return res.next({
-          data: "dummy-data",
-          status: 400,
-          statusText: "bad-data",
-        });
-      });
-
-    const response = await useErrorMiddlewares(route)(new Error("test-error"), {
-      method: "get",
-      url: "/test",
-      params: {},
-      queries: {},
-      headers: {},
-    });
-
-    expect(response.headers).toStrictEqual({
-      "content-type": "application/json",
-    });
-    expect(response.status).toBe(404);
-    expect(response.statusText).toBe("not-found");
-    expect(response.data).toBe(undefined);
-  });
-});
-
 test("sets request dataType based on content-type header", async () => {
   const route = dredgeRoute()
     .options({
@@ -334,12 +247,12 @@ test("sets request dataType based on content-type header", async () => {
     .path("/test")
     .get()
     .use((req, res) => {
-      return res.end({
+      return res.up({
         data: req.dataType,
       });
     })
     .error((_err, req, res) => {
-      return res.end({
+      return res.up({
         data: req.dataType,
       });
     });
@@ -385,12 +298,12 @@ test("sets response dataType based on accept header", async () => {
     .path("/test")
     .get()
     .use((_req, res) => {
-      return res.end({
+      return res.up({
         data: res.dataType,
       });
     })
     .error((_err, _req, res) => {
-      return res.end({
+      return res.up({
         data: res.dataType,
       });
     });

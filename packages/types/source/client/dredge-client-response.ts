@@ -1,6 +1,6 @@
-import { Parser, inferParserType } from "../parser";
+import { inferParserType } from "../parser";
 import { AnyRouteOptions, Route } from "../route";
-import { Merge } from "../utils";
+import { IsNever, Merge } from "../utils";
 
 export interface DredgeClientResponse<T = any> {
   headers: Record<string, string>;
@@ -23,7 +23,9 @@ export type DredgeResponsePromise<
   >
 > & {
   [key in DataTypes extends string ? DataTypes : never]: () => Promise<Data>;
-} & { data: () => Promise<Data> };
+} & {
+  data: () => Promise<Data>;
+};
 
 export type inferDredgeResponsePromise<
   R,
@@ -42,7 +44,9 @@ export type inferDredgeResponsePromise<
 >
   ? DredgeResponsePromise<
       keyof Options["dataTypes"],
-      OBody extends Parser ? inferParserType<OBody> : unknown,
+      IsNever<inferParserType<OBody>> extends true
+        ? any
+        : inferParserType<OBody>,
       Response
     >
   : never;

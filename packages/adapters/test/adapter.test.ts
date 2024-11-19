@@ -46,7 +46,7 @@ describe.each(servers)(
             .path("/success")
             .post()
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
                 json: {
                   ...req.data,
@@ -61,7 +61,7 @@ describe.each(servers)(
               throw "error";
             })
             .error((_err, req, res) => {
-              return res.end({
+              return res.up({
                 status: 500,
                 json: {
                   ...req.data,
@@ -109,7 +109,7 @@ describe.each(servers)(
             .post()
             .input(z.string())
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
                 text: req.data,
               });
@@ -123,7 +123,7 @@ describe.each(servers)(
               throw "error";
             })
             .error((_err, req, res) => {
-              return res.end({
+              return res.up({
                 status: 500,
                 text: req.data,
               });
@@ -175,7 +175,7 @@ describe.each(servers)(
             .path("/fruits")
             .get()
             .use((_req, res) => {
-              return res.end({
+              return res.up({
                 json: data,
               });
             }),
@@ -200,7 +200,7 @@ describe.each(servers)(
             .path("/test-I")
             .get()
             .use((_req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
               });
             }),
@@ -222,7 +222,7 @@ describe.each(servers)(
             .path("/test/:param")
             .get()
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
                 json: req.param(),
               });
@@ -273,7 +273,7 @@ describe.each(servers)(
             })
             .get()
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
                 json: {
                   single: req.query(),
@@ -332,7 +332,7 @@ describe.each(servers)(
               .input(z.any())
               .post()
               .use((req, res) => {
-                return res.end({
+                return res.up({
                   status: 200,
                   text: req.data,
                 });
@@ -412,7 +412,7 @@ describe.each(servers)(
               .input(z.any())
               .post()
               .use((req, res) => {
-                return res.end({
+                return res.up({
                   status: 200,
                   text: req.data,
                 });
@@ -455,7 +455,7 @@ describe.each(servers)(
               .post()
               .input(z.string())
               .use((req, res) => {
-                return res.end({
+                return res.up({
                   status: 200,
                   headers: {
                     "Content-Type": req.data || req.header("accept") || "",
@@ -544,7 +544,7 @@ describe.each(servers)(
               .post()
               .input(z.string())
               .use((req, res) => {
-                return res.end({
+                return res.up({
                   status: 200,
                   headers: {
                     "Content-Type": req.data || req.header("accept") || "",
@@ -589,7 +589,7 @@ describe.each(servers)(
           .get()
           .use((req, res) => {
             const url = new URL(req.url, "relative:///");
-            return res.end({
+            return res.up({
               status: 200,
               text: url.pathname,
             });
@@ -600,7 +600,7 @@ describe.each(servers)(
           .post()
           .use((req, res) => {
             const url = new URL(req.url, "relative:///");
-            return res.end({
+            return res.up({
               status: 200,
               text: url.pathname,
             });
@@ -652,13 +652,13 @@ describe.each(servers)(
             })
             .get()
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
                 json: req.param(),
               });
             })
             .error((_err, _req, res) => {
-              return res.end({
+              return res.up({
                 status: 400,
               });
             }),
@@ -690,7 +690,7 @@ describe.each(servers)(
             })
             .get()
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
                 json: {
                   single: {
@@ -739,12 +739,12 @@ describe.each(servers)(
             })
             .get()
             .use((_req, res) => {
-              return res.end({
+              return res.up({
                 status: 200,
               });
             })
             .error((_err, _req, res) => {
-              return res.end({
+              return res.up({
                 status: 400,
               });
             }),
@@ -784,7 +784,7 @@ describe.each(servers)(
             .post()
             .input(z.any())
             .use((req, res) => {
-              return res.end({
+              return res.up({
                 headers: {
                   "x-had-req-data": req.data ? "true" : "false",
                 },
@@ -793,7 +793,7 @@ describe.each(servers)(
               });
             })
             .error((_err, _req, res) => {
-              return res.end({
+              return res.up({
                 status: 500,
               });
             }),
