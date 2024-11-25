@@ -1,5 +1,6 @@
 import type { Readable } from "stream";
 import type { ReadableStream } from "stream/web";
+import { DataTypes } from "../data-types";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import {
   IsAny,
@@ -10,43 +11,9 @@ import {
   Simplify,
 } from "../utils";
 import { HTTPMethod } from "./http";
-import { DataTypes } from "../data-types";
+import { OptionalData } from "../route/route-data";
 
-export interface MiddlewareResult<C, Data> {
-  ctx: C;
-  headers: Record<string, string>; // Header names are lower-case
-  status?: number;
-  statusText?: string;
-
-  data?: Data;
-  dataType?: string;
-  isEnd: boolean;
-}
-
-export interface NextMiddlewareResult<C, Data>
-  extends MiddlewareResult<C, Data> {
-  isEnd: false;
-}
-export interface EndMiddlewareResult<C, Data>
-  extends MiddlewareResult<C, Data> {
-  isEnd: true;
-}
-
-type Data<Types, T> =
-  | { data: T }
-  | (Types extends infer U
-      ? U extends string
-        ? { [P in U]: T }
-        : never
-      : never);
-
-type OptionalData<Types, T> =
-  | { data?: T }
-  | (Types extends infer U
-      ? U extends string
-        ? { [P in U]?: T }
-        : never
-      : never);
+export class ResponseUpdate<Context, Data> {}
 
 export type isAnyRoute<R> = R extends Route<
   infer _Options,
@@ -74,6 +41,69 @@ export type isAnyRoute<R> = R extends Route<
     : false
   : false;
 
+export interface MiddlewareRequest<DataType, Method, Params, Queries, Data> {
+  readonly url: string;
+  readonly method: Method;
+  readonly dataType?: DataType;
+  readonly data: IsNever<Data> extends true
+    ? Method extends "get" | "delete" | "head"
+      ? undefined
+      : any
+    : Data;
+  header: {
+    (headerName: string): string | undefined;
+    (): Record<string, string>;
+  };
+  param: {
+    (): Simplify<Params & Record<string, string>>;
+    <T extends keyof Params>(
+      key: T,
+    ): Params extends { [key in T]: any } ? Params[T] : string | undefined;
+    <T extends string>(key: T): string | undefined;
+  };
+  query: {
+    (): Simplify<Queries & Record<string, any>>;
+    <T extends keyof Queries>(
+      key: T,
+    ): Queries extends { [key in T]: any } ? Queries[T] : any;
+    <T extends string>(key: T): any;
+  };
+  queries: {
+    (): Simplify<
+      { [key in keyof Queries]: Queries[key][] } & Record<string, any[]>
+    >;
+    <T extends keyof Queries>(
+      key: T,
+    ): Queries extends { [key in T]: any } ? Queries[T][] : any[];
+    <T extends string>(key: T): any[];
+  };
+}
+
+export interface MiddlewareResponse<DataType, Context, Data> {
+  readonly ctx: Context;
+  readonly status?: number;
+  readonly statusText?: string;
+  readonly dataType?: DataType;
+  readonly data: any;
+  header: {
+    (): Record<string, string>;
+    (headerName: string): string | undefined;
+  };
+  up: UpFunction<DataType, IsNever<Data> extends true ? any : Data>;
+}
+
+export interface AnyMiddlewareRequest
+  extends MiddlewareRequest<
+    any,
+    string,
+    Record<string, string>,
+    Record<string, any>,
+    any
+  > {}
+
+export interface AnyMiddlewareResponse
+  extends MiddlewareResponse<any, any, any> {}
+
 export type AnyMiddlewareFunction = MiddlewareFunction<
   any,
   any,
@@ -95,7 +125,7 @@ export type AnyErrorMiddlewareFunction = ErrorMiddlewareFunction<
 >;
 
 export type MiddlewareFunction<
-  DataTypes,
+  DataType,
   Context,
   NewContext,
   Method,
@@ -106,64 +136,13 @@ export type MiddlewareFunction<
   NewOData,
 > = {
   (
-    req: {
-      readonly url: string;
-      readonly method: Method;
-      readonly dataType?: DataTypes;
-      readonly data: IsNever<IData> extends true
-        ? Method extends "get" | "delete" | "head"
-          ? undefined
-          : any
-        : IData;
-      header: {
-        (headerName: string): string | undefined;
-        (): Record<string, string>;
-      };
-      param: {
-        (): Simplify<Params & Record<string, string>>;
-        <T extends keyof Params>(
-          key: T,
-        ): Params extends { [key in T]: any } ? Params[T] : string | undefined;
-        <T extends string>(key: T): string | undefined;
-      };
-      query: {
-        (): Simplify<Queries & Record<string, any>>;
-        <T extends keyof Queries>(
-          key: T,
-        ): Queries extends { [key in T]: any } ? Queries[T] : any;
-        <T extends string>(key: T): any;
-      };
-      queries: {
-        (): Simplify<
-          { [key in keyof Queries]: Queries[key][] } & Record<string, any[]>
-        >;
-        <T extends keyof Queries>(
-          key: T,
-        ): Queries extends { [key in T]: any } ? Queries[T][] : any[];
-        <T extends string>(key: T): any[];
-      };
-    },
-    res: {
-      readonly ctx: Context;
-      readonly status?: number;
-      readonly statusText?: string;
-      readonly data: any;
-      readonly dataType?: DataTypes;
-      header: {
-        (): Record<string, string>;
-        (headerName: string): string | undefined;
-      };
-      next: NextFunction<DataTypes>;
-      end: OptionalEndFunction<
-        DataTypes,
-        IsNever<OData> extends true ? any : OData
-      >;
-    },
-  ): MaybePromise<MiddlewareResult<NewContext, NewOData> | void>;
+    req: MiddlewareRequest<DataType, Method, Params, Queries, IData>,
+    res: MiddlewareResponse<DataType, Context, OData>,
+  ): MaybePromise<ResponseUpdate<NewContext, NewOData> | void>;
 };
 
 export type ErrorMiddlewareFunction<
-  DataTypes,
+  DataType,
   Context,
   NewContext,
   Method,
@@ -172,74 +151,29 @@ export type ErrorMiddlewareFunction<
 > = {
   (
     error: any,
-    req: {
-      readonly method: Method;
-      readonly url: string;
-      readonly data: Method extends "get" | "delete" | "head" ? undefined : any;
-      readonly dataType?: DataTypes;
-
-      param: {
-        <T extends string>(key: T): string | undefined;
-        (): Record<string, string>;
-      };
-      query: {
-        <T extends string>(key: T): any;
-        (): Record<string, any>;
-      };
-      queries: {
-        <T extends string>(key: T): any[];
-        (): Record<string, any[]>;
-      };
-      header: {
-        (headerName: string): string | undefined;
-        (): Record<string, string>;
-      };
-    },
-    res: {
-      readonly ctx: Context;
-      readonly status?: number;
-      readonly statusText?: string;
-      readonly data: any;
-      readonly dataType?: DataTypes;
-
-      header: {
-        (): Record<string, string>;
-        (headerName: string): string | undefined;
-      };
-      next: NextFunction<DataTypes>;
-      end: OptionalEndFunction<
-        DataTypes,
-        IsNever<EData> extends true ? any : EData
-      >;
-    },
-  ): MaybePromise<MiddlewareResult<NewContext, NewEData> | void>;
+    req: MiddlewareRequest<
+      DataType,
+      Method,
+      Record<string, string>,
+      Record<string, any>,
+      EData
+    >,
+    res: MiddlewareResponse<DataType, Context, EData>,
+  ): MaybePromise<ResponseUpdate<NewContext, NewEData> | void>;
 };
 
-type NextFunction<DataTypes> = {
-  (): MiddlewareResult<{}, never>;
+type UpFunction<DataType, Data = any> = {
+  (): ResponseUpdate<{}, never>;
 
-  <$ContextOverride>(
-    opts: OptionalData<DataTypes, any> & {
-      dataType?: DataTypes;
-      ctx?: $ContextOverride;
+  <C, D extends Data>(
+    opts: OptionalData<DataType, D> & {
+      dataType?: DataType;
+      ctx?: C;
       headers?: Record<string, string | null>;
       status?: number;
       statusText?: string;
     },
-  ): MiddlewareResult<$ContextOverride, never>;
-};
-
-type OptionalEndFunction<DataTypes, DT = any> = {
-  (): MiddlewareResult<{}, any>;
-
-  <T extends DT>(
-    opts: OptionalData<DataTypes, T> & {
-      dataType?: DataTypes;
-      headers?: Record<string, string | null>;
-      status?: number;
-      statusText?: string;
-    },
-  ): MiddlewareResult<{}, T>;
+  ): ResponseUpdate<C, D>;
 };
 
 export type RouteBuilderDef = {
