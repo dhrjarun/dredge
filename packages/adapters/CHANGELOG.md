@@ -1,5 +1,24 @@
 # dredge-adapters
 
+## 2.0.0
+
+### Major Changes
+
+- d8fd40a: BodyParserFunction and DataSerializerFunction now contain contentType in option instead of mediaType, charset and boundary
+- f25bb59: replace searchParam(s) to query/queries
+
+### Patch Changes
+
+- Updated dependencies [164b922]
+- Updated dependencies [f25bb59]
+- Updated dependencies [164b922]
+- Updated dependencies [d8fd40a]
+- Updated dependencies [4e2aa47]
+- Updated dependencies [6dedc48]
+  - dredge-common@1.0.0
+  - dredge-route@2.0.0
+  - dredge-types@2.0.0
+
 ## 1.0.4
 
 ### Patch Changes
