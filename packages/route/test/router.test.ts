@@ -37,7 +37,7 @@ test("it will return route, if method and path matched", async () => {
       .path("/post")
       .get()
       .use((_req, res) => {
-        res.end();
+        res.up();
       }),
 
     dredgeRoute().path("/post").post(),

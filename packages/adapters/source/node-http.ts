@@ -13,7 +13,7 @@ import {
   trimSlashes,
 } from "dredge-common";
 import {
-  MiddlewareRequest,
+  DredgeRequest,
   getPathParams,
   useErrorMiddlewares,
   useSuccessMiddlewares,
@@ -114,7 +114,7 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     const parsedParams = deserializeParams(params, routeDef.params);
     const parsedQueries = deserializeQueries(queries, routeDef.queries);
 
-    const middlewareRequest: MiddlewareRequest = {
+    const middlewareRequest: DredgeRequest = {
       url: url.href,
       method: req.method || "get",
       headers,

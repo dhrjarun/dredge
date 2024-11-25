@@ -1,4 +1,4 @@
-import { DataTypes, trimSlashes, validateDataTypeName } from "dredge-common";
+import { DataTypes, trimSlashes } from "dredge-common";
 import type { AnyRoute, RouteBuilderDef, Route } from "dredge-types";
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {

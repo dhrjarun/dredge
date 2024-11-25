@@ -6,7 +6,7 @@ import {
   trimSlashes,
 } from "dredge-common";
 import {
-  MiddlewareRequest,
+  DredgeRequest,
   useErrorMiddlewares,
   useSuccessMiddlewares,
   useValidate,
@@ -82,7 +82,7 @@ export function createDirectClient(
         ? new URL(_options.path, _options.prefixUrl).href
         : _options.path;
 
-      const middlewareRequest: MiddlewareRequest = {
+      const middlewareRequest: DredgeRequest = {
         url,
         method: _options.method,
         headers: _options.headers,

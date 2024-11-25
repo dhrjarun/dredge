@@ -148,10 +148,9 @@ export type RequiredKeys<Type> = Type extends unknown
   ? Exclude<keyof Type, OptionalKeys<Type>>
   : never;
 
-export type DistributiveIndex<T, K extends PropertyKey> = T extends Record<
-  K,
-  infer V
->
+export type DistributiveIndex<T, K extends PropertyKey> = T extends
+  | { [key in K]: infer V }
+  | { [key in K]?: infer V }
   ? V
   : never;
 

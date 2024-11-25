@@ -1,58 +1,118 @@
-import { DataTypes, mergeDredgeHeaders } from "dredge-common";
-import type { AnyRoute, MiddlewareResult, Parser } from "dredge-types";
+import { mergeDredgeHeaders } from "dredge-common";
+import type {
+  AnyRoute,
+  Parser,
+  AnyMiddlewareResponse,
+  AnyMiddlewareRequest,
+  RouteBuilderDef,
+} from "dredge-types";
+import { ResponseUpdate } from "dredge-types";
 import { getParseFn } from "./parser";
 
-function nextEndFunction(
-  res?: MiddlewareResponse & { [key: string]: any },
-  previousRes: MiddlewareResponse = {
-    ctx: {},
-    headers: {},
-  },
-  dataTypes: DataTypes = new DataTypes(),
-) {
-  const generatedHeaders: Record<string, string> = {};
+function middlewareRequestFactory(request: any): AnyMiddlewareRequest {
+  return {
+    url: request.url,
+    method: request.method,
+    data: request.data,
+    dataType: request.dataType,
+    header: (headerName?: string) => {
+      return headerFn(request.headers)(headerName) as any;
+    },
+    param(key?: string) {
+      return paramFn(request.params)(key);
+    },
+    query(key?: string) {
+      return paramFn(request.queries, true)(key);
+    },
+    queries(key?: string) {
+      return paramFn(request.queries)(key);
+    },
+  };
+}
 
-  if (!res) {
-    return previousRes;
-  }
-
-  const dataTypeKeys = ["data", ...dataTypes.keys()];
-  let data: any = previousRes?.data;
-  let dataType = res.dataType ?? previousRes?.dataType;
-
-  if (!res.dataType) {
-    for (const item of dataTypeKeys) {
-      if (typeof res[item] !== "undefined") {
-        data = res[item];
-        dataType = item === "data" ? dataType : item;
-        break;
-      }
-    }
-  }
-
-  const dataTypeFromHeader = dataTypes.getDataTypeFromContentType(
-    res?.headers?.["content-type"] || "",
-  );
-  if (dataTypeFromHeader) {
-    dataType = dataTypeFromHeader;
-  } else if (dataType) {
-    const ct = dataTypes.getContentTypeHeader(dataType);
-    if (ct) {
-      generatedHeaders["content-type"] = ct;
-    }
-  }
+function middlewareResponseFactory(
+  response: any,
+  routeDef: RouteBuilderDef,
+): AnyMiddlewareResponse {
+  const dataTypes = routeDef.dataTypes;
 
   return {
-    ctx: { ...(previousRes.ctx || {}), ...(res?.ctx || {}) },
-    headers: mergeDredgeHeaders(
-      previousRes.headers,
-      res?.headers,
-      generatedHeaders,
-    ),
-    status: res?.status || previousRes?.status,
-    statusText: res?.statusText || previousRes?.statusText,
-    data,
-    dataType,
+    header(headerName?: string) {
+      const headers = response.headers;
+      if (headerName) {
+        const name = headerName?.toLocaleLowerCase();
+        if (!Object.hasOwn(headers, name)) return null;
+        return headers?.[name];
+      }
+
+      return headers;
+    },
+    status: response.status,
+    statusText: response.statusText,
+    data: response.data,
+    dataType: response.dataType,
+    ctx: response.ctx,
+    up(responseUpdate?: any) {
+      const generatedHeaders: Record<string, string> = {};
+
+      if (!responseUpdate) {
+        return response;
+      }
+
+      const dataTypeKeys = ["data", ...dataTypes.keys()];
+      let data: any = response?.data;
+      let dataType = responseUpdate.dataType ?? response?.dataType;
+
+      if (!responseUpdate.dataType) {
+        for (const item of dataTypeKeys) {
+          if (typeof responseUpdate[item] !== "undefined") {
+            data = responseUpdate[item];
+            dataType = item === "data" ? dataType : item;
+            break;
+          }
+        }
+      }
+
+      const dataTypeFromHeader = dataTypes.getDataTypeFromContentType(
+        responseUpdate?.headers?.["content-type"] || "",
+      );
+      if (dataTypeFromHeader) {
+        dataType = dataTypeFromHeader;
+      } else if (dataType) {
+        const ct = dataTypes.getContentTypeHeader(dataType);
+        if (ct) {
+          generatedHeaders["content-type"] = ct;
+        }
+      }
+
+      response.ctx = {
+        ...(response.ctx || {}),
+        ...(responseUpdate?.ctx || {}),
+      };
+      response.headers = mergeDredgeHeaders(
+        response.headers,
+        responseUpdate?.headers,
+        generatedHeaders,
+      );
+      response.status = responseUpdate?.status || response?.status;
+      response.statusText = responseUpdate?.statusText || response?.statusText;
+      response.data = data;
+      response.dataType = dataType;
+
+      return new ResponseUpdate();
+    },
+  };
+}
+
+function headerFn(headers: Record<string, string>) {
+  return function (headerName?: string) {
+    if (headerName) {
+      const name = headerName?.toLocaleLowerCase();
+      if (!Object.hasOwn(headers, name)) return null;
+      return headers?.[name] ?? null;
+    }
+
+    return headers;
   };
 }
 
@@ -80,93 +140,6 @@ function paramFn(params: Record<string, any>, onlyFirst: boolean = false) {
   };
 }
 
-async function handleMiddleware(
-  fn: Function,
-  payload: {
-    isError?: boolean;
-    error?: any;
-    request: MiddlewareRequest;
-    response: MiddlewareResponse & { [key: string]: any };
-  },
-  dataTypes: DataTypes,
-): Promise<MiddlewareResult<any, any> | void> {
-  const { request, response, error, isError = false } = payload;
-
-  function createHeaderFunction(headers: Record<string, string>) {
-    return function (headerName?: string) {
-      if (headerName) {
-        const name = headerName?.toLocaleLowerCase();
-        if (!Object.hasOwn(headers, name)) return null;
-        return headers?.[name];
-      }
-
-      return headers;
-    };
-  }
-
-  const req = {
-    header: createHeaderFunction(request.headers),
-    method: request.method,
-    data: request.data,
-    url: request.url,
-    dataType: request.dataType,
-    param(key?: string) {
-      return paramFn(request.params)(key);
-    },
-    query(key?: string) {
-      return paramFn(request.queries, true)(key);
-    },
-    queries(key?: string) {
-      return paramFn(request.queries)(key);
-    },
-  };
-
-  let isEnd = false;
-
-  const res = {
-    status: response.status,
-    statusText: response.statusText,
-    data: response.data,
-    dataType: response.dataType,
-    header: createHeaderFunction(response.headers),
-    ctx: response.ctx,
-    next(nextOptions?: any) {
-      return nextEndFunction(
-        nextOptions,
-        {
-          ...response,
-        },
-        dataTypes,
-      );
-    },
-    end(endOptions?: any) {
-      isEnd = true;
-
-      return nextEndFunction(
-        endOptions,
-        {
-          ...response,
-        },
-        dataTypes,
-      );
-    },
-  };
-
-  let middlewareResult: MiddlewareResult<any, any>;
-
-  if (isError) {
-    middlewareResult = await fn(error, req, res);
-  } else {
-    middlewareResult = await fn(req, res);
-  }
-
-  if (middlewareResult) {
-    middlewareResult.isEnd = isEnd;
-  }
-
-  return middlewareResult;
-}
-
 export class ValidationError extends Error {
   issue: any;
   type: ValidationType;
@@ -175,7 +148,7 @@ export class ValidationError extends Error {
     type: "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA",
     issue: any,
   ) {
-    super(`Failed at ${type} validation`);
+    super();
 
     this.type = type;
     this.issue = issue;
@@ -211,7 +184,7 @@ export function getPathParams(routePath: string[]) {
   };
 }
 
-export type MiddlewareRequest = {
+export type DredgeRequest = {
   url: string;
   method: string;
   headers: Record<string, string>;
@@ -221,7 +194,7 @@ export type MiddlewareRequest = {
   dataType?: string;
 };
 
-export type MiddlewareResponse = {
+export type DredgeReponse = {
   headers: Record<string, string>;
   data?: any;
   status?: number;
@@ -233,8 +206,8 @@ export type MiddlewareResponse = {
 export function useValidate(route: AnyRoute) {
   const routeDef = route._def;
 
-  return async (unValidatedRequest: MiddlewareRequest) => {
-    let validatedRequest: MiddlewareRequest = { ...unValidatedRequest };
+  return async (unValidatedRequest: DredgeRequest) => {
+    let validatedRequest: DredgeRequest = { ...unValidatedRequest };
 
     const validatedParams: Record<string, any> = {};
     for (const [key, value] of Object.entries(unValidatedRequest.params)) {
@@ -281,57 +254,68 @@ export function useValidate(route: AnyRoute) {
   };
 }
 
+function getRequestResponseObject(
+  requestInit: Partial<DredgeRequest> = {},
+  responseInit: Partial<DredgeReponse> = {},
+  routeDef: RouteBuilderDef,
+): {
+  request: DredgeRequest;
+  response: DredgeReponse;
+} {
+  const response: DredgeReponse = {
+    headers: responseInit.headers ?? {},
+    data: responseInit.data,
+    status: responseInit.status,
+    statusText: responseInit.statusText,
+    dataType: responseInit.dataType,
+    ctx: responseInit.ctx ?? {},
+  };
+
+  const request: DredgeRequest = {
+    headers: requestInit.headers ?? {},
+    data: requestInit.data,
+    dataType: requestInit.dataType,
+    method: requestInit.method || "get",
+    url: requestInit.url || "",
+    params: requestInit.params || {},
+    queries: requestInit.queries || {},
+  };
+
+  const dataTypes = routeDef.dataTypes;
+  const contentType = requestInit.headers?.["content-type"] || "";
+  const accept = requestInit.headers?.["accept"] || "";
+
+  if (!request.dataType) {
+    request.dataType = dataTypes.getDataTypeFromContentType(contentType);
+  }
+  if (!response.dataType) {
+    response.dataType = dataTypes.getDataTypeFromAccept(accept);
+  }
+
+  return { request, response };
+}
+
 export function useSuccessMiddlewares(route: AnyRoute) {
   const routeDef = route._def;
 
   return async (
-    validatedRequest: MiddlewareRequest,
-    response: MiddlewareResponse = { headers: {} },
-  ) => {
-    let _response = {
-      ...response,
-      ctx: {
-        ...response.ctx,
-      },
-    };
+    requestInit: Partial<DredgeRequest> = {},
+    responseInit: Partial<DredgeReponse> = {},
+  ): Promise<DredgeReponse> => {
+    const { request, response } = getRequestResponseObject(
+      requestInit,
+      responseInit,
+      routeDef,
+    );
 
-    const request = {
-      ...validatedRequest,
-    };
-
-    const dataTypes = routeDef.dataTypes;
-    const contentType = validatedRequest.headers["content-type"] || "";
-    const accept = validatedRequest.headers["accept"] || "";
-    if (!request.dataType) {
-      request.dataType = dataTypes.getDataTypeFromContentType(contentType);
-    }
-    if (!_response.dataType) {
-      _response.dataType = dataTypes.getDataTypeFromAccept(accept);
-    }
+    const req = middlewareRequestFactory(request);
+    const res = middlewareResponseFactory(response, routeDef);
 
     for (const fn of routeDef.middlewares) {
-      const middlewareResult = await handleMiddleware(
-        fn,
-        {
-          isError: false,
-          request,
-          response: _response,
-        },
-        routeDef.dataTypes as any,
-      );
-
-      if (!middlewareResult) {
-        continue;
-      }
-      const { isEnd, ...newResponse } = middlewareResult;
-      _response = newResponse;
-
-      if (isEnd) {
-        break;
-      }
+      await fn(req, res);
     }
 
-    return _response;
+    return response;
   };
 }
 
@@ -341,55 +325,22 @@ export function useErrorMiddlewares(route: AnyRoute) {
 
   return async (
     error: any,
-    unValidatedRequest: MiddlewareRequest,
-    response: MiddlewareResponse = { headers: {} },
-  ) => {
-    const request = {
-      ...unValidatedRequest,
-    };
+    requestInit: Partial<DredgeRequest> = {},
+    responseInit: Partial<DredgeReponse> = {},
+  ): Promise<DredgeReponse> => {
+    const { request, response } = getRequestResponseObject(
+      requestInit,
+      responseInit,
+      routeDef,
+    );
 
-    let _response = {
-      ...response,
-      ctx: {
-        ...response.ctx,
-      },
-    };
-
-    const dataTypes = routeDef.dataTypes;
-    const contentType = unValidatedRequest.headers["content-type"] || "";
-    const accept = unValidatedRequest.headers["accept"] || "";
-
-    if (!request.dataType) {
-      request.dataType = dataTypes.getDataTypeFromContentType(contentType);
-    }
-    if (!_response.dataType) {
-      _response.dataType = dataTypes.getDataTypeFromAccept(accept);
-    }
+    const req = middlewareRequestFactory(request);
+    const res = middlewareResponseFactory(response, routeDef);
 
     for (const fn of errorMiddlewares) {
-      const middlewareResult = await handleMiddleware(
-        fn,
-        {
-          isError: true,
-          error,
-          request,
-          response: _response,
-        },
-        dataTypes as any,
-      );
-
-      if (!middlewareResult) {
-        continue;
-      }
-
-      const { isEnd, ...newResponse } = middlewareResult;
-      _response = newResponse;
-
-      if (isEnd) {
-        break;
-      }
+      await fn(error, req, res);
     }
 
-    return _response;
+    return response;
   };
 }
