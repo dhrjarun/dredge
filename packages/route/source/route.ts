@@ -1,5 +1,26 @@
 import { DataTypes, trimSlashes } from "dredge-common";
-import type { AnyRoute, RouteBuilderDef, Route } from "dredge-types";
+import type { AnyRoute, Route, Parser } from "dredge-types";
+import {
+  validateInput,
+  validateOutput,
+  validateParams,
+  validateQueries,
+} from "./validate";
+import { composeMiddlewares } from "./compose";
+import { RawResponse } from "./response";
+
+export type RouteBuilderDef = {
+  method?: string;
+  paths: string[];
+  params: Record<string, Parser>;
+  queries: Record<string, Parser>;
+  dataTypes: DataTypes;
+  input?: Parser;
+  output?: Parser;
+
+  middlewares: Function[];
+  errorMiddlewares: Function[];
+};
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as Route<
@@ -18,7 +39,9 @@ export function dredgeRoute<Context extends Record<string, any> = {}>() {
   >;
 }
 
-export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
+export function createRouteBuilder(
+  initDef: Partial<RouteBuilderDef> = {},
+): AnyRoute {
   const {
     method,
     middlewares = [],
@@ -30,7 +53,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     ...rest
   } = initDef;
 
-  const _def: RouteBuilderDef = {
+  const schema: RouteBuilderDef = {
     middlewares,
     errorMiddlewares,
     paths,
@@ -41,11 +64,85 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     ...rest,
   };
 
-  const builder = {
-    _def,
+  const builder: AnyRoute = {
+    async _handle(rawcontext) {
+      const defaultResponse: RawResponse = {
+        headers: {},
+      };
+      try {
+        if (rawcontext.error !== undefined) {
+          throw rawcontext.error;
+        }
 
-    options: (options = {}) => {
-      const _dataTypes = _def.dataTypes.toRecord();
+        const validateRequest = { ...rawcontext.request };
+
+        validateRequest.params = await validateParams(
+          schema.params,
+          validateRequest.params,
+        );
+        validateRequest.queries = await validateQueries(
+          schema.queries,
+          validateRequest.queries,
+        );
+        validateRequest.data = await validateInput(
+          schema.input!!,
+          validateRequest.data,
+        );
+
+        const successFn = composeMiddlewares(schema.middlewares);
+
+        const successContext = {
+          state: {
+            ...rawcontext.state,
+          },
+          response: rawcontext.response || defaultResponse,
+          request: validateRequest,
+          dataTypes: schema.dataTypes,
+        };
+        await successFn(successContext, () => {});
+
+        const validatedResponse = {
+          ...successContext.response,
+        };
+
+        validatedResponse.data = await validateOutput(
+          schema.output!,
+          successContext.response.data,
+        );
+        return validatedResponse;
+      } catch (error) {
+        const errorFn = composeMiddlewares(schema.errorMiddlewares);
+        const errorContext = {
+          request: rawcontext.request,
+          response: rawcontext.response || defaultResponse,
+          state: {
+            ...rawcontext.state,
+          },
+          dataTypes: schema.dataTypes,
+          error,
+        };
+        await errorFn(errorContext, () => {});
+        return errorContext.response;
+      }
+    },
+
+    get _schema() {
+      return {
+        method: schema.method,
+        paths: [...schema.paths],
+        params: {
+          ...schema.params,
+        },
+        queries: {
+          ...schema.queries,
+        },
+        input: schema.input,
+        output: schema.output,
+      };
+    },
+
+    options(options) {
+      const _dataTypes = schema.dataTypes.toRecord();
       const { dataTypes = {} } = options;
 
       const newDataTypes = new DataTypes({
@@ -54,13 +151,13 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
 
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         dataTypes: newDataTypes,
       });
     },
 
-    path: (path) => {
-      const _paths = _def.paths;
+    path(path: string) {
+      const _paths = schema.paths;
       const paths = trimSlashes(path).split("/");
 
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
@@ -89,14 +186,14 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
 
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         paths: [..._paths, ...paths],
       });
     },
 
-    params: (params) => {
-      const _params = _def.params;
-      const _paths = _def.paths;
+    params(params: Record<string, Parser>) {
+      const _params = schema.params;
+      const _paths = schema.paths;
 
       Object.entries(params).forEach(([path]) => {
         if (_params[path]) {
@@ -109,7 +206,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
 
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         params: {
           ..._params,
           ...params,
@@ -117,8 +214,8 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    queries: (queries) => {
-      const _queries = _def.queries;
+    queries(queries: Record<string, Parser>) {
+      const _queries = schema.queries;
 
       // check if it already defined
       Object.entries(queries).forEach(([name]) => {
@@ -128,7 +225,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
 
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         queries: {
           ..._queries,
           ...queries,
@@ -136,73 +233,82 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    use: (cb) => {
-      const middlewares = [..._def.middlewares];
+    use(cb: Function) {
+      const middlewares = [...schema.middlewares];
       middlewares.push(cb);
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         middlewares,
       });
     },
 
-    error(cb) {
-      const errorMiddlewares = [..._def.errorMiddlewares];
+    error(cb: Function) {
+      const errorMiddlewares = [...schema.errorMiddlewares];
       errorMiddlewares.push(cb);
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         errorMiddlewares,
       });
     },
 
-    method: (method) => {
-      const _method = _def.method;
+    method(method: string) {
+      const _method = schema.method;
 
       if (_method) {
         throw "Method is already defined";
       }
 
       return createRouteBuilder({
-        ..._def,
+        ...schema,
         method,
       });
     },
 
-    input(parser) {
-      const _parser = _def.iBody;
+    get() {
+      return this.method("get");
+    },
+    post() {
+      return this.method("post");
+    },
+    put() {
+      return this.method("put");
+    },
+    delete() {
+      return this.method("delete");
+    },
+    patch() {
+      return this.method("patch");
+    },
+    head() {
+      return this.method("head");
+    },
+
+    input(parser: Parser) {
+      const _parser = schema.input;
 
       if (_parser) {
         throw "Request data schema is already defined";
       }
 
-      if (parser) {
-        return createRouteBuilder({
-          ..._def,
-          iBody: parser,
-        });
-      }
+      return createRouteBuilder({
+        ...schema,
+        input: parser,
+      });
     },
 
-    output(parser) {
-      const _parser = _def.oBody;
+    output(parser: Parser) {
+      const _parser = schema.output;
 
       if (_parser) {
         throw "Response data schema is already defined";
       }
 
-      if (parser) {
-        return createRouteBuilder({
-          ..._def,
-          oBody: parser,
-        });
-      }
+      return createRouteBuilder({
+        ...schema,
+        output: parser,
+      });
     },
-  } as AnyRoute;
-
-  const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
-  for (const item of aliases) {
-    const fn = () => builder.method(item) as any;
-    builder[item] = fn;
-  }
+  };
 
   return builder;
 }

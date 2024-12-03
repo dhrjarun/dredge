@@ -2,7 +2,7 @@ import { assert, describe, expect, test } from "vitest";
 import { dredgeRoute } from "../source/route";
 
 describe("route.options()", () => {
-  test("invalid dataTypes will throw error", () => {
+  test("throws when given invalid dataTypes", () => {
     expect(() => {
       dredgeRoute().options({
         dataTypes: {
@@ -30,9 +30,9 @@ describe("route.options()", () => {
 });
 
 describe("route.path()", () => {
-  test("paths should be registered in _def", () => {
+  test("paths should be registered in _schema", () => {
     let route = dredgeRoute().path("universe/milky-way/solar-system/:planet/");
-    expect(route._def.paths).toStrictEqual([
+    expect(route._schema.paths).toStrictEqual([
       "universe",
       "milky-way",
       "solar-system",
@@ -40,7 +40,7 @@ describe("route.path()", () => {
     ]);
 
     route = dredgeRoute().path("/universe/milky-way/solar-system/:planet");
-    expect(route._def.paths).toStrictEqual([
+    expect(route._schema.paths).toStrictEqual([
       "universe",
       "milky-way",
       "solar-system",
@@ -53,7 +53,7 @@ describe("route.path()", () => {
       .path("/universe/milky-way")
       .path("/solar-system/:planet");
 
-    expect(route._def.paths).toStrictEqual([
+    expect(route._schema.paths).toStrictEqual([
       "universe",
       "milky-way",
       "solar-system",
@@ -77,7 +77,7 @@ describe("route.params()", () => {
       .path("/test/:par")
       .params({ par: (p) => p });
 
-    assert.property(route._def.params, "par");
+    assert.property(route._schema.params, "par");
   });
 
   test("throws when a key is defined before defining it in path", () => {
@@ -101,7 +101,7 @@ describe("route.params()", () => {
 });
 
 describe("route.queries()", () => {
-  test("queries should be added in route._def", () => {
+  test("queries should be added in route._schema", () => {
     const route = dredgeRoute()
       .path("/test")
       .queries({ SPi: () => {}, SPii: () => {} })
@@ -109,9 +109,9 @@ describe("route.queries()", () => {
         SPiii: (p) => p,
       });
 
-    assert.property(route._def.queries, "SPi");
-    assert.property(route._def.queries, "SPii");
-    assert.property(route._def.queries, "SPiii");
+    assert.property(route._schema.queries, "SPi");
+    assert.property(route._schema.queries, "SPii");
+    assert.property(route._schema.queries, "SPiii");
   });
 
   test("throws when a key is defined more than once", () => {
@@ -152,7 +152,7 @@ describe("route.output()", () => {
 });
 
 describe("route.<method>()", () => {
-  test("should register method in _def", () => {
+  test("should register method in _schema", () => {
     const methodsWithoutBody = [
       "get",
       "delete",
@@ -163,7 +163,7 @@ describe("route.<method>()", () => {
     ] as const;
     methodsWithoutBody.forEach((method) => {
       const getRoute = dredgeRoute().path("/test")[method]();
-      expect(getRoute._def.method).toBe(method);
+      expect(getRoute._schema.method).toBe(method);
     });
   });
 
@@ -178,25 +178,4 @@ describe("route.<method>()", () => {
   });
 });
 
-describe("route.<middleware>()", () => {
-  test("should register middleware", () => {
-    const lastMiddleware = () => {};
-    const route = dredgeRoute()
-      .use(() => {})
-      .use(lastMiddleware);
-
-    expect(route._def.middlewares).toHaveLength(2);
-    expect(route._def.middlewares[1]).toBe(lastMiddleware);
-  });
-
-  test("should register error middleware", () => {
-    const lastMiddleware = () => {};
-    const route = dredgeRoute()
-      .error(() => {})
-      .error(() => {})
-      .error(lastMiddleware);
-
-    expect(route._def.errorMiddlewares).toHaveLength(3);
-    expect(route._def.errorMiddlewares[2]).toBe(lastMiddleware);
-  });
-});
+describe("route._handle", () => {});
