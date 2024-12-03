@@ -8,7 +8,7 @@ import {
 import { IsNever, Merge } from "./utils";
 
 export interface DredgeRouter<Routes = []> {
-  find(method: string, path: string[]): AnyValidRoute | null;
+  find(method: string, paths: string[]): AnyValidRoute | null;
 }
 
 export type inferRouterRoutes<T> = T extends DredgeRouter<infer R> ? R : never;

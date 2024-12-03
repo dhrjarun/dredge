@@ -45,12 +45,9 @@ describe.each(servers)(
           route
             .path("/success")
             .post()
-            .use((req, res) => {
-              return res.up({
-                status: 200,
-                json: {
-                  ...req.data,
-                },
+            .use((d, { req }) => {
+              return d.status(200).json({
+                ...req.data,
               });
             }),
 
@@ -60,12 +57,9 @@ describe.each(servers)(
             .use(() => {
               throw "error";
             })
-            .error((_err, req, res) => {
-              return res.up({
-                status: 500,
-                json: {
-                  ...req.data,
-                },
+            .error((d, { req }) => {
+              return d.status(500).json({
+                ...req.data,
               });
             }),
         ]),
@@ -108,11 +102,8 @@ describe.each(servers)(
             .path("/success")
             .post()
             .input(z.string())
-            .use((req, res) => {
-              return res.up({
-                status: 200,
-                text: req.data,
-              });
+            .use((d, { req }) => {
+              return d.status(200).text(req.data);
             }),
 
           route
@@ -122,11 +113,8 @@ describe.each(servers)(
             .use(() => {
               throw "error";
             })
-            .error((_err, req, res) => {
-              return res.up({
-                status: 500,
-                text: req.data,
-              });
+            .error((d, { req }) => {
+              return d.status(500).text(req.data);
             }),
         ]),
       });
@@ -174,10 +162,8 @@ describe.each(servers)(
             })
             .path("/fruits")
             .get()
-            .use((_req, res) => {
-              return res.up({
-                json: data,
-              });
+            .use((d) => {
+              return d.json(data);
             }),
         ]),
       });
@@ -199,10 +185,8 @@ describe.each(servers)(
           dredgeRoute()
             .path("/test-I")
             .get()
-            .use((_req, res) => {
-              return res.up({
-                status: 200,
-              });
+            .use((d) => {
+              d.status(200);
             }),
         ]),
       });
@@ -221,11 +205,8 @@ describe.each(servers)(
           route
             .path("/test/:param")
             .get()
-            .use((req, res) => {
-              return res.up({
-                status: 200,
-                json: req.param(),
-              });
+            .use((d, { req }) => {
+              d.status(200).json(req.param());
             }),
         ]),
 
@@ -272,13 +253,10 @@ describe.each(servers)(
               b: z.string(),
             })
             .get()
-            .use((req, res) => {
-              return res.up({
-                status: 200,
-                json: {
-                  single: req.query(),
-                  multiple: req.queries(),
-                },
+            .use((d, { req }) => {
+              d.status(200).json({
+                single: req.query(),
+                multiple: req.queries(),
               });
             }),
         ]),
@@ -331,11 +309,8 @@ describe.each(servers)(
               .path("/test")
               .input(z.any())
               .post()
-              .use((req, res) => {
-                return res.up({
-                  status: 200,
-                  text: req.data,
-                });
+              .use((d, { req }) => {
+                d.status(200).text(req.data);
               }),
           ]),
 
@@ -411,11 +386,8 @@ describe.each(servers)(
               .path("/test")
               .input(z.any())
               .post()
-              .use((req, res) => {
-                return res.up({
-                  status: 200,
-                  text: req.data,
-                });
+              .use((d, { req }) => {
+                d.status(200).text(req.data);
               }),
           ]),
           bodyParsers: {
@@ -454,14 +426,13 @@ describe.each(servers)(
               .path("/test")
               .post()
               .input(z.string())
-              .use((req, res) => {
-                return res.up({
-                  status: 200,
-                  headers: {
-                    "Content-Type": req.data || req.header("accept") || "",
-                  },
-                  data: "",
-                });
+              .use((d, { req }) => {
+                d.status(200)
+                  .header(
+                    "Content-Type",
+                    req.data || req.header("accept") || "",
+                  )
+                  .data("");
               }),
           ]),
           dataSerializers: {
@@ -543,14 +514,13 @@ describe.each(servers)(
               .path("/test")
               .post()
               .input(z.string())
-              .use((req, res) => {
-                return res.up({
-                  status: 200,
-                  headers: {
-                    "Content-Type": req.data || req.header("accept") || "",
-                  },
-                  data: "",
-                });
+              .use((d, { req }) => {
+                d.status(200)
+                  .header(
+                    "Content-Type",
+                    req.data || req.header("accept") || "",
+                  )
+                  .data("");
               }),
           ]),
           dataSerializers: {
@@ -587,23 +557,16 @@ describe.each(servers)(
         route
           .path("/test")
           .get()
-          .use((req, res) => {
+          .use((d, { req }) => {
             const url = new URL(req.url, "relative:///");
-            return res.up({
-              status: 200,
-              text: url.pathname,
-            });
+            return d.status(200).text(url.pathname);
           }),
-
         route
           .path("/test")
           .post()
-          .use((req, res) => {
+          .use((d, { req }) => {
             const url = new URL(req.url, "relative:///");
-            return res.up({
-              status: 200,
-              text: url.pathname,
-            });
+            return d.status(200).text(url.pathname);
           }),
       ]);
       await startServer({
@@ -611,11 +574,11 @@ describe.each(servers)(
         prefixUrl: "/base",
       });
 
-      const get = await client("/base/test", {
+      let get = await client("/base/test", {
         method: "GET",
       });
 
-      const post = await client("/base/test", {
+      let post = await client("/base/test", {
         method: "POST",
       });
 
@@ -629,16 +592,16 @@ describe.each(servers)(
         prefixUrl: "/base/",
       });
 
-      const getII = await client("/base/test", {
+      get = await client("/base/test", {
         method: "GET",
       });
 
-      const postII = await client("/base/test", {
+      post = await client("/base/test", {
         method: "POST",
       });
 
-      expect(await getII.text()).toBe("/base/test");
-      expect(await postII.text()).toBe("/base/test");
+      expect(await get.text()).toBe("/base/test");
+      expect(await post.text()).toBe("/base/test");
     });
 
     test("params default deserialization", async () => {
@@ -651,16 +614,8 @@ describe.each(servers)(
               boolean: z.boolean(),
             })
             .get()
-            .use((req, res) => {
-              return res.up({
-                status: 200,
-                json: req.param(),
-              });
-            })
-            .error((_err, _req, res) => {
-              return res.up({
-                status: 400,
-              });
+            .use((d, { req }) => {
+              d.status(200).json(req.param());
             }),
         ]),
       });
@@ -689,16 +644,13 @@ describe.each(servers)(
               date: z.date(),
             })
             .get()
-            .use((req, res) => {
-              return res.up({
-                status: 200,
-                json: {
-                  single: {
-                    ...req.query(),
-                    date: req.query("date").toISOString().split("T")[0],
-                  },
-                  multiple: req.queries(),
+            .use((d, { req }) => {
+              d.status(200).json({
+                single: {
+                  ...req.query(),
+                  date: req.query("date").toISOString().split("T")[0],
                 },
+                multiple: req.queries(),
               });
             }),
         ]),
@@ -738,15 +690,11 @@ describe.each(servers)(
               boolean: z.boolean().optional(),
             })
             .get()
-            .use((_req, res) => {
-              return res.up({
-                status: 200,
-              });
+            .use((d) => {
+              d.status(200);
             })
-            .error((_err, _req, res) => {
-              return res.up({
-                status: 400,
-              });
+            .error((d) => {
+              d.status(400);
             }),
         ]),
       });
@@ -783,19 +731,15 @@ describe.each(servers)(
             .path("/test")
             .post()
             .input(z.any())
-            .use((req, res) => {
-              return res.up({
-                headers: {
-                  "x-had-req-data": req.data ? "true" : "false",
-                },
-                status: 200,
-                data: "test",
-              });
+            .use((d, { req }) => {
+              d.header({
+                "x-had-req-data": req.data ? "true" : "false",
+              })
+                .status(200)
+                .data("test");
             })
-            .error((_err, _req, res) => {
-              return res.up({
-                status: 500,
-              });
+            .error((d) => {
+              d.status(500);
             }),
         ]),
 
