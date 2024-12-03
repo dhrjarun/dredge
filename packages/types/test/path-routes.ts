@@ -6,38 +6,30 @@ export const singleParamNonAutoRouter = dredgeRouter([
   dredgeRoute()
     .path("/a/b/c/d")
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/a/b/c/d" as const,
-      });
+    .use((d) => {
+      return d.data("GET/a/b/c/d" as const);
     }),
 
   dredgeRoute()
     .path("/a/b/c/d")
     .delete()
-    .use((_req, res) => {
-      return res.up({
-        data: "DELETE/a/b/c/d" as const,
-      });
+    .use((d) => {
+      return d.data("DELETE/a/b/c/d" as const);
     }),
 
   dredgeRoute()
     .path("/:a/b/c/d")
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/:a/b/c/d" as const,
-      });
+    .use((d) => {
+      return d.data("GET/:a/b/c/d" as const);
     }),
 
   dredgeRoute()
     .path("/:a/b/c/d")
     .put()
     .input(z.any())
-    .use((_req, res) => {
-      return res.up({
-        data: "PUT/:a/b/c/d" as const,
-      });
+    .use((d) => {
+      return d.data("PUT/:a/b/c/d" as const);
     }),
 
   dredgeRoute()
@@ -46,10 +38,8 @@ export const singleParamNonAutoRouter = dredgeRouter([
     .params({
       b: z.number(),
     })
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/a/:b/c/d" as const,
-      });
+    .use((d) => {
+      return d.data("GET/a/:b/c/d" as const);
     }),
 
   dredgeRoute()
@@ -58,10 +48,8 @@ export const singleParamNonAutoRouter = dredgeRouter([
       c: z.bigint(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/a/b/:c/d" as const,
-      });
+    .use((d) => {
+      return d.data("GET/a/b/:c/d" as const);
     }),
 
   dredgeRoute()
@@ -70,10 +58,8 @@ export const singleParamNonAutoRouter = dredgeRouter([
       d: z.date(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/a/b/c/:d" as const,
-      });
+    .use((d) => {
+      return d.data("GET/a/b/c/:d" as const);
     }),
 ]);
 
@@ -85,10 +71,8 @@ export const singleParamAutoRouter = dredgeRouter([
       e: z.enum(["a", "b"]),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/:e/f/g/h" as const,
-      });
+    .use((d) => {
+      return d.data("GET/:e/f/g/h" as const);
     }),
   dredgeRoute()
     .path("/e/:f/g/h")
@@ -96,10 +80,8 @@ export const singleParamAutoRouter = dredgeRouter([
       f: z.boolean(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/e/:f/g/h" as const,
-      });
+    .use((d) => {
+      return d.data("GET/e/:f/g/h" as const);
     }),
   dredgeRoute()
     .path("/e/f/:g/h")
@@ -107,10 +89,8 @@ export const singleParamAutoRouter = dredgeRouter([
       g: z.undefined(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/e/f/:g/h" as const,
-      });
+    .use((d) => {
+      return d.data("GET/e/f/:g/h" as const);
     }),
   dredgeRoute()
     .path("/e/f/g/:h")
@@ -118,10 +98,8 @@ export const singleParamAutoRouter = dredgeRouter([
       h: z.null(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/e/f/g/:h" as const,
-      });
+    .use((d) => {
+      return d.data("GET/e/f/g/:h" as const);
     }),
 ]);
 
@@ -134,10 +112,8 @@ export const doubleParamNonAutoRouter = dredgeRouter([
       u: z.number(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/:s/t/:u/v/w/x" as const,
-      });
+    .use((d) => {
+      return d.data("GET/:s/t/:u/v/w/x" as const);
     }),
   dredgeRoute()
     .path("/s/:t/u/:v/w/x")
@@ -146,10 +122,8 @@ export const doubleParamNonAutoRouter = dredgeRouter([
       v: z.bigint(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/s/:t/u/:v/w/x" as const,
-      });
+    .use((d) => {
+      return d.data("GET/s/:t/u/:v/w/x" as const);
     }),
   dredgeRoute()
     .path("/s/t/u/v/:w/:x")
@@ -158,10 +132,8 @@ export const doubleParamNonAutoRouter = dredgeRouter([
       x: z.date(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/s/t/u/v/:w/:x" as const,
-      });
+    .use((d) => {
+      return d.data("GET/s/t/u/v/:w/:x" as const);
     }),
 ]);
 export const doubleParamAutoRouter = dredgeRouter([
@@ -173,10 +145,8 @@ export const doubleParamAutoRouter = dredgeRouter([
       r: z.boolean(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/:p/q/:r/s/t/u" as const,
-      });
+    .use((d) => {
+      return d.data("GET/:p/q/:r/s/t/u" as const);
     }),
   dredgeRoute()
     .path("/p/:q/r/:s/t/u")
@@ -185,10 +155,8 @@ export const doubleParamAutoRouter = dredgeRouter([
       s: z.undefined(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "/GET/p/:q/r/:s/t/u" as const,
-      });
+    .use((d) => {
+      return d.data("/GET/p/:q/r/:s/t/u" as const);
     }),
   dredgeRoute()
     .path("/p/q/r/s/:t/:u")
@@ -197,10 +165,8 @@ export const doubleParamAutoRouter = dredgeRouter([
       u: z.null(),
     })
     .get()
-    .use((_req, res) => {
-      return res.up({
-        data: "GET/p/q/r/s/:t/:u" as const,
-      });
+    .use((d) => {
+      return d.data("GET/p/q/r/s/:t/:u" as const);
     }),
 ]);
 

@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 import { dredgeRoute } from "../source/route";
 import { dredgeRouter } from "../source/router";
-import { AnyValidRoute } from "dredge-types";
 
 const userRouter = dredgeRouter([
   dredgeRoute().path("user/:id").get(),
@@ -36,29 +35,27 @@ test("it will return route, if method and path matched", async () => {
     dredgeRoute()
       .path("/post")
       .get()
-      .use((_req, res) => {
-        res.up();
-      }),
+      .use(() => {}),
 
     dredgeRoute().path("/post").post(),
   ]);
 
-  expect(router.find("get", ["user", "1"])!._def).toMatchObject({
+  expect(router.find("get", ["user", "1"])!._schema).toMatchObject({
     method: "get",
     paths: ["user", ":id"],
   });
 
-  expect(router.find("delete", ["user", "1"])!._def).toMatchObject({
+  expect(router.find("delete", ["user", "1"])!._schema).toMatchObject({
     method: "delete",
     paths: ["user", ":id"],
   });
 
-  expect(router.find("get", ["post"])!._def).toMatchObject({
+  expect(router.find("get", ["post"])!._schema).toMatchObject({
     method: "get",
     paths: ["post"],
   });
 
-  expect(router.find("post", ["post"])!._def).toMatchObject({
+  expect(router.find("post", ["post"])!._schema).toMatchObject({
     method: "post",
     paths: ["post"],
   });
