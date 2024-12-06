@@ -5,6 +5,22 @@ import type {
   OverwriteRoutes,
 } from "dredge-types";
 
+export function getPathParams(routePath: string[]) {
+  return (pathArray: string[]) => {
+    const params: Record<string, string> = routePath.reduce(
+      (acc: any, item: string, index: number) => {
+        if (item.startsWith(":")) {
+          acc[item.replace(":", "")] = pathArray[index];
+        }
+        return acc;
+      },
+      {},
+    );
+
+    return params;
+  };
+}
+
 export class RoutePath {
   name: string;
   isParam: boolean;
@@ -24,7 +40,8 @@ export class RoutePath {
     this.isParam = isParam;
 
     routes.forEach((item) => {
-      this.routes.set(item._def.method || "get", item);
+      const method = item._schema.method || "get";
+      this.routes.set(method, item);
     });
   }
 
@@ -36,7 +53,8 @@ export class RoutePath {
     return this.routes.get(method.toLowerCase());
   }
   setRoute(route: AnyRoute) {
-    this.routes.set(route._def.method || "get", route);
+    const method = route._schema.method || "get";
+    this.routes.set(method, route);
   }
 
   hasChild(name: string) {
@@ -86,19 +104,19 @@ export class RoutePath {
   }
 }
 
-class DredgeRouterClass<Routes extends AnyRoute[] = []>
-  implements DredgeRouter
-{
-  // readonly routes: Routes;
-
+class DredgeRouterClass implements DredgeRouter {
   root: RoutePath = new RoutePath({
     name: "$root",
   });
 
-  find(method: string, routePathArray: string[]) {
+  find(method: string, paths: string[]) {
     let current = this.root;
 
-    for (const item of routePathArray) {
+    if (!method) {
+      return null;
+    }
+
+    for (const item of paths) {
       const child = current.getStaticChild(item) || current.getDynamicChild();
 
       if (!child) {
@@ -126,8 +144,8 @@ class DredgeRouterClass<Routes extends AnyRoute[] = []>
         return;
       }
 
-      const def = route._def;
-      const paths = def.paths as string[];
+      const method = route._schema.method;
+      const paths = route._schema.paths;
 
       let current = this.root;
       paths.forEach((name) => {
@@ -142,16 +160,15 @@ class DredgeRouterClass<Routes extends AnyRoute[] = []>
         current = current.getChild(name)!;
       });
 
-      const endRoute = current.getRoute(def.method!);
+      const endRoute = current.getRoute(method!);
       if (endRoute) {
-        throw new Error(`Duplicate method ${def.method} in the same level`);
+        throw new Error(`Duplicate method ${method} in the same level`);
       }
 
-      const _def = route._def;
-      if (!_def.paths.length) {
+      if (!paths.length) {
         throw TypeError("Invalid route - Paths are not defined");
       }
-      if (!_def.method) {
+      if (!method) {
         throw TypeError("Invalid route - Method is not defined");
       }
 

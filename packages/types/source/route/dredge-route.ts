@@ -1,6 +1,5 @@
 import type { Readable } from "stream";
 import type { ReadableStream } from "stream/web";
-import { DataTypes } from "../data-types";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import {
   IsAny,
@@ -14,6 +13,24 @@ import { HTTPMethod } from "./http";
 import { OptionalData } from "../route/route-data";
 
 export class ResponseUpdate<Context, Data> {}
+
+export type RouteD<DataType extends string, Context, Data> = {
+  status(number: number, text: string): RouteD<DataType, Context, Data>;
+  data<D extends Data>(data: D): RouteD<DataType, Context, D>;
+  ctx<C extends Record<string, any>>(
+    context: C,
+  ): RouteD<DataType, Overwrite<Context, C>, Data>;
+  header(
+    headerName: string,
+    value: string | null,
+  ): RouteD<DataType, Context, Data>;
+  headers(
+    headers: Record<string, string | null>,
+  ): RouteD<DataType, Context, Data>;
+  next(): Promise<RouteD<DataType, Context, Data>>;
+} & {
+  [key in DataType]: <D extends Data>(data: D) => RouteD<DataType, Context, D>;
+};
 
 export type isAnyRoute<R> = R extends Route<
   infer _Options,
@@ -41,15 +58,18 @@ export type isAnyRoute<R> = R extends Route<
     : false
   : false;
 
+export type MiddlewareContext<DataType, State, Method, Params, Queries, IData> =
+  {
+    req: MiddlewareRequest<DataType, Method, Params, Queries, IData>;
+    res: MiddlewareResponse<DataType, any>;
+    state: State;
+  };
+
 export interface MiddlewareRequest<DataType, Method, Params, Queries, Data> {
   readonly url: string;
   readonly method: Method;
   readonly dataType?: DataType;
-  readonly data: IsNever<Data> extends true
-    ? Method extends "get" | "delete" | "head"
-      ? undefined
-      : any
-    : Data;
+  readonly data: Method extends "get" | "delete" | "head" ? undefined : Data;
   header: {
     (headerName: string): string | undefined;
     (): Record<string, string>;
@@ -79,17 +99,15 @@ export interface MiddlewareRequest<DataType, Method, Params, Queries, Data> {
   };
 }
 
-export interface MiddlewareResponse<DataType, Context, Data> {
-  readonly ctx: Context;
+export interface MiddlewareResponse<DataType, Data = any> {
   readonly status?: number;
   readonly statusText?: string;
   readonly dataType?: DataType;
-  readonly data: any;
+  readonly data: Data;
   header: {
     (): Record<string, string>;
     (headerName: string): string | undefined;
   };
-  up: UpFunction<DataType, IsNever<Data> extends true ? any : Data>;
 }
 
 export interface AnyMiddlewareRequest
@@ -101,8 +119,7 @@ export interface AnyMiddlewareRequest
     any
   > {}
 
-export interface AnyMiddlewareResponse
-  extends MiddlewareResponse<any, any, any> {}
+export interface AnyMiddlewareResponse extends MiddlewareResponse<any, any> {}
 
 export type AnyMiddlewareFunction = MiddlewareFunction<
   any,
@@ -136,8 +153,19 @@ export type MiddlewareFunction<
   NewOData,
 > = {
   (
-    req: MiddlewareRequest<DataType, Method, Params, Queries, IData>,
-    res: MiddlewareResponse<DataType, Context, OData>,
+    d: RouteD<
+      DataType extends string ? DataType : never,
+      Context,
+      IsNever<OData> extends true ? any : OData
+    >,
+    opts: MiddlewareContext<
+      DataType,
+      Context,
+      Method,
+      Params,
+      Queries,
+      IsNever<IData> extends true ? any : IData
+    >,
   ): MaybePromise<ResponseUpdate<NewContext, NewOData> | void>;
 };
 
@@ -156,9 +184,9 @@ export type ErrorMiddlewareFunction<
       Method,
       Record<string, string>,
       Record<string, any>,
-      EData
+      any
     >,
-    res: MiddlewareResponse<DataType, Context, EData>,
+    res: MiddlewareResponse<DataType, EData>,
   ): MaybePromise<ResponseUpdate<NewContext, NewEData> | void>;
 };
 
@@ -174,29 +202,6 @@ type UpFunction<DataType, Data = any> = {
       statusText?: string;
     },
   ): ResponseUpdate<C, D>;
-};
-
-export type RouteBuilderDef = {
-  method?: HTTPMethod;
-  paths: string[];
-  params: Record<string, Parser>;
-  queries: Record<string, Parser>;
-  dataTypes: DataTypes;
-  iBody?: Parser;
-  oBody?: Parser;
-
-  middlewares: MiddlewareFunction<
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any
-  >[];
-  errorMiddlewares: ErrorMiddlewareFunction<any, any, any, any, any, any>[];
 };
 
 type _inferPathArray<T> = T extends `${infer P}/${infer Rest}`
@@ -300,6 +305,24 @@ export type BodyFn = {
   <As extends BodyAs>(as: As): Promise<BodyTypesMap[As]>;
 };
 
+interface RawRequest {
+  url: string;
+  method: string;
+  dataType?: string;
+  data?: any;
+  headers: Record<string, string>;
+  params: Record<string, any>;
+  queries: Record<string, any[]>;
+}
+
+interface RawResponse {
+  status?: number;
+  statusText?: string;
+  dataType?: string;
+  data?: any;
+  headers: Record<string, string>;
+}
+
 export interface Route<
   Options,
   SuccessContext,
@@ -312,32 +335,44 @@ export interface Route<
   OBody = never,
   EBody = never,
 > {
-  _def: RouteBuilderDef;
+  _schema: {
+    method?: string;
+    paths: string[];
+    params: Record<string, Parser>;
+    queries: Record<string, Parser>;
+    input?: Parser;
+    output?: Parser;
+  };
 
-  options<const DataTypes extends Record<string, string> = {}>(options?: {
+  _handle(context: {
+    request: RawRequest;
+    error?: any;
+    response?: RawResponse;
+    state?: any;
+  }): Promise<RawResponse>;
+
+  options<const DataTypes extends Record<string, string> = {}>(options: {
     dataTypes?: DataTypes;
-  }): IsNotAllowedDataTypes<DataTypes> extends true
-    ? "One or more of dataType is invalid!"
-    : Route<
-        Merge<
-          Options,
-          {
-            dataTypes: Merge<
-              DataTypes,
-              Options extends { dataTypes: any } ? Options["dataTypes"] : {}
-            >;
-          }
-        >,
-        SuccessContext,
-        ErrorContext,
-        Method,
-        Paths,
-        Params,
-        Queries,
-        IBody,
-        OBody,
-        EBody
-      >;
+  }): Route<
+    Merge<
+      Options,
+      {
+        dataTypes: Merge<
+          DataTypes,
+          Options extends { dataTypes: any } ? Options["dataTypes"] : {}
+        >;
+      }
+    >,
+    SuccessContext,
+    ErrorContext,
+    Method,
+    Paths,
+    Params,
+    Queries,
+    IBody,
+    OBody,
+    EBody
+  >;
 
   path<const T extends string>(
     path: T,
@@ -467,7 +502,7 @@ export interface Route<
   >;
 
   input<P extends Parser>(
-    parser?: P,
+    parser: P,
   ): Route<
     Options,
     SuccessContext,
