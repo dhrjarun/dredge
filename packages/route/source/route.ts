@@ -1,5 +1,27 @@
 import { DataTypes, trimSlashes } from "dredge-common";
-import type { AnyRoute, RouteBuilderDef, Route } from "dredge-types";
+import type { AnyRoute, Route, Parser } from "dredge-types";
+import {
+  validateInput,
+  validateOutput,
+  validateParams,
+  validateQueries,
+} from "./validate";
+import { composeMiddlewares } from "./compose";
+import { RawResponse } from "./response";
+import { RawRequest } from "./request";
+
+export type RouteBuilderDef = {
+  method?: string;
+  paths: string[];
+  params: Record<string, Parser>;
+  queries: Record<string, Parser>;
+  dataTypes: DataTypes;
+  input?: Parser;
+  output?: Parser;
+
+  middlewares: Function[];
+  errorMiddlewares: Function[];
+};
 
 export function dredgeRoute<Context extends Record<string, any> = {}>() {
   return createRouteBuilder() as Route<
@@ -18,7 +40,9 @@ export function dredgeRoute<Context extends Record<string, any> = {}>() {
   >;
 }
 
-export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
+export function createRouteBuilder(
+  initDef: Partial<RouteBuilderDef> = {},
+): AnyRoute {
   const {
     method,
     middlewares = [],
@@ -41,10 +65,89 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
     ...rest,
   };
 
-  const builder = {
-    _def,
+  async function validateRequest(rawRequest: RawRequest) {
+    const validateRequest = { ...rawRequest };
 
-    options: (options = {}) => {
+    validateRequest.params = await validateParams(
+      _def.params,
+      validateRequest.params,
+    );
+    validateRequest.queries = await validateQueries(
+      _def.queries,
+      validateRequest.queries,
+    );
+    validateRequest.data = await validateInput(
+      _def.input!!,
+      validateRequest.data,
+    );
+
+    return validateRequest;
+  }
+
+  const builder: AnyRoute = {
+    async _handle(rawcontext) {
+      const defaultResponse: RawResponse = {
+        headers: {},
+      };
+      try {
+        if (rawcontext.error !== undefined) {
+          throw rawcontext.error;
+        }
+
+        const validatedRequest = await validateRequest(rawcontext.request);
+
+        const successFn = composeMiddlewares(_def.middlewares);
+        const successContext = {
+          state: {
+            ...rawcontext.state,
+          },
+          response: rawcontext.response || defaultResponse,
+          request: validatedRequest,
+          dataTypes: _def.dataTypes,
+        };
+        await successFn(successContext, () => {});
+
+        const validatedResponse = {
+          ...successContext.response,
+        };
+
+        validatedResponse.data = await validateOutput(
+          _def.output!,
+          successContext.response.data,
+        );
+        return validatedResponse;
+      } catch (error) {
+        const errorFn = composeMiddlewares(_def.errorMiddlewares);
+        const errorContext = {
+          request: rawcontext.request,
+          response: rawcontext.response || defaultResponse,
+          state: {
+            ...rawcontext.state,
+          },
+          dataTypes: _def.dataTypes,
+          error,
+        };
+        await errorFn(errorContext, () => {});
+        return errorContext.response;
+      }
+    },
+
+    get _schema() {
+      return {
+        method: _def.method,
+        paths: [..._def.paths],
+        params: {
+          ..._def.params,
+        },
+        queries: {
+          ..._def.queries,
+        },
+        input: _def.input,
+        output: _def.output,
+      };
+    },
+
+    options(options) {
       const _dataTypes = _def.dataTypes.toRecord();
       const { dataTypes = {} } = options;
 
@@ -59,7 +162,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    path: (path) => {
+    path(path: string) {
       const _paths = _def.paths;
       const paths = trimSlashes(path).split("/");
 
@@ -94,7 +197,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    params: (params) => {
+    params(params: Record<string, Parser>) {
       const _params = _def.params;
       const _paths = _def.paths;
 
@@ -117,7 +220,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    queries: (queries) => {
+    queries(queries: Record<string, Parser>) {
       const _queries = _def.queries;
 
       // check if it already defined
@@ -136,7 +239,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    use: (cb) => {
+    use(cb: Function) {
       const middlewares = [..._def.middlewares];
       middlewares.push(cb);
       return createRouteBuilder({
@@ -145,7 +248,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    error(cb) {
+    error(cb: Function) {
       const errorMiddlewares = [..._def.errorMiddlewares];
       errorMiddlewares.push(cb);
       return createRouteBuilder({
@@ -154,7 +257,7 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    method: (method) => {
+    method(method: string) {
       const _method = _def.method;
 
       if (_method) {
@@ -167,42 +270,51 @@ export function createRouteBuilder(initDef: Partial<RouteBuilderDef> = {}) {
       });
     },
 
-    input(parser) {
-      const _parser = _def.iBody;
+    get() {
+      return this.method("get");
+    },
+    post() {
+      return this.method("post");
+    },
+    put() {
+      return this.method("put");
+    },
+    delete() {
+      return this.method("delete");
+    },
+    patch() {
+      return this.method("patch");
+    },
+    head() {
+      return this.method("head");
+    },
+
+    input(parser: Parser) {
+      const _parser = _def.input;
 
       if (_parser) {
         throw "Request data schema is already defined";
       }
 
-      if (parser) {
-        return createRouteBuilder({
-          ..._def,
-          iBody: parser,
-        });
-      }
+      return createRouteBuilder({
+        ..._def,
+        input: parser,
+      });
     },
 
-    output(parser) {
-      const _parser = _def.oBody;
+    output(parser: Parser) {
+      const _parser = _def.output;
 
       if (_parser) {
         throw "Response data schema is already defined";
       }
 
-      if (parser) {
-        return createRouteBuilder({
-          ..._def,
-          oBody: parser,
-        });
-      }
+      return createRouteBuilder({
+        ..._def,
+        output: parser,
+      });
     },
-  } as AnyRoute;
-
-  const aliases = ["get", "post", "put", "delete", "patch", "head"] as const;
-  for (const item of aliases) {
-    const fn = () => builder.method(item) as any;
-    builder[item] = fn;
-  }
+  };
 
   return builder;
 }

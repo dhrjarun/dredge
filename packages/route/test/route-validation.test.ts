@@ -1,102 +1,100 @@
 import { expect, test } from "vitest";
 import z from "zod";
-import { dredgeRoute } from "../source/route";
-import { useValidate } from "../source/route-invocation";
+import {
+  validateParams,
+  validateQueries,
+  validateInput,
+  validateOutput,
+} from "../source/validate";
 
-test("simple validation", async () => {
-  const route = dredgeRoute()
-    .path("/a/:string/:number/:boolean")
-    .params({
-      string: z.string(),
-      number: z.number(),
-      boolean: z.boolean(),
-    })
-    .queries({
-      sstring: z.string(),
-      snumber: z.number(),
-      sboolean: z.boolean(),
-    })
-    .post()
-    .input(z.enum(["a", "b", "c"]));
+test("validateParams", () => {
+  const schema = {
+    string: z.string(),
+    number: z.number(),
+    boolean: z.boolean(),
+  };
 
-  const validated = await useValidate(route)({
-    method: "POST",
-    url: "",
-    queries: {
-      sstring: ["world"],
-      snumber: [2],
-      sboolean: [false],
-    },
-    data: "a",
-    params: {
+  expect(
+    validateParams(schema, {
       string: "hello",
       number: 1,
       boolean: true,
-    },
-    headers: {},
-  });
-
-  expect(validated.params).toStrictEqual({
+    }),
+  ).resolves.toStrictEqual({
     string: "hello",
     number: 1,
     boolean: true,
   });
+});
 
-  expect(validated.queries).toStrictEqual({
-    sstring: ["world"],
-    snumber: [2],
-    sboolean: [false],
+test("validateQueries", () => {
+  const schema = {
+    string: z.string(),
+    number: z.number(),
+    boolean: z.boolean(),
+  };
+
+  expect(
+    validateQueries(schema, {
+      string: ["hello"],
+      number: [1],
+      boolean: [true],
+    }),
+  ).resolves.toStrictEqual({
+    string: ["hello"],
+    number: [1],
+    boolean: [true],
   });
 });
 
+test("validateInput", () => {
+  const schema = z.enum(["a", "b", "c"]);
+
+  expect(validateInput(schema, "a")).resolves.toBe("a");
+  expect(validateInput(schema, "b")).resolves.toBe("b");
+  expect(validateInput(schema, "c")).resolves.toBe("c");
+
+  expect(validateInput(schema, "d")).rejects.toThrowError();
+});
+
+test("validateOutput", () => {
+  const schema = z.enum(["a", "b", "c"]);
+
+  expect(validateOutput(schema, "a")).resolves.toBe("a");
+  expect(validateOutput(schema, "b")).resolves.toBe("b");
+  expect(validateOutput(schema, "c")).resolves.toBe("c");
+
+  expect(validateOutput(schema, "d")).rejects.toThrowError();
+});
+
 test("optional searchParam should work", async () => {
-  const route = dredgeRoute()
-    .path("/test")
-    .queries({
-      required: z.string(),
-      optional: z.string().optional(),
-    })
-    .get();
+  const schema = {
+    required: z.string(),
+    optional: z.string().optional(),
+  };
 
   expect(
-    useValidate(route)({
-      method: "GET",
-      url: "/test?required=i am required",
-      queries: {
-        required: ["i am required"],
-      },
-      params: {},
-      headers: {},
+    validateQueries(schema, {
+      required: ["i am required"],
     }),
   ).resolves.toMatchObject({
-    queries: {
-      required: ["i am required"],
-    },
+    required: ["i am required"],
   });
 });
 
 test("unSpecified searchParam should work", async () => {
-  const route = dredgeRoute()
-    .path("/test")
-    .queries({
-      i: z.number(),
-      o: z.string().optional(),
-    })
-    .get();
+  const schema = {
+    i: z.number(),
+    o: z.string().optional(),
+  };
 
-  const validated = await useValidate(route)({
-    method: "GET",
-    url: "/test",
-    queries: {
-      i: [1],
-      a: ["apple"],
-      b: ["ball"],
-    },
-    params: {},
-    headers: {},
+  const validated = await validateQueries(schema, {
+    i: [1],
+    a: ["apple"],
+    b: ["ball"],
   });
 
-  expect(validated.queries).toStrictEqual({
+  expect(validated).toStrictEqual({
     i: [1],
     a: ["apple"],
     b: ["ball"],
