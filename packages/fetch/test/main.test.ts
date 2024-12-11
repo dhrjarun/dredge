@@ -21,10 +21,8 @@ const route = dredgeRoute()
       text: "text/plain",
     },
   })
-  .error((_error, _req, res) => {
-    return res.up({
-      status: 400,
-    });
+  .error((d) => {
+    d.status(400);
   });
 
 const birds = [
@@ -80,54 +78,42 @@ const events = [
 
 function findEvent(date: string | Date) {
   let d = date instanceof Date ? date.toISOString().split("T")[0] : date;
-  return events.find((event) => event.date === d);
+  return events.find((event) => event.date === d)!;
 }
 
 function findBird(name: string) {
-  return birds.find((bird) => bird.name.toLowerCase() === name.toLowerCase());
+  return birds.find((bird) => bird.name.toLowerCase() === name.toLowerCase())!;
 }
 
 const GetBirds = route
   .path("/birds")
   .get()
-  .use((_req, res) => {
-    return res.up({
-      status: 200,
-      json: birds,
-    });
+  .use((d) => {
+    return d.status(200).json(birds);
   });
 
 const GetBirdByName = route
   .path("/birds/:name")
   .get()
-  .use((req, res) => {
-    return res.up({
-      status: 200,
-      json: findBird(req.param("name")),
-    });
+  .use((d, { req }) => {
+    return d.status(200).json(findBird(req.param("name")));
   });
 
 const PostBird = route
   .path("/birds")
   .post()
   .input(z.object({ name: z.string(), color: z.string() }))
-  .use((_req, res) => {
-    return res.up({
-      status: 200,
-      json: {
-        created: true,
-      },
+  .use((d) => {
+    return d.status(200).json({
+      created: true,
     });
   });
 
 const GetBirdColors = route
   .path("/birds/colors")
   .get()
-  .use((_req, res) => {
-    return res.up({
-      status: 200,
-      json: birds.map((bird) => bird.color),
-    });
+  .use((d) => {
+    return d.status(200).json(birds.map((bird) => bird.color));
   });
 
 const GetEventByDate = route
@@ -136,32 +122,23 @@ const GetEventByDate = route
     date: z.date(),
   })
   .get()
-  .use((req, res) => {
-    return res.up({
-      status: 200,
-      json: findEvent(req.param("date")),
-    });
+  .use((d, { req }) => {
+    return d.status(200).json(findEvent(req.param("date")));
   });
 
 const DeleteFruitByName = route
   .path("/fruits/:name")
   .delete()
-  .use((_req, res) => {
-    return res.up({
-      status: 200,
-      json: {
-        isDeleted: true,
-      },
+  .use((d) => {
+    return d.status(200).json({
+      isDeleted: true,
     });
   });
 
 const GetFreshFruits = route
   .path("/fruits/fresh")
-  .use((_req, res) => {
-    return res.up({
-      status: 200,
-      json: fruits.filter((fruit) => fruit.isFresh),
-    });
+  .use((d) => {
+    return d.status(200).json(fruits.filter((fruit) => fruit.isFresh));
   })
   .get();
 
@@ -175,11 +152,8 @@ const router = dredgeRouter([
   GetFreshFruits,
 ]);
 
-type RootRouter = typeof router;
-
 let server = createHTTPServer({
   router,
-  ctx: {},
 });
 
 let client = dredgeFetch<typeof router>().extends({
@@ -211,7 +185,7 @@ let client = dredgeFetch<typeof router>().extends({
 });
 
 beforeEach(async () => {
-  await server.listen();
+  server.listen();
 
   client = client.extends({
     prefixUrl: `http://localhost:${(server.address() as any)?.port}`,
@@ -219,7 +193,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await server.close();
+  server.close();
 });
 
 test("client.get /birds", async () => {

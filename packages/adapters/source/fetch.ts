@@ -9,13 +9,7 @@ import {
   searchParamsToObject,
   trimSlashes,
 } from "dredge-common";
-import {
-  DredgeRequest,
-  getPathParams,
-  useErrorMiddlewares,
-  useSuccessMiddlewares,
-  useValidate,
-} from "dredge-route";
+import { RawRequest, getPathParams } from "dredge-route";
 import type { DredgeRouter } from "dredge-types";
 import { MaybePromise } from "dredge-types";
 import { ReadableStream } from "stream/web";
@@ -37,9 +31,9 @@ type DataSerializerFunction = (options: {
   string | ReadableStream<Uint8Array> | ArrayBuffer | Blob | FormData
 >;
 
-export interface CreateFetchRequestHandlerOptions<Context extends object> {
+export interface CreateFetchRequestHandlerOptions<State extends object> {
   router: DredgeRouter;
-  ctx?: Context;
+  state?: State;
   prefixUrl?: string;
   bodyParsers?: {
     [key: string]: BodyParserFunction;
@@ -62,7 +56,7 @@ export function createFetchRequestHandler<Context extends object = {}>(
 ) {
   const {
     router,
-    ctx = {},
+    state = {},
     prefixUrl,
     deserializeParams = defaultDeserializeParams,
     deserializeQueries = defaultDeserializeQueries,
@@ -96,16 +90,16 @@ export function createFetchRequestHandler<Context extends object = {}>(
       });
     }
 
-    const routeDef = route._def;
+    const schema = route._schema;
 
     const headers = Object.fromEntries(req.headers);
-    const params = getPathParams(route._def.paths)(pathArray);
+    const params = getPathParams(schema.paths)(pathArray);
     const queries = searchParamsToObject(url.search);
 
-    const parsedParams = deserializeParams(params, routeDef.params);
-    const parsedQueries = deserializeQueries(queries, routeDef.queries);
+    const parsedParams = deserializeParams(params, schema.params);
+    const parsedQueries = deserializeQueries(queries, schema.queries);
 
-    const middlewareRequest: DredgeRequest = {
+    const middlewareRequest: RawRequest = {
       url: url.href,
       method: req.method || "get",
       headers,
@@ -129,15 +123,10 @@ export function createFetchRequestHandler<Context extends object = {}>(
     }
 
     try {
-      const validatedRequest = await useValidate(route)(middlewareRequest);
-      const middlewareResponse = await useSuccessMiddlewares(route)(
-        validatedRequest,
-        {
-          headers: {},
-          ctx,
-        },
-      );
-
+      const middlewareResponse = await route._handle({
+        request: middlewareRequest,
+        state,
+      });
       let body: any = null;
       const dataSerializeOptions = {
         data: middlewareResponse.data,
@@ -160,35 +149,10 @@ export function createFetchRequestHandler<Context extends object = {}>(
         headers: middlewareResponse.headers,
       });
     } catch (error) {
-      const middlewareResponse = await useErrorMiddlewares(route)(
-        error,
-        middlewareRequest,
-        {
-          headers: {},
-          ctx,
-        },
-      );
-
-      let body: any = null;
-      const dataSerializeOptions = {
-        data: middlewareResponse.data,
-        contentType: middlewareResponse.headers["content-type"],
-      };
-
-      const dataSerializer = dataSerializers.get(
-        dataSerializeOptions.contentType || "",
-      );
-      if (dataSerializer) {
-        body = await dataSerializer(dataSerializeOptions as any);
-      }
-
-      middlewareRequest.headers["content-type"] =
-        dataSerializeOptions.contentType ?? "";
-
-      return new Response(body, {
-        headers: middlewareRequest.headers,
-        status: middlewareResponse.status,
-        statusText: middlewareResponse.statusText,
+      return new Response("Something went wrong", {
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: {},
       });
     }
   };
