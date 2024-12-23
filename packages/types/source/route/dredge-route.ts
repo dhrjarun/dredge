@@ -1,5 +1,5 @@
-import type { Readable } from "stream";
 import type { ReadableStream } from "stream/web";
+import type { Readable } from "stream";
 import { Parser, ParserWithoutInput, inferParserType } from "../parser";
 import {
   IsAny,
@@ -150,11 +150,6 @@ export type MiddlewareFunction<
   NewOData,
 > = {
   (
-    d: RouteD<
-      DataType extends string ? DataType : never,
-      Context,
-      IsNever<OData> extends true ? any : OData
-    >,
     c: MiddlewareContext<
       DataType,
       Context,
@@ -162,6 +157,11 @@ export type MiddlewareFunction<
       Params,
       Queries,
       IsNever<IData> extends true ? any : IData
+    >,
+    d: RouteD<
+      DataType extends string ? DataType : never,
+      Context,
+      IsNever<OData> extends true ? any : OData
     >,
   ): MaybePromise<RouteD<
     DataType extends string ? DataType : never,
@@ -179,11 +179,6 @@ export type ErrorMiddlewareFunction<
   NewEData,
 > = {
   (
-    d: RouteD<
-      DataType extends string ? DataType : never,
-      Context,
-      IsNever<EData> extends true ? any : EData
-    >,
     c: MiddlewareContext<
       DataType extends string ? DataType : never,
       Context,
@@ -191,6 +186,11 @@ export type ErrorMiddlewareFunction<
       Record<string, string>,
       Record<string, any>,
       any
+    >,
+    d: RouteD<
+      DataType extends string ? DataType : never,
+      Context,
+      IsNever<EData> extends true ? any : EData
     >,
   ): MaybePromise<RouteD<
     DataType extends string ? DataType : never,

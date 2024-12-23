@@ -21,7 +21,7 @@ const route = dredgeRoute()
       text: "text/plain",
     },
   })
-  .error((d) => {
+  .error((_, d) => {
     d.status(400);
   });
 
@@ -88,14 +88,14 @@ function findBird(name: string) {
 const GetBirds = route
   .path("/birds")
   .get()
-  .use((d) => {
+  .use((_, d) => {
     return d.status(200).json(birds);
   });
 
 const GetBirdByName = route
   .path("/birds/:name")
   .get()
-  .use((d, { req }) => {
+  .use(({ req }, d) => {
     return d.status(200).json(findBird(req.param("name")));
   });
 
@@ -103,7 +103,7 @@ const PostBird = route
   .path("/birds")
   .post()
   .input(z.object({ name: z.string(), color: z.string() }))
-  .use((d) => {
+  .use((_, d) => {
     return d.status(200).json({
       created: true,
     });
@@ -112,7 +112,7 @@ const PostBird = route
 const GetBirdColors = route
   .path("/birds/colors")
   .get()
-  .use((d) => {
+  .use((_, d) => {
     return d.status(200).json(birds.map((bird) => bird.color));
   });
 
@@ -122,14 +122,14 @@ const GetEventByDate = route
     date: z.date(),
   })
   .get()
-  .use((d, { req }) => {
+  .use(({ req }, d) => {
     return d.status(200).json(findEvent(req.param("date")));
   });
 
 const DeleteFruitByName = route
   .path("/fruits/:name")
   .delete()
-  .use((d) => {
+  .use((_, d) => {
     return d.status(200).json({
       isDeleted: true,
     });
@@ -137,7 +137,7 @@ const DeleteFruitByName = route
 
 const GetFreshFruits = route
   .path("/fruits/fresh")
-  .use((d) => {
+  .use((_, d) => {
     return d.status(200).json(fruits.filter((fruit) => fruit.isFresh));
   })
   .get();
