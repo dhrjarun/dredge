@@ -12,8 +12,25 @@ import {
 import { HTTPMethod } from "./http";
 
 export type RouteD<DataType extends string, Context, Data> = {
+  res<D extends Data>(resUpdate: {
+    status?: number;
+    statusText?: string;
+    data?: D;
+    dataType?: DataType;
+    headers?: Record<string, string | null>;
+  }): RouteD<DataType, Context, Data>;
+  req(reqUpdate: {
+    url?: string;
+    method?: string;
+    dataType?: string;
+    data?: any;
+    params?: Record<string, any>;
+    queries?: Record<string, any[]>;
+    headers?: Record<string, string | null>;
+  }): RouteD<DataType, Context, Data>;
   status(number: number, text?: string): RouteD<DataType, Context, Data>;
   data<D extends Data>(data: D): RouteD<DataType, Context, D>;
+  dataType(type: DataType): RouteD<DataType, Context, Data>;
   state<State extends Record<string, any>>(
     state: State,
   ): RouteD<DataType, Overwrite<Context, State>, Data>;
