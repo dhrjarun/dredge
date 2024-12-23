@@ -45,7 +45,7 @@ describe.each(servers)(
           route
             .path("/success")
             .post()
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               return d.status(200).json({
                 ...req.data,
               });
@@ -57,7 +57,7 @@ describe.each(servers)(
             .use(() => {
               throw "error";
             })
-            .error((d, { req }) => {
+            .error(({ req }, d) => {
               return d.status(500).json({
                 ...req.data,
               });
@@ -102,7 +102,7 @@ describe.each(servers)(
             .path("/success")
             .post()
             .input(z.string())
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               return d.status(200).text(req.data);
             }),
 
@@ -113,7 +113,7 @@ describe.each(servers)(
             .use(() => {
               throw "error";
             })
-            .error((d, { req }) => {
+            .error(({ req }, d) => {
               return d.status(500).text(req.data);
             }),
         ]),
@@ -162,7 +162,7 @@ describe.each(servers)(
             })
             .path("/fruits")
             .get()
-            .use((d) => {
+            .use((_, d) => {
               return d.json(data);
             }),
         ]),
@@ -185,7 +185,7 @@ describe.each(servers)(
           dredgeRoute()
             .path("/test-I")
             .get()
-            .use((d) => {
+            .use((_, d) => {
               d.status(200);
             }),
         ]),
@@ -205,7 +205,7 @@ describe.each(servers)(
           route
             .path("/test/:param")
             .get()
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               d.status(200).json(req.param());
             }),
         ]),
@@ -253,7 +253,7 @@ describe.each(servers)(
               b: z.string(),
             })
             .get()
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               d.status(200).json({
                 single: req.query(),
                 multiple: req.queries(),
@@ -309,7 +309,7 @@ describe.each(servers)(
               .path("/test")
               .input(z.any())
               .post()
-              .use((d, { req }) => {
+              .use(({ req }, d) => {
                 d.status(200).text(req.data);
               }),
           ]),
@@ -386,7 +386,7 @@ describe.each(servers)(
               .path("/test")
               .input(z.any())
               .post()
-              .use((d, { req }) => {
+              .use(({ req }, d) => {
                 d.status(200).text(req.data);
               }),
           ]),
@@ -426,7 +426,7 @@ describe.each(servers)(
               .path("/test")
               .post()
               .input(z.string())
-              .use((d, { req }) => {
+              .use(({ req }, d) => {
                 d.status(200)
                   .header(
                     "Content-Type",
@@ -514,7 +514,7 @@ describe.each(servers)(
               .path("/test")
               .post()
               .input(z.string())
-              .use((d, { req }) => {
+              .use(({ req }, d) => {
                 d.status(200)
                   .header(
                     "Content-Type",
@@ -557,14 +557,14 @@ describe.each(servers)(
         route
           .path("/test")
           .get()
-          .use((d, { req }) => {
+          .use(({ req }, d) => {
             const url = new URL(req.url, "relative:///");
             return d.status(200).text(url.pathname);
           }),
         route
           .path("/test")
           .post()
-          .use((d, { req }) => {
+          .use(({ req }, d) => {
             const url = new URL(req.url, "relative:///");
             return d.status(200).text(url.pathname);
           }),
@@ -614,7 +614,7 @@ describe.each(servers)(
               boolean: z.boolean(),
             })
             .get()
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               d.status(200).json(req.param());
             }),
         ]),
@@ -644,7 +644,7 @@ describe.each(servers)(
               date: z.date(),
             })
             .get()
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               d.status(200).json({
                 single: {
                   ...req.query(),
@@ -690,10 +690,10 @@ describe.each(servers)(
               boolean: z.boolean().optional(),
             })
             .get()
-            .use((d) => {
+            .use((_, d) => {
               d.status(200);
             })
-            .error((d) => {
+            .error((_, d) => {
               d.status(400);
             }),
         ]),
@@ -731,14 +731,14 @@ describe.each(servers)(
             .path("/test")
             .post()
             .input(z.any())
-            .use((d, { req }) => {
+            .use(({ req }, d) => {
               d.header({
                 "x-had-req-data": req.data ? "true" : "false",
               })
                 .status(200)
                 .data("test");
             })
-            .error((d) => {
+            .error((_, d) => {
               d.status(500);
             }),
         ]),

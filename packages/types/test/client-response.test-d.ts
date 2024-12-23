@@ -81,7 +81,7 @@ test("infers `any` when route never return res.up() or pass data to it", async (
     r
       .path("/up-returned")
       .get()
-      .use((d) => {
+      .use((_, d) => {
         return d.status(200);
       }),
     r
@@ -111,21 +111,21 @@ test("infers based on schema passed to `r.output()`", async () => {
       .path("/string")
       .get()
       .output(z.string())
-      .use((d) => {
+      .use((_, d) => {
         return d.data("a");
       }),
     r
       .path("/number")
       .get()
       .output(z.number())
-      .use((d) => {
+      .use((_, d) => {
         return d.data(1);
       }),
     r
       .path("/boolean")
       .get()
       .output(z.boolean())
-      .use((d) => {
+      .use((_, d) => {
         return d.data(true);
       }),
   ]);
@@ -154,19 +154,19 @@ test("infers type passed to `res.up( { data: ... } )` for the first time", async
     dredgeRoute()
       .path("/string")
       .get()
-      .use((d) => {
+      .use((_, d) => {
         return d.data("a");
       }),
     dredgeRoute()
       .path("/number")
       .get()
-      .use((d) => {
+      .use((_, d) => {
         return d.data(1);
       }),
     dredgeRoute()
       .path("/boolean")
       .get()
-      .use((d) => {
+      .use((_, d) => {
         return d.data(true);
       }),
   ]);

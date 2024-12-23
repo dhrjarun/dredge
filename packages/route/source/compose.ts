@@ -25,7 +25,7 @@ export function composeMiddlewares(middlewares: any) {
       try {
         const d = new D(context, dispatch.bind(null, index + 1));
         const c = new Context(context);
-        return Promise.resolve(fn(d, c));
+        return Promise.resolve(fn(c, d));
       } catch (err) {
         return Promise.reject(err);
       }
