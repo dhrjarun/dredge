@@ -4,11 +4,13 @@ import { RawContext } from "./context";
 export class D {
   #context: RawContext;
   #response: RawContext["response"];
+  #request: RawContext["request"];
   #next: Function;
 
   constructor(context: RawContext, next: Function) {
     this.#context = context;
     this.#response = this.#context.response;
+    this.#request = this.#context.request;
     this.#next = next;
 
     for (const item of this.#context.dataTypes.keys()) {
@@ -35,6 +37,71 @@ export class D {
         this.#context.request.dataType = dataType;
       }
     }
+  }
+
+  req(reqUpdate: {
+    url?: string;
+    method?: string;
+    dataType?: string;
+    data?: any;
+    params?: Record<string, any>;
+    queries?: Record<string, any[]>;
+    headers?: Record<string, string | null>;
+  }) {
+    const {
+      url = this.#request.url,
+      method = this.#request.method,
+      dataType = this.#request.dataType,
+      data = this.#request.data,
+      params = {},
+      queries = {},
+      headers = {},
+    } = reqUpdate;
+
+    this.#request.url = url;
+    this.#request.method = method;
+    this.#request.dataType = dataType;
+    this.#request.data = data;
+    this.#request.params = {
+      ...this.#request.params,
+      ...params,
+    };
+    this.#request.queries = {
+      ...this.#request.queries,
+      ...queries,
+    };
+    this.#request.headers = mergeDredgeHeaders(this.#request.headers, headers);
+    return this;
+  }
+
+  res<D extends any>(resUpdate: {
+    status?: number;
+    statusText?: string;
+    data?: D;
+    dataType?: string;
+    headers?: Record<string, string | null>;
+  }) {
+    const {
+      status = this.#response.status,
+      statusText = this.#response.statusText,
+      data = this.#response.data,
+      dataType = this.#response.dataType,
+      headers = {},
+    } = resUpdate;
+
+    this.#response.status = status;
+    this.#response.statusText = statusText;
+    this.#response.data = data;
+    this.#response.headers = mergeDredgeHeaders(
+      this.#response.headers,
+      headers,
+    );
+
+    if (dataType) {
+      this.dataType(dataType);
+    }
+
+    return this;
   }
 
   status(status: number, statusText: string) {

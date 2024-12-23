@@ -13,7 +13,105 @@ test("updates options.status", () => {
   expect(context.response.statusText).toBe("OK");
 });
 
-test("updates options.data", () => {
+test("update ctx.request", () => {
+  const context = createRawContext({});
+
+  const d = new D(context, () => {});
+
+  let update = {
+    url: "https://google.com",
+    method: "get",
+    dataType: "json",
+    data: {
+      hello: "world",
+    },
+    params: {
+      a: "b",
+    },
+    queries: {
+      c: ["d", "e"],
+    },
+    headers: {
+      "content-type": "application/json",
+      "x-custom-header": "custom-value",
+    },
+  };
+  d.req(update);
+
+  expect(context.request).toStrictEqual(update);
+  d.req({
+    params: {
+      a: "c",
+      b: "d",
+    },
+    queries: {
+      c: ["m"],
+      m: ["n"],
+    },
+    headers: {
+      "x-custom-header": null,
+      "content-type": "text/plain",
+    },
+  });
+
+  expect(context.request).toStrictEqual({
+    ...update,
+    params: {
+      a: "c",
+      b: "d",
+    },
+    queries: {
+      c: ["m"],
+      m: ["n"],
+    },
+    headers: {
+      "content-type": "text/plain",
+    },
+  });
+});
+
+test("update ctx.response", () => {
+  const context = createRawContext({
+    dataTypes: new DataTypes({
+      text: "text/plain;charset=utf-8",
+      form: "multipart/form-data",
+    }),
+  });
+
+  const d = new D(context, () => {});
+
+  const update = {
+    status: 200,
+    statusText: "OK",
+    data: "hello",
+    dataType: "text",
+    headers: {
+      "x-custom-header": "custom-value",
+    },
+  };
+  d.res(update);
+  expect(context.response).toStrictEqual({
+    ...update,
+    headers: {
+      ...update.headers,
+      "content-type": "text/plain;charset=utf-8",
+    },
+  });
+
+  d.res({
+    headers: {
+      "x-custom-header": null,
+    },
+  });
+  expect(context.response).toStrictEqual({
+    ...update,
+    headers: {
+      "content-type": "text/plain;charset=utf-8",
+    },
+  });
+});
+
+test("updates response.data", () => {
   const context = createRawContext({});
   const d = new D(context, () => {});
 
