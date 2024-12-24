@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { serializeParams, serializeQueries } from "../source/serialize-params";
+import { serializeParams } from "../source/serialize-params";
 
 test("serializeQueries", () => {
   const queries = {
@@ -9,7 +9,7 @@ test("serializeQueries", () => {
     d: ["apple"],
   };
 
-  const result = serializeQueries(queries);
+  const result = serializeParams(queries);
 
   expect(result).toStrictEqual({
     a: ["1", "2", "3"],

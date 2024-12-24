@@ -64,6 +64,58 @@ describe("context.req", () => {
     });
   });
 
+  test("param()", () => {
+    const context = createRawContext({
+      request: {
+        params: {
+          ":a": "apple",
+          "?b": ["ball", "bat"],
+          "?c": ["cat", "dog"],
+          ":d": "donkey",
+        },
+      },
+    });
+    const c = new Context(context);
+
+    expect(c.req.param()).toStrictEqual({
+      a: "apple",
+      b: "ball",
+      c: "cat",
+      d: "donkey",
+    });
+
+    expect(c.req.param("a")).toBe("apple");
+    expect(c.req.param("b")).toStrictEqual("ball");
+    expect(c.req.param("c")).toStrictEqual("cat");
+    expect(c.req.param("d")).toBe("donkey");
+  });
+
+  test("params()", () => {
+    const context = createRawContext({
+      request: {
+        params: {
+          ":a": "apple",
+          "?b": ["ball", "bat"],
+          "?c": ["cat", "dog"],
+          ":d": "donkey",
+        },
+      },
+    });
+    const c = new Context(context);
+
+    expect(c.req.params()).toStrictEqual({
+      a: ["apple"],
+      b: ["ball", "bat"],
+      c: ["cat", "dog"],
+      d: ["donkey"],
+    });
+
+    expect(c.req.params("a")).toStrictEqual(["apple"]);
+    expect(c.req.params("b")).toStrictEqual(["ball", "bat"]);
+    expect(c.req.params("c")).toStrictEqual(["cat", "dog"]);
+    expect(c.req.params("d")).toStrictEqual(["donkey"]);
+  });
+
   test("header()", () => {
     const context = createRawContext({
       request: {

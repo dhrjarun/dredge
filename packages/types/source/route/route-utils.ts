@@ -1,5 +1,5 @@
 import { Parser } from "../parser";
-import { AnyRouteOptions, Route } from "./dredge-route";
+import { Route } from "./dredge-route";
 import { HTTPMethod } from "./http";
 import {
   inferParamPathString,
@@ -19,7 +19,6 @@ export type ExtractRouteBy<
   infer M,
   infer PathArray,
   infer Params extends Record<string, Parser>,
-  any,
   any,
   any,
   any
@@ -47,7 +46,6 @@ export type ExtractFirstRouteBy<
   infer Params extends Record<string, Parser>,
   any,
   any,
-  any,
   any
 >
   ? Method extends M
@@ -70,7 +68,6 @@ export type ExtractSecondRouteBy<R, Method, Path> = R extends Route<
   infer M,
   infer PathArray,
   infer Params extends Record<string, Parser>,
-  any,
   null,
   any,
   any
@@ -93,7 +90,6 @@ export type ExcludeRoute<T, U> = T extends Route<
   infer M,
   infer PA extends string[],
   any,
-  any,
   null,
   any,
   any
@@ -113,7 +109,6 @@ export type ExtractRoute<T, U> = T extends Route<
   any,
   infer M,
   infer PA extends string[],
-  any,
   any,
   null,
   any,

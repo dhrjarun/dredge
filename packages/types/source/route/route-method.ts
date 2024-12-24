@@ -10,7 +10,6 @@ export type inferRouteMethod<R> = R extends Route<
   any,
   any,
   any,
-  any,
   any
 >
   ? Method

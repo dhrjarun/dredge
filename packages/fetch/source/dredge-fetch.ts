@@ -3,16 +3,13 @@ import {
   defaultJSONBodyParser,
   defaultJsonDataSerializer,
   serializeParams as defaultSerializeParams,
-  serializeQueries as defaultSerializeQueries,
   defaultTextBodyParser,
   defaultTextDataSerializer,
-  getSimplePath,
   mergeHeaders,
-  normalizeSearchParamObject,
-  trimSlashes,
   parseContentType,
   DataTypes,
-  objectToSearchParams,
+  createURL,
+  objectToDredgeParams,
 } from "dredge-common";
 import { HTTPError } from "./errors/HTTPError";
 import { AnyDredgeFetchClient, DredgeFetchClient } from "./types/client";
@@ -50,21 +47,14 @@ export function untypedDredgeFetch(
   const client: any = (path: string, options: FetchOptions = {}) => {
     const extendedOptions = mergeDefaultOptions(defaultOptions, options);
 
-    const normalizedQueries = normalizeSearchParamObject(
-      options?.queries || {},
-    );
-    const serializedParams = extendedOptions.serializeParams(
-      options?.params || {},
-    );
-    const serializedQueries =
-      extendedOptions.serializeQueries(normalizedQueries);
+    const params = objectToDredgeParams(path, options?.params || {});
+    const serializedParams = extendedOptions.serializeParams(params);
 
     const _options = {
       ...options,
       ...extendedOptions,
-      path: getSimplePath(path, serializedParams),
+      path,
       params: options?.params || {},
-      queries: normalizedQueries,
     } as unknown as NormalizedFetchOptions;
 
     for (const item of Object.keys(_options.dataTypes)) {
@@ -84,7 +74,7 @@ export function untypedDredgeFetch(
       const url = createURL({
         prefixUrl: _options.prefixUrl,
         path: _options.path,
-        queries: serializedQueries,
+        params: serializedParams,
       });
 
       let body: any = null;
@@ -268,28 +258,6 @@ export function untypedDredgeFetch(
   return client;
 }
 
-function createURL(options: {
-  prefixUrl: string;
-  path: string;
-  queries?: Record<string, string | string[]>;
-}) {
-  let { prefixUrl, path, queries = {} } = options;
-
-  path = trimSlashes(path);
-
-  if (!prefixUrl.endsWith("/")) {
-    prefixUrl += "/";
-  }
-
-  let search = objectToSearchParams(queries).toString();
-  let url = prefixUrl + path;
-  if (search) {
-    url += "?" + search;
-  }
-
-  return url;
-}
-
 function mergeDefaultOptions(
   defaultOptions: DefaultFetchOptions,
   options: DefaultFetchOptions,
@@ -349,10 +317,6 @@ function mergeDefaultOptions(
       options.serializeParams ||
       defaultOptions.serializeParams ||
       defaultSerializeParams,
-    serializeQueries:
-      options.serializeQueries ||
-      defaultOptions.serializeQueries ||
-      defaultSerializeQueries,
   };
 
   return newOptions;

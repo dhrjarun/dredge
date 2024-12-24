@@ -1,3 +1,5 @@
+import type { RawRequest } from "dredge-types";
+
 export class DredgeRequest {
   #request: RawRequest;
 
@@ -20,25 +22,39 @@ export class DredgeRequest {
   header(headerName?: string) {
     return headerFn(this.#request.headers)(headerName) as any;
   }
-  param(key?: string) {
-    return paramFn(this.#request.params)(key);
-  }
-  query(key?: string) {
-    return paramFn(this.#request.queries, true)(key);
-  }
-  queries(key?: string) {
-    return paramFn(this.#request.queries)(key);
-  }
-}
+  param(key?: string): any {
+    if (key) {
+      const param = this.#request.params[`:${key}`];
+      const queryParam = this.#request.params[`?${key}`]?.[0];
 
-export interface RawRequest {
-  url: string;
-  method: string;
-  dataType?: string;
-  data?: any;
-  headers: Record<string, string>;
-  params: Record<string, any>;
-  queries: Record<string, any[]>;
+      return param ?? queryParam;
+    }
+
+    const result: any = {};
+    Object.entries(this.#request.params).forEach(([key, value]) => {
+      result[key.slice(1)] = Array.isArray(value) ? value[0] : value;
+    });
+    return result;
+  }
+  params(key?: string): any[] {
+    if (key) {
+      let param = this.#request.params[`:${key}`];
+      const queryParam = this.#request.params[`?${key}`];
+
+      param = param ? [param] : [];
+      return queryParam ?? param;
+    }
+
+    const result: any = {};
+    Object.entries(this.#request.params).forEach(([key, value]) => {
+      if (key.startsWith(":")) {
+        result[key.slice(1)] = [value];
+      } else {
+        result[key.slice(1)] = value;
+      }
+    });
+    return result;
+  }
 }
 
 export function headerFn(headers: Record<string, string>) {
@@ -50,29 +66,5 @@ export function headerFn(headers: Record<string, string>) {
     }
 
     return headers;
-  };
-}
-
-function paramFn(params: Record<string, any>, onlyFirst: boolean = false) {
-  return (key?: string) => {
-    if (key) {
-      const result = params?.[key];
-
-      return onlyFirst ? result?.[0] : result;
-    }
-
-    const result = params;
-
-    if (onlyFirst) {
-      const onlyFirstResult: Record<string, any> = {};
-
-      Object.entries(result).forEach(([key, value]) => {
-        onlyFirstResult[key] = Array.isArray(value) ? value[0] : undefined;
-      });
-
-      return onlyFirstResult;
-    }
-
-    return result;
   };
 }

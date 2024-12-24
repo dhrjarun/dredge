@@ -31,16 +31,11 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "pnpm biome format ./source",
-    "lint:fix": "pnpm biome format --write ./source"
+    "lint:fix": "pnpm biome format --write ./source",
+    "bench": "./bench.sh"
   },
   "devDependencies": {
     "@types/node": "^20.12.4"
   },
-  "dependencies": {
-    "arktype": "2.0.0-rc.15",
-    "superstruct": "^2.0.2",
-    "valibot": "^0.42.1",
-    "yup": "^1.4.0",
-    "zod": "^3.22.4"
-  }
+  "dependencies": {}
 }

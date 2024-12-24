@@ -39,7 +39,7 @@ type _inferSimplePathString<
   Params extends Record<string, Parser>,
 > = Paths extends [infer First extends string, ...infer Tail extends string[]]
   ? `/${First extends `:${infer N}`
-      ? inferParamParserType<Params[N]>
+      ? inferParamParserType<Params[`:${N}`]>
       : First}${_inferSimplePathString<Tail, Params>}`
   : "";
 
@@ -61,7 +61,6 @@ export type inferRouteGenericPath<R> = R extends Route<
   any,
   any,
   any,
-  any,
   any
 >
   ? inferGenericPath<PathArray>
@@ -71,7 +70,7 @@ type _inferGenericPath<Paths> = Paths extends [
   infer First extends string,
   ...infer Tail extends string[],
 ]
-  ? `/${First extends `:${infer N}`
+  ? `/${First extends `:${any}`
       ? string | number | bigint
       : First}${_inferGenericPath<Tail>}`
   : "";
@@ -108,7 +107,6 @@ export type inferRoutePath<R> = R extends Route<
   infer Params extends Record<string, Parser>,
   any,
   any,
-  any,
   any
 >
   ? inferPathString<PathArray, Params>
@@ -123,7 +121,6 @@ export type inferRouteFirstPath<R> = R extends Route<
   any,
   infer PathArray,
   infer Params extends Record<string, Parser>,
-  any,
   any,
   any,
   any
@@ -144,7 +141,6 @@ export type inferRouteSecondPath<R> = R extends Route<
   infer Params extends Record<string, Parser>,
   any,
   any,
-  any,
   any
 >
   ? Options["withDynamicPath"] extends false
@@ -161,7 +157,6 @@ export type inferRouteSimplePath<R> = R extends Route<
   infer Params extends Record<string, Parser>,
   any,
   any,
-  any,
   any
 >
   ? inferSimplePathString<PathArray, Params>
@@ -173,7 +168,6 @@ export type inferRouteParamPath<R> = R extends Route<
   any,
   any,
   infer PathArray,
-  any,
   any,
   any,
   any,
@@ -191,7 +185,6 @@ export type inferRouteSignature<R> = R extends Route<
   any,
   any,
   any,
-  any,
   any
 >
   ? [Method, ...PathArray]
@@ -203,7 +196,6 @@ export type inferRoutePathArray<R> = R extends Route<
   any,
   any,
   infer PathArray extends string[],
-  any,
   any,
   any,
   any,
