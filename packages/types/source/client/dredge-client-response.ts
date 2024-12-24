@@ -38,7 +38,6 @@ export type inferDredgeResponsePromise<
   any,
   any,
   any,
-  any,
   infer OBody,
   any
 >

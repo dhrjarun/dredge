@@ -204,16 +204,26 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/test/:param")
+            .params({
+              a: z.string(),
+              b: z.string(),
+            })
             .get()
+            .error((_, d) => {
+              d.status(500);
+            })
             .use(({ req }, d) => {
               d.status(200).json(req.param());
             }),
         ]),
 
         deserializeParams: (params) => {
-          const newParams: Record<string, any> = {};
+          const newParams: Record<string, any | any> = {};
+
           Object.entries(params).forEach(([key, value]) => {
-            if (key === "param") {
+            if (Array.isArray(value)) {
+              newParams[key] = value.map((v) => `ds-${v}`);
+            } else {
               newParams[key] = `ds-${value}`;
             }
           });
@@ -224,72 +234,26 @@ describe.each(servers)(
 
       expect(
         await (
-          await client("/test/p", {
+          await client("/test/p?a=apple&b=ball", {
             method: "GET",
           })
         ).json(),
       ).toStrictEqual({
         param: "ds-p",
+        a: "ds-apple",
+        b: "ds-ball",
       });
 
       expect(
         await (
-          await client("/test/pp", {
+          await client("/test/pp?a=airplane&b=banana", {
             method: "GET",
           })
         ).json(),
       ).toStrictEqual({
         param: "ds-pp",
-      });
-    });
-
-    test("deserializeQueries", async () => {
-      await startServer({
-        router: dredgeRouter([
-          route
-            .path("/test")
-            .queries({
-              a: z.string(),
-              b: z.string(),
-            })
-            .get()
-            .use(({ req }, d) => {
-              d.status(200).json({
-                single: req.query(),
-                multiple: req.queries(),
-              });
-            }),
-        ]),
-
-        deserializeQueries: (queries) => {
-          const newQueries: Record<string, any> = {};
-          Object.entries(queries).forEach(([key, value]) => {
-            newQueries[key] = [];
-
-            value.forEach((v) => {
-              newQueries[key].push(`ds-${v}`);
-            });
-          });
-
-          return newQueries;
-        },
-      });
-
-      expect(
-        await (
-          await client("/test?a=apple&b=ball&b=banana&a=airplane", {
-            method: "GET",
-          })
-        ).json(),
-      ).toStrictEqual({
-        single: {
-          a: "ds-apple",
-          b: "ds-ball",
-        },
-        multiple: {
-          a: ["ds-apple", "ds-airplane"],
-          b: ["ds-ball", "ds-banana"],
-        },
+        a: "ds-airplane",
+        b: "ds-banana",
       });
     });
 
@@ -637,7 +601,7 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/test")
-            .queries({
+            .params({
               string: z.string(),
               number: z.number(),
               boolean: z.boolean(),
@@ -647,10 +611,14 @@ describe.each(servers)(
             .use(({ req }, d) => {
               d.status(200).json({
                 single: {
-                  ...req.query(),
-                  date: req.query("date").toISOString().split("T")[0],
+                  ...req.param(),
+                  date: req.param("date").toISOString().split("T")[0],
                 },
-                multiple: req.queries(),
+                multiple: {
+                  number: req.params("number"),
+                  string: req.params("string"),
+                  boolean: req.params("boolean"),
+                },
               });
             }),
         ]),
@@ -684,7 +652,7 @@ describe.each(servers)(
         router: dredgeRouter([
           route
             .path("/test")
-            .queries({
+            .params({
               string: z.string().optional(),
               number: z.number().optional(),
               boolean: z.boolean().optional(),

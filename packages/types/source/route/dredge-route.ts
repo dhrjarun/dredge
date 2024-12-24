@@ -24,8 +24,7 @@ export type RouteD<DataType extends string, Context, Data> = {
     method?: string;
     dataType?: string;
     data?: any;
-    params?: Record<string, any>;
-    queries?: Record<string, any[]>;
+    params?: Record<string, any | any[]>;
     headers?: Record<string, string | null>;
   }): RouteD<DataType, Context, Data>;
   status(number: number, text?: string): RouteD<DataType, Context, Data>;
@@ -53,7 +52,6 @@ export type isAnyRoute<R> = R extends Route<
   infer Method,
   infer Paths,
   infer Params,
-  infer Queries,
   infer IBody,
   infer OBody,
   infer EBody
@@ -64,7 +62,6 @@ export type isAnyRoute<R> = R extends Route<
       | IsAny<Method>
       | IsAny<Paths>
       | IsAny<Params>
-      | IsAny<Queries>
       | IsAny<IBody>
       | IsAny<OBody>
       | IsAny<EBody> extends true
@@ -72,14 +69,13 @@ export type isAnyRoute<R> = R extends Route<
     : false
   : false;
 
-export type MiddlewareContext<DataType, State, Method, Params, Queries, IData> =
-  {
-    req: MiddlewareRequest<DataType, Method, Params, Queries, IData>;
-    res: MiddlewareResponse<DataType, any>;
-    state: State;
-  };
+export type MiddlewareContext<DataType, State, Method, Params, IData> = {
+  req: MiddlewareRequest<DataType, Method, Params, IData>;
+  res: MiddlewareResponse<DataType, any>;
+  state: State;
+};
 
-export interface MiddlewareRequest<DataType, Method, Params, Queries, Data> {
+export interface MiddlewareRequest<DataType, Method, Params, Data> {
   readonly url: string;
   readonly method: Method;
   readonly dataType?: DataType;
@@ -89,26 +85,19 @@ export interface MiddlewareRequest<DataType, Method, Params, Queries, Data> {
     (): Record<string, string>;
   };
   param: {
-    (): Simplify<Params & Record<string, string>>;
+    (): Simplify<Params & Record<string, any>>;
     <T extends keyof Params>(
       key: T,
-    ): Params extends { [key in T]: any } ? Params[T] : string | undefined;
-    <T extends string>(key: T): string | undefined;
+    ): Params extends { [key in T]: any } ? Params[T] : any | undefined;
+    <T extends string>(key: T): any | undefined;
   };
-  query: {
-    (): Simplify<Queries & Record<string, any>>;
-    <T extends keyof Queries>(
-      key: T,
-    ): Queries extends { [key in T]: any } ? Queries[T] : any;
-    <T extends string>(key: T): any;
-  };
-  queries: {
+  params: {
     (): Simplify<
-      { [key in keyof Queries]: Queries[key][] } & Record<string, any[]>
+      { [key in keyof Params]: Params[key][] } & Record<string, any[]>
     >;
-    <T extends keyof Queries>(
+    <T extends keyof Params>(
       key: T,
-    ): Queries extends { [key in T]: any } ? Queries[T][] : any[];
+    ): Params extends { [key in T]: any } ? Params[T][] : any[];
     <T extends string>(key: T): any[];
   };
 }
@@ -125,18 +114,11 @@ export interface MiddlewareResponse<DataType, Data = any> {
 }
 
 export interface AnyMiddlewareRequest
-  extends MiddlewareRequest<
-    any,
-    string,
-    Record<string, string>,
-    Record<string, any>,
-    any
-  > {}
+  extends MiddlewareRequest<any, string, Record<string, any>, any> {}
 
 export interface AnyMiddlewareResponse extends MiddlewareResponse<any, any> {}
 
 export type AnyMiddlewareFunction = MiddlewareFunction<
-  any,
   any,
   any,
   any,
@@ -161,7 +143,6 @@ export type MiddlewareFunction<
   NewContext,
   Method,
   Params,
-  Queries,
   IData,
   OData,
   NewOData,
@@ -172,7 +153,6 @@ export type MiddlewareFunction<
       Context,
       Method,
       Params,
-      Queries,
       IsNever<IData> extends true ? any : IData
     >,
     d: RouteD<
@@ -200,7 +180,6 @@ export type ErrorMiddlewareFunction<
       DataType extends string ? DataType : never,
       Context,
       Method,
-      Record<string, string>,
       Record<string, any>,
       any
     >,
@@ -270,10 +249,6 @@ export type IsNotAllowedDataTypes<T> = (
   ? false
   : true;
 
-type inferQueriesType<Queries> = Simplify<{
-  [key in keyof Queries]: inferParserType<Queries[key]>;
-}>;
-
 export type BodyAs =
   | "text"
   | "Buffer"
@@ -317,22 +292,40 @@ export type BodyFn = {
   <As extends BodyAs>(as: As): Promise<BodyTypesMap[As]>;
 };
 
-interface RawRequest {
+type ModifyParams<T extends Record<string, any>, Params> = {
+  [key in keyof T as `:${string & key}` extends keyof Params
+    ? `:${string & key}`
+    : `?${string & key}`]: T[key];
+};
+
+type MergeParams<Params, T extends Record<string, Parser>> = Merge<
+  Params,
+  ModifyParams<T, Params>
+>;
+
+export interface RawRequest {
   url: string;
   method: string;
   dataType?: string;
   data?: any;
   headers: Record<string, string>;
-  params: Record<string, any>;
-  queries: Record<string, any[]>;
+  params: Record<string, any | any[]>;
 }
 
-interface RawResponse {
+export interface RawResponse {
   status?: number;
   statusText?: string;
   dataType?: string;
   data?: any;
   headers: Record<string, string>;
+}
+
+export interface DredgeRouteSchema {
+  method: string | null;
+  paths: string[];
+  params: Record<string, Parser | null>;
+  input: Parser | null;
+  output: Parser | null;
 }
 
 export interface Route<
@@ -342,19 +335,11 @@ export interface Route<
   Method = never,
   Paths = [],
   Params = {},
-  Queries = {},
   IBody = never,
   OBody = never,
   EBody = never,
 > {
-  _schema: {
-    method?: string;
-    paths: string[];
-    params: Record<string, Parser>;
-    queries: Record<string, Parser>;
-    input?: Parser;
-    output?: Parser;
-  };
+  _schema: DredgeRouteSchema;
 
   _handle(context: {
     request: RawRequest;
@@ -380,7 +365,6 @@ export interface Route<
     Method,
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -398,10 +382,9 @@ export interface Route<
       : inferPathArray<T>,
     Params & {
       [key in inferPathArray<T>[number] as key extends `:${infer N}`
-        ? N
+        ? `:${N}`
         : never]: never;
     },
-    Queries,
     IBody,
     OBody,
     EBody
@@ -410,9 +393,11 @@ export interface Route<
   params<
     const T extends {
       [key in keyof Params as IsNever<Params[key]> extends true
-        ? key
+        ? key extends `:${infer N}`
+          ? N
+          : never
         : never]?: Parser;
-    },
+    } & Record<string, Parser>,
   >(
     arg: T,
   ): Route<
@@ -421,23 +406,7 @@ export interface Route<
     ErrorContext,
     Method,
     Paths,
-    Omit<Params, keyof T> & T,
-    Queries,
-    IBody,
-    OBody,
-    EBody
-  >;
-
-  queries<const T extends { [key: string]: Parser }>(
-    queries: T,
-  ): Route<
-    Options,
-    SuccessContext,
-    ErrorContext,
-    Method,
-    Paths,
-    Params,
-    Omit<Queries, keyof T> & T,
+    MergeParams<Params, T>,
     IBody,
     OBody,
     EBody
@@ -450,7 +419,6 @@ export interface Route<
       NewContext,
       IsNever<Method> extends true ? string : Method,
       inferParamsType<Params>,
-      inferQueriesType<Queries>,
       inferParserType<IBody>,
       inferParserType<OBody>,
       NewOData
@@ -462,7 +430,6 @@ export interface Route<
     Method,
     Paths,
     Params,
-    Queries,
     IBody,
     IsNever<NewOData> extends true
       ? OBody
@@ -488,7 +455,6 @@ export interface Route<
     Method,
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     IsNever<NewEData> extends true
@@ -507,7 +473,6 @@ export interface Route<
     Method,
     Paths,
     Params,
-    Queries,
     IBody,
     P,
     EBody
@@ -522,7 +487,6 @@ export interface Route<
     Method,
     Paths,
     Params,
-    Queries,
     P,
     OBody,
     EBody
@@ -537,7 +501,6 @@ export interface Route<
     M,
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -549,7 +512,6 @@ export interface Route<
     "get",
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -561,7 +523,6 @@ export interface Route<
     "post",
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -573,7 +534,6 @@ export interface Route<
     "put",
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -585,7 +545,6 @@ export interface Route<
     "delete",
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -597,7 +556,6 @@ export interface Route<
     "patch",
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
@@ -609,14 +567,13 @@ export interface Route<
     "head",
     Paths,
     Params,
-    Queries,
     IBody,
     OBody,
     EBody
   >;
 }
 
-export type AnyRoute = Route<any, any, any, any, any, any, any, any, any, any>;
+export type AnyRoute = Route<any, any, any, any, any, any, any, any, any>;
 
 export type AnyValidRoute = Route<
   any,
@@ -624,7 +581,6 @@ export type AnyValidRoute = Route<
   any,
   string,
   string[],
-  any,
   any,
   any,
   any,
@@ -640,9 +596,9 @@ export interface AnyRouteOptions {
 }
 
 type inferParamsType<Params> = Simplify<{
-  [key in keyof Params]: Params[key] extends null
-    ? string
-    : inferParserType<Params[key]>;
+  [key in keyof Params as key extends `:${infer N}` | `?${infer N}`
+    ? N
+    : never]: Params[key] extends null ? string : inferParserType<Params[key]>;
 }>;
 
 export type inferDataTypes<Options> = Options extends {

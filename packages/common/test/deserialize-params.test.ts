@@ -4,10 +4,7 @@ import * as v from "valibot";
 import { expect, test } from "vitest";
 import * as yup from "yup";
 import { z } from "zod";
-import {
-  deserializeParams,
-  deserializeQueries,
-} from "../source/deserialize-params";
+import { deserializeParams } from "../source/deserialize-params";
 
 const schemas = [
   {
@@ -125,7 +122,7 @@ test.each(schemas)("deserializeQueries with $name", ({ schema }) => {
     enum: ["a", "b"],
   };
 
-  const result = deserializeQueries(queries, schema);
+  const result = deserializeParams(queries, schema);
 
   expect(result).toStrictEqual({
     number: [1, 2, 3],

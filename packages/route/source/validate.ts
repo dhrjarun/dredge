@@ -1,16 +1,11 @@
 import type { Parser } from "dredge-types";
-import { RouteBuilderDef } from "./route";
 import { getParseFn } from "./parser";
-import { RawRequest } from "./request";
 
 export class ValidationError extends Error {
   issue: any;
   type: ValidationType;
 
-  constructor(
-    type: "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA",
-    issue: any,
-  ) {
+  constructor(type: ValidationType, issue: any) {
     super();
 
     this.type = type;
@@ -29,61 +24,63 @@ function getValidatorFn(parser: Parser, step: ValidationType) {
   };
 }
 
-type ValidationType = "PARAMS" | "SEARCH_PARAMS" | "DATA" | "RESPONSE_DATA";
+type ValidationType = "PARAMS" | "INPUT" | "OUTPUT";
 
-// export function getPathParams(routePath: string[]) {
-//   return (pathArray: string[]) => {
-//     const params: Record<string, string> = routePath.reduce(
-//       (acc: any, item: string, index: number) => {
-//         if (item.startsWith(":")) {
-//           acc[item.replace(":", "")] = pathArray[index];
-//         }
-//         return acc;
-//       },
-//       {},
-//     );
+// export async function validateParams(
+//   schema: Record<string, Parser | null>,
+//   params: any,
+// ) {
+//   const validatedParams: Record<string, any> = {};
+//   for (const [key, value] of Object.entries(params)) {
+//     const parser = schema[key];
 //
-//     return params;
-//   };
+//     validatedParams[key] = parser
+//       ? await getValidatorFn(parser, "PARAMS")(value)
+//       : value;
+//   }
+//
+//   return validatedParams;
 // }
 
 export async function validateParams(
-  schema: Record<string, Parser>,
-  params: any,
-) {
-  const validatedParams: Record<string, any> = {};
-  for (const [key, value] of Object.entries(params)) {
-    const parser = schema[key];
-
-    validatedParams[key] = parser
-      ? await getValidatorFn(parser, "PARAMS")(value)
-      : value;
-  }
-
-  return validatedParams;
-}
-
-export async function validateQueries(
-  schema: Record<string, Parser>,
+  schema: Record<string, Parser | null>,
   queries: any, // TODO: add an option to whether or not to pass query if their schema is not defined
 ) {
   const validatedQueries: Record<string, any> = {
     ...queries,
   };
+
   for (const [key, parser] of Object.entries(schema)) {
-    const values = queries[key];
-    const validatedValues: any[] = [];
+    const paramType = key.charAt(0);
 
-    if (!values) {
-      await getValidatorFn(parser, "SEARCH_PARAMS")(undefined);
-      continue;
+    if (paramType === ":") {
+      const value = queries[key];
+
+      validatedQueries[key] = parser
+        ? await getValidatorFn(parser, "PARAMS")(value)
+        : value;
     }
 
-    for (const item of values) {
-      validatedValues.push(await getValidatorFn(parser, "SEARCH_PARAMS")(item));
-    }
+    if (paramType === "?") {
+      const values = queries[key];
+      const validatedValues: any[] = [];
 
-    validatedQueries[key] = validatedValues;
+      if (!parser) {
+        validatedQueries[key] = values;
+        continue;
+      }
+
+      if (!values) {
+        await getValidatorFn(parser, "PARAMS")(undefined);
+        continue;
+      }
+
+      for (const item of values) {
+        validatedValues.push(await getValidatorFn(parser, "PARAMS")(item));
+      }
+
+      validatedQueries[key] = validatedValues;
+    }
   }
 
   return validatedQueries;
@@ -91,63 +88,15 @@ export async function validateQueries(
 export async function validateInput(schema: Parser, input: any) {
   let validatedData: unknown;
   if (schema) {
-    validatedData = await getValidatorFn(schema, "DATA")(input);
+    validatedData = await getValidatorFn(schema, "INPUT")(input);
   }
   return validatedData || input;
 }
+
 export async function validateOutput(schema: Parser, output: any) {
   let validatedData: unknown;
   if (schema) {
-    validatedData = await getValidatorFn(schema, "DATA")(output);
+    validatedData = await getValidatorFn(schema, "OUTPUT")(output);
   }
   return validatedData || output;
-}
-
-export function useValidate(routeDef: RouteBuilderDef) {
-  return async (unValidatedRequest: RawRequest) => {
-    let validatedRequest: RawRequest = { ...unValidatedRequest };
-
-    const validatedParams: Record<string, any> = {};
-    for (const [key, value] of Object.entries(unValidatedRequest.params)) {
-      const parser = routeDef.params[key];
-
-      validatedParams[key] = parser
-        ? await getValidatorFn(parser, "PARAMS")(value)
-        : value;
-    }
-    validatedRequest.params = validatedParams;
-
-    const validatedQueries: Record<string, any> = {
-      ...unValidatedRequest.queries, // TODO: add an option to whether or not to pass query if their schema is not defined
-    };
-    for (const [key, parser] of Object.entries(routeDef.queries)) {
-      const values = unValidatedRequest.queries[key];
-      const validatedValues: any[] = [];
-
-      if (!values) {
-        await getValidatorFn(parser, "SEARCH_PARAMS")(undefined);
-        continue;
-      }
-
-      for (const item of values) {
-        validatedValues.push(
-          await getValidatorFn(parser, "SEARCH_PARAMS")(item),
-        );
-      }
-
-      validatedQueries[key] = validatedValues;
-    }
-    validatedRequest.queries = validatedQueries;
-
-    let validatedData: unknown;
-    if (routeDef.input) {
-      validatedData = await getValidatorFn(
-        routeDef.input,
-        "DATA",
-      )(unValidatedRequest.data);
-      validatedRequest.data = validatedData;
-    }
-
-    return validatedRequest;
-  };
 }

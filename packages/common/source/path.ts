@@ -1,3 +1,5 @@
+import { dredgeParamsToSearchParams } from "./params";
+
 export function isSinglePathValid(...paths: string[]) {
   const pathRegex = /^[a-zA-Z0-9\.\-_~]+$/g;
 
@@ -32,7 +34,31 @@ export const trimSlashes = (path: string): string => {
   return path;
 };
 
-export function getSimplePath(path: string, params: Record<string, string>) {
+export function createURL(options: {
+  prefixUrl: string;
+  path: string;
+  params?: Record<string, string | string[]>;
+}) {
+  let { prefixUrl, path, params = {} } = options;
+
+  if (!prefixUrl.endsWith("/")) {
+    prefixUrl += "/";
+  }
+  const simplePath = trimSlashes(getSimplePath(path, params));
+
+  let search = dredgeParamsToSearchParams(params).toString();
+  let url = prefixUrl + simplePath;
+  if (search) {
+    url += "?" + search;
+  }
+
+  return url;
+}
+
+export function getSimplePath(
+  path: string,
+  params: Record<string, string | string[]>,
+) {
   const isParamPath = path.startsWith(":");
 
   if (!isParamPath) return path;
@@ -43,7 +69,7 @@ export function getSimplePath(path: string, params: Record<string, string>) {
 
   const simplePathArray = pathArray.map((item) => {
     if (item.startsWith(":")) {
-      const param = params[item.slice(1)];
+      const param = params[item];
 
       if (!param) throw "Can't find specified param";
 

@@ -3,7 +3,8 @@ import {
   isPathnameValid,
   isSinglePathValid,
   isValidPrefixUrl,
-} from "../source/utils/path";
+  createURL,
+} from "../source/path";
 
 test("isSinglePathValid", () => {
   expect(isSinglePathValid("apple123-ddd")).toBeTruthy();
@@ -34,4 +35,32 @@ test("isValidPrefixUrl", () => {
   expect(isValidPrefixUrl("http://")).toBeFalsy();
   expect(isValidPrefixUrl("http://example.com")).toBeTruthy();
   expect(isValidPrefixUrl("http://example.com/live")).toBeTruthy();
+});
+
+test("createURL", () => {
+  expect(
+    createURL({
+      prefixUrl: "https://a.com",
+      path: "test",
+      params: {
+        "?a": "apple",
+        "?b": "banana",
+        "?c": "carrot",
+      },
+    }),
+  ).toBe("https://a.com/test?a=apple&b=banana&c=carrot");
+});
+
+test("createURL", () => {
+  expect(
+    createURL({
+      prefixUrl: "https://a.com",
+      path: ":/test/:a/:b/:c",
+      params: {
+        ":a": "apple",
+        ":b": "banana",
+        ":c": "carrot",
+      },
+    }),
+  ).toBe("https://a.com/test/apple/banana/carrot");
 });
