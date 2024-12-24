@@ -57,7 +57,6 @@ type MakeDynamicRoute<T> = T extends Route<
   infer Method,
   infer Paths,
   infer Params,
-  infer SearchParams,
   infer IBody,
   infer OBody,
   infer EBody
@@ -74,7 +73,6 @@ type MakeDynamicRoute<T> = T extends Route<
       Method,
       Paths,
       Params,
-      SearchParams,
       IBody,
       OBody,
       EBody

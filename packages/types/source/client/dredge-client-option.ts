@@ -6,8 +6,7 @@ import {
   HTTPMethod,
   Route,
   inferModifiedInitialRouteContext,
-  inferParamsType,
-  inferQueriesType,
+  inferClientParamsType,
   inferRouteDataTypes,
 } from "../route";
 import { IsNever, Merge, RequiredKeys } from "../utils";
@@ -32,6 +31,7 @@ export interface DredgeClientOptions {
 
 export type inferDredgeClientOption<
   R,
+  ParamTypes extends ":" | "?" = ":" | "?",
   Options = DredgeClientOptions,
 > = R extends Route<
   infer RouteOptions extends AnyRouteOptions,
@@ -40,7 +40,6 @@ export type inferDredgeClientOption<
   infer Method,
   any,
   infer Params,
-  infer Queries,
   infer IBody,
   any,
   any
@@ -58,21 +57,23 @@ export type inferDredgeClientOption<
         ? { serverCtx?: RouteOptions["initialContext"] }
         : {}) &
         Data<keyof RouteOptions["dataTypes"], inferParserType<IBody>> &
-        (IsNever<keyof Queries> extends true
-          ? {}
-          : IsNever<RequiredKeys<inferQueriesType<Queries>>> extends true
-            ? { queries?: inferQueriesType<Queries> }
-            : { queries: inferQueriesType<Queries> }) &
         (IsNever<keyof Params> extends true
           ? {}
-          : { params: inferParamsType<Params> })
+          : IsNever<
+                RequiredKeys<inferClientParamsType<Params, ParamTypes>>
+              > extends true
+            ? { params?: inferClientParamsType<Params, ParamTypes> }
+            : { params: inferClientParamsType<Params, ParamTypes> })
     >
   : Options;
 
 export type _inferDredgeClientOption<
   R,
+  ParamTypes extends ":" | "?" = ":" | "?",
   Options = DredgeClientOptions,
-> = IsNever<R> extends true ? Options : inferDredgeClientOption<R, Options>;
+> = IsNever<R> extends true
+  ? Options
+  : inferDredgeClientOption<R, ParamTypes, Options>;
 
 export type DefaultFieldInDirectClientOptions =
   | "headers"

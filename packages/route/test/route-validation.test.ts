@@ -2,48 +2,47 @@ import { expect, test } from "vitest";
 import z from "zod";
 import {
   validateParams,
-  validateQueries,
   validateInput,
   validateOutput,
 } from "../source/validate";
 
 test("validateParams", () => {
   const schema = {
-    string: z.string(),
-    number: z.number(),
-    boolean: z.boolean(),
+    ":string": z.string(),
+    ":number": z.number(),
+    ":boolean": z.boolean(),
   };
 
   expect(
     validateParams(schema, {
-      string: "hello",
-      number: 1,
-      boolean: true,
+      ":string": "hello",
+      ":number": 1,
+      ":boolean": true,
     }),
   ).resolves.toStrictEqual({
-    string: "hello",
-    number: 1,
-    boolean: true,
+    ":string": "hello",
+    ":number": 1,
+    ":boolean": true,
   });
 });
 
 test("validateQueries", () => {
   const schema = {
-    string: z.string(),
-    number: z.number(),
-    boolean: z.boolean(),
+    "?string": z.string(),
+    "?number": z.number(),
+    "?boolean": z.boolean(),
   };
 
   expect(
-    validateQueries(schema, {
-      string: ["hello"],
-      number: [1],
-      boolean: [true],
+    validateParams(schema, {
+      "?string": ["hello"],
+      "?number": [1],
+      "?boolean": [true],
     }),
   ).resolves.toStrictEqual({
-    string: ["hello"],
-    number: [1],
-    boolean: [true],
+    "?string": ["hello"],
+    "?number": [1],
+    "?boolean": [true],
   });
 });
 
@@ -74,7 +73,7 @@ test("optional searchParam should work", async () => {
   };
 
   expect(
-    validateQueries(schema, {
+    validateParams(schema, {
       required: ["i am required"],
     }),
   ).resolves.toMatchObject({
@@ -84,19 +83,19 @@ test("optional searchParam should work", async () => {
 
 test("unSpecified searchParam should work", async () => {
   const schema = {
-    i: z.number(),
-    o: z.string().optional(),
+    "?i": z.number(),
+    "?o": z.string().optional(),
   };
 
-  const validated = await validateQueries(schema, {
-    i: [1],
-    a: ["apple"],
-    b: ["ball"],
+  const validated = await validateParams(schema, {
+    "?i": [1],
+    "?a": ["apple"],
+    "?b": ["ball"],
   });
 
   expect(validated).toStrictEqual({
-    i: [1],
-    a: ["apple"],
-    b: ["ball"],
+    "?i": [1],
+    "?a": ["apple"],
+    "?b": ["ball"],
   });
 });

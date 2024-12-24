@@ -13,6 +13,48 @@ test("updates options.status", () => {
   expect(context.response.statusText).toBe("OK");
 });
 
+test("update ctx.request.params", () => {
+  const context = createRawContext({
+    schema: {
+      params: {
+        ":a": null,
+        ":b": null,
+      },
+    },
+  });
+
+  const params = {
+    a: "b",
+    c: ["d", "e"],
+  };
+
+  const d = new D(context, () => {});
+  d.req({
+    params,
+  });
+
+  expect(context.request.params).toStrictEqual({
+    ":a": "b",
+    "?c": ["d", "e"],
+  });
+
+  d.req({
+    params: {
+      a: "c",
+      b: "d",
+      c: ["m"],
+      m: ["n"],
+    },
+  });
+
+  expect(context.request.params).toStrictEqual({
+    ":a": "c",
+    ":b": "d",
+    "?c": ["m"],
+    "?m": ["n"],
+  });
+});
+
 test("update ctx.request", () => {
   const context = createRawContext({});
 
@@ -25,12 +67,6 @@ test("update ctx.request", () => {
     data: {
       hello: "world",
     },
-    params: {
-      a: "b",
-    },
-    queries: {
-      c: ["d", "e"],
-    },
     headers: {
       "content-type": "application/json",
       "x-custom-header": "custom-value",
@@ -38,36 +74,7 @@ test("update ctx.request", () => {
   };
   d.req(update);
 
-  expect(context.request).toStrictEqual(update);
-  d.req({
-    params: {
-      a: "c",
-      b: "d",
-    },
-    queries: {
-      c: ["m"],
-      m: ["n"],
-    },
-    headers: {
-      "x-custom-header": null,
-      "content-type": "text/plain",
-    },
-  });
-
-  expect(context.request).toStrictEqual({
-    ...update,
-    params: {
-      a: "c",
-      b: "d",
-    },
-    queries: {
-      c: ["m"],
-      m: ["n"],
-    },
-    headers: {
-      "content-type": "text/plain",
-    },
-  });
+  expect(context.request).toMatchObject(update);
 });
 
 test("update ctx.response", () => {

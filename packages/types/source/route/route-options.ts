@@ -23,7 +23,6 @@ export type inferInitialRouteContext<R> = R extends Route<
   any,
   any,
   any,
-  any,
   any
 >
   ? Options["initialContext"]
@@ -33,7 +32,6 @@ export type inferModifiedInitialRouteContext<R> = R extends Route<
   infer Options extends {
     modifiedInitialContext: any;
   },
-  any,
   any,
   any,
   any,
@@ -55,7 +53,6 @@ export type inferRouteOptions<R> = R extends Route<
   any,
   any,
   any,
-  any,
   any
 >
   ? Options
@@ -63,7 +60,6 @@ export type inferRouteOptions<R> = R extends Route<
 
 export type inferRouteDataTypes<R> = R extends Route<
   infer Options extends { dataTypes: any },
-  any,
   any,
   any,
   any,
