@@ -1,11 +1,6 @@
 import { DataTypes, trimSlashes } from "dredge-common";
 import type { AnyRoute, Route, Parser } from "dredge-types";
-import {
-  validateInput,
-  validateOutput,
-  validateParams,
-  validateQueries,
-} from "./validate";
+import { validateInput, validateOutput, validateParams } from "./validate";
 import { composeMiddlewares } from "./compose";
 import { RawResponse } from "./response";
 import { RawRequest } from "./request";
@@ -13,12 +8,10 @@ import { RawRequest } from "./request";
 export type RouteBuilderDef = {
   method?: string;
   paths: string[];
-  params: Record<string, Parser>;
-  queries: Record<string, Parser>;
+  params: Record<string, Parser | null>;
   dataTypes: DataTypes;
   input?: Parser;
   output?: Parser;
-
   middlewares: Function[];
   errorMiddlewares: Function[];
 };
@@ -49,7 +42,6 @@ export function createRouteBuilder(
     errorMiddlewares = [],
     paths = [],
     params = {},
-    queries = {},
     dataTypes = new DataTypes(),
     ...rest
   } = initDef;
@@ -59,7 +51,6 @@ export function createRouteBuilder(
     errorMiddlewares,
     paths,
     params,
-    queries,
     method,
     dataTypes,
     ...rest,
@@ -71,10 +62,6 @@ export function createRouteBuilder(
     validateRequest.params = await validateParams(
       _def.params,
       validateRequest.params,
-    );
-    validateRequest.queries = await validateQueries(
-      _def.queries,
-      validateRequest.queries,
     );
     validateRequest.data = await validateInput(
       _def.input!!,
@@ -104,6 +91,7 @@ export function createRouteBuilder(
           response: rawcontext.response || defaultResponse,
           request: validatedRequest,
           dataTypes: _def.dataTypes,
+          schema: this._schema,
         };
         await successFn(successContext, () => {});
 
@@ -126,6 +114,7 @@ export function createRouteBuilder(
           },
           dataTypes: _def.dataTypes,
           error,
+          schema: this._schema,
         };
         await errorFn(errorContext, () => {});
         return errorContext.response;
@@ -134,16 +123,13 @@ export function createRouteBuilder(
 
     get _schema() {
       return {
-        method: _def.method,
+        method: _def.method ?? null,
         paths: [..._def.paths],
         params: {
           ..._def.params,
         },
-        queries: {
-          ..._def.queries,
-        },
-        input: _def.input,
-        output: _def.output,
+        input: _def.input ?? null,
+        output: _def.output ?? null,
       };
     },
 
@@ -164,7 +150,10 @@ export function createRouteBuilder(
 
     path(path: string) {
       const _paths = _def.paths;
+      const _params = _def.params;
+
       const paths = trimSlashes(path).split("/");
+      const params: Record<string, Parser | null> = {};
 
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
       paths.forEach((item) => {
@@ -175,11 +164,22 @@ export function createRouteBuilder(
 
       const newParamPaths = paths.reduce((acc: string[], item) => {
         if (item.startsWith(":")) {
+          if (_params[item]) {
+            throw new TypeError(`param '${item}' is used more than once`);
+          }
+
+          if (Object.hasOwn(_params, item.replace(":", "?"))) {
+            throw new TypeError(
+              `A query param is already defined with this name: ${item.replace(":", "")}`,
+            );
+          }
+
           if (acc.includes(item)) {
-            throw new Error(`Param '${item}' is used more than once`);
+            throw new TypeError(`param '${item}' is used more than once`);
           }
 
           acc.push(item);
+          params[item] = null;
         }
 
         return acc;
@@ -194,20 +194,33 @@ export function createRouteBuilder(
       return createRouteBuilder({
         ..._def,
         paths: [..._paths, ...paths],
+        params: {
+          ..._params,
+          ...params,
+        },
       });
     },
 
-    params(params: Record<string, Parser>) {
+    params(paramsInit: Record<string, Parser>) {
       const _params = _def.params;
-      const _paths = _def.paths;
 
-      Object.entries(params).forEach(([path]) => {
-        if (_params[path]) {
-          throw `${path} param schema already defined`;
+      const params: Record<string, Parser | null> = {};
+
+      Object.entries(paramsInit).forEach(([param]) => {
+        if (_params[`:${param}`]) {
+          throw `${param} param schema already defined`;
         }
 
-        if (!_paths.includes(`:${path}`)) {
-          throw `Param '${path}' is not defined`;
+        if (_params[`?${param}`]) {
+          throw `${param} query schema already defined`;
+        }
+
+        const isParam = Object.hasOwn(_params, `:${param}`);
+
+        if (isParam) {
+          params[`:${param}`] = paramsInit[param] ?? null;
+        } else {
+          params[`?${param}`] = paramsInit[param] ?? null;
         }
       });
 
@@ -216,25 +229,6 @@ export function createRouteBuilder(
         params: {
           ..._params,
           ...params,
-        },
-      });
-    },
-
-    queries(queries: Record<string, Parser>) {
-      const _queries = _def.queries;
-
-      // check if it already defined
-      Object.entries(queries).forEach(([name]) => {
-        if (_queries[name]) {
-          throw `${name} query schema already defined`;
-        }
-      });
-
-      return createRouteBuilder({
-        ..._def,
-        queries: {
-          ..._queries,
-          ...queries,
         },
       });
     },

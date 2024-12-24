@@ -3,21 +3,30 @@ import { RawContext } from "./context";
 
 export function createRawContext(
   rawContext: Partial<
-    Omit<RawContext, "request" | "response"> & {
+    Omit<RawContext, "request" | "response" | "schema"> & {
       request: Partial<RawContext["request"]>;
       response: Partial<RawContext["response"]>;
+      schema: Partial<RawContext["schema"]>;
     }
   > = {},
 ) {
   const {
     request,
     response,
+    schema,
     state = {},
     dataTypes = new DataTypes({}),
     error,
   } = rawContext;
 
   const c: RawContext = {
+    schema: {
+      method: schema?.method ?? null,
+      paths: schema?.paths ?? [],
+      params: schema?.params ?? {},
+      input: schema?.input ?? null,
+      output: schema?.output ?? null,
+    },
     request: {
       url: request?.url ?? "/test",
       method: request?.method ?? "get",
@@ -25,7 +34,6 @@ export function createRawContext(
       data: request?.data ?? {},
       dataType: request?.dataType,
       params: request?.params ?? {},
-      queries: request?.queries ?? {},
     },
     response: {
       status: response?.status ?? 200,
