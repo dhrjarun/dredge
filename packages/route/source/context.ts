@@ -1,6 +1,8 @@
-import { DredgeResponse, RawResponse } from "./response";
-import { DredgeRequest, RawRequest } from "./request";
+import { DredgeResponse } from "./response";
+import { DredgeRequest } from "./request";
 import { DataTypes } from "dredge-common";
+import { DredgeRouteSchema } from "dredge-types";
+import type { RawRequest, RawResponse } from "dredge-types";
 
 export class Context {
   #raw: RawContext;
@@ -28,6 +30,10 @@ export class Context {
   get state() {
     return this.#raw.state;
   }
+
+  get schema() {
+    return this.#raw.schema;
+  }
 }
 
 export type RawContext = {
@@ -36,4 +42,5 @@ export type RawContext = {
   request: RawRequest;
   response: RawResponse;
   state: any;
+  schema: DredgeRouteSchema;
 };

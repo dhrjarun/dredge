@@ -77,15 +77,7 @@ describe("route.params()", () => {
       .path("/test/:par")
       .params({ par: (p) => p });
 
-    assert.property(route._schema.params, "par");
-  });
-
-  test("throws when a key is defined before defining it in path", () => {
-    expect(() =>
-      dredgeRoute()
-        .path("/test")
-        .params({ noParam: (p: any) => p }),
-    ).toThrowError("noParam");
+    assert.property(route._schema.params, ":par");
   });
 
   test("throws when a key is defined more than once", () => {
@@ -104,22 +96,22 @@ describe("route.queries()", () => {
   test("route._schema.queries", () => {
     const route = dredgeRoute()
       .path("/test")
-      .queries({ SPi: () => {}, SPii: () => {} })
-      .queries({
+      .params({ SPi: () => {}, SPii: () => {} })
+      .params({
         SPiii: (p) => p,
       });
 
-    assert.property(route._schema.queries, "SPi");
-    assert.property(route._schema.queries, "SPii");
-    assert.property(route._schema.queries, "SPiii");
+    assert.property(route._schema.params, "?SPi");
+    assert.property(route._schema.params, "?SPii");
+    assert.property(route._schema.params, "?SPiii");
   });
 
   test("throws when a key is defined more than once", () => {
     expect(() => {
       dredgeRoute()
         .path("/test")
-        .queries({ SPi: (p) => p })
-        .queries({
+        .params({ SPi: (p) => p })
+        .params({
           SPi: (p) => p,
           SPii: (p) => p,
         });

@@ -1,4 +1,3 @@
-import { DredgeRouter } from "../../source";
 import { DredgeClient } from "../../source/client";
 
 export const createClient = <R>(defaultOptions?: object) => {

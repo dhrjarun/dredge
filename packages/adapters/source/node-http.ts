@@ -3,18 +3,17 @@ import { Readable, Stream } from "stream";
 import {
   MimeStore,
   deserializeParams as defaultDeserializeParams,
-  deserializeQueries as defaultDeserializeQueries,
   defaultJSONBodyParser,
   defaultJsonDataSerializer,
   defaultTextBodyParser,
   defaultTextDataSerializer,
   joinDuplicateHeaders,
-  searchParamsToObject,
+  searchParamsToDredgeParams,
   trimSlashes,
 } from "dredge-common";
-import { getPathParams, RawRequest } from "dredge-route";
+import { getPathParams } from "dredge-route";
 import type { DredgeRouter } from "dredge-types";
-import { MaybePromise } from "dredge-types";
+import { MaybePromise, RawRequest } from "dredge-types";
 import parseUrl from "parseurl";
 
 // TODO: add bodyUsed getter
@@ -42,12 +41,8 @@ export interface CreateNodeHttpRequestHandlerOptions<State extends object> {
   dataSerializers?: {
     [key: string]: DataSerializerFunction;
   };
-  deserializeQueries?: (
-    queries: Record<string, string[]>,
-    schema: Record<string, any>,
-  ) => Record<string, any[]>;
   deserializeParams?: (
-    params: Record<string, string>,
+    params: Record<string, string | string[]>,
     schema: Record<string, any>,
   ) => Record<string, any>;
 }
@@ -59,7 +54,6 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     router,
     state = {},
     prefixUrl,
-    deserializeQueries = defaultDeserializeQueries,
     deserializeParams = defaultDeserializeParams,
   } = options;
 
@@ -102,18 +96,18 @@ export function createNodeHttpRequestHandler<Context extends object = {}>(
     const schema = route._schema;
 
     const headers = joinDuplicateHeaders(req.headers || {});
-    const params = getPathParams(schema.paths)(pathArray);
-    const queries = searchParamsToObject(url.search);
+    const params = {
+      ...getPathParams(schema.paths)(pathArray),
+      ...searchParamsToDredgeParams(url.search),
+    };
 
     const parsedParams = deserializeParams(params, schema.params);
-    const parsedQueries = deserializeQueries(queries, schema.queries);
 
     const middlewareRequest: RawRequest = {
       url: url.href,
       method: req.method || "get",
       headers,
       params: parsedParams,
-      queries: parsedQueries,
     };
 
     const bodyParser = bodyParsers.get(headers["content-type"] || "");

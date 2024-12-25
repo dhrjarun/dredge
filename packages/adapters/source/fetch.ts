@@ -1,18 +1,18 @@
 import {
   MimeStore,
   deserializeParams as defaultDeserializeParams,
-  deserializeQueries as defaultDeserializeQueries,
   defaultJSONBodyParser,
   defaultJsonDataSerializer,
   defaultTextBodyParser,
   defaultTextDataSerializer,
-  searchParamsToObject,
+  searchParamsToDredgeParams,
   trimSlashes,
 } from "dredge-common";
-import { RawRequest, getPathParams } from "dredge-route";
+import { getPathParams } from "dredge-route";
 import type { DredgeRouter } from "dredge-types";
 import { MaybePromise } from "dredge-types";
 import { ReadableStream } from "stream/web";
+import { RawRequest } from "dredge-types";
 
 // TODO: add bodyUsed getter
 type BodyParserFunction = (options: {
@@ -41,14 +41,10 @@ export interface CreateFetchRequestHandlerOptions<State extends object> {
   dataSerializers?: {
     [key: string]: DataSerializerFunction;
   };
-  deserializeQueries?: (
-    queries: Record<string, string[]>,
-    schema: Record<string, any>,
-  ) => Record<string, any[]>;
   deserializeParams?: (
-    params: Record<string, string>,
+    params: Record<string, string | string[]>,
     schema: Record<string, any>,
-  ) => Record<string, any>;
+  ) => Record<string, any | any[]>;
 }
 
 export function createFetchRequestHandler<Context extends object = {}>(
@@ -59,7 +55,6 @@ export function createFetchRequestHandler<Context extends object = {}>(
     state = {},
     prefixUrl,
     deserializeParams = defaultDeserializeParams,
-    deserializeQueries = defaultDeserializeQueries,
   } = options;
 
   const parsedPrefixUrl = new URL(prefixUrl || "relative:///", "relative:///");
@@ -93,18 +88,18 @@ export function createFetchRequestHandler<Context extends object = {}>(
     const schema = route._schema;
 
     const headers = Object.fromEntries(req.headers);
-    const params = getPathParams(schema.paths)(pathArray);
-    const queries = searchParamsToObject(url.search);
+    const params = {
+      ...getPathParams(schema.paths)(pathArray),
+      ...searchParamsToDredgeParams(url.search),
+    };
 
     const parsedParams = deserializeParams(params, schema.params);
-    const parsedQueries = deserializeQueries(queries, schema.queries);
 
     const middlewareRequest: RawRequest = {
       url: url.href,
       method: req.method || "get",
       headers,
       params: parsedParams,
-      queries: parsedQueries,
       data: undefined,
     };
 

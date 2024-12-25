@@ -11,6 +11,7 @@ describe("pathRoutes", () => {
   const client = createClient<PathRouter>();
 
   test("/a/b/c/d", async () => {
+    expectTypeOf(await client.get("/a/b/c/d").data()).not.toBeAny();
     expectTypeOf(
       await client.get("/a/b/c/d").data(),
     ).toEqualTypeOf<"GET/a/b/c/d">();
@@ -91,6 +92,8 @@ test("infers `any` when route never return res.up() or pass data to it", async (
   ]);
 
   const client = createClient<typeof Router>();
+
+  expectTypeOf(client.get).toBeFunction();
 
   expectTypeOf(await client.get("/up-returned").data()).toBeAny();
   expectTypeOf(await client.get("/no-up-returned").data()).toBeAny();

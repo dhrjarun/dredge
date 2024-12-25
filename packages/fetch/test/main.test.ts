@@ -21,7 +21,8 @@ const route = dredgeRoute()
       text: "text/plain",
     },
   })
-  .error((_, d) => {
+  .error(({ error }, d) => {
+    console.log("error", error);
     d.status(400);
   });
 
