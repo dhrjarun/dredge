@@ -1,7 +1,9 @@
+import { DredgeSchema } from "./dredge-schema";
 import { trimSlashes } from "./path";
 
 export function searchParamsToDredgeParams(
   searchParams?: URLSearchParams | string | null,
+  schema: Record<string, DredgeSchema> = {},
 ) {
   if (!searchParams) return {};
   const sp =
@@ -9,12 +11,21 @@ export function searchParamsToDredgeParams(
       ? searchParams
       : new URLSearchParams(searchParams);
 
-  const obj: Record<string, string[]> = {};
+  const obj: Record<string, string | string[]> = {};
 
-  for (const key of sp.keys()) {
-    const value = sp.getAll(key);
-    obj[`?${key}`] = value;
+  for (const key of Object.keys(schema)) {
+    if (!sp.has(key)) continue;
+
+    if (schema[key]?.type === "array" || schema[key]?.type === "tuple") {
+      obj[key] = sp.getAll(key);
+      continue;
+    }
+
+    const value = sp.get(key);
+    if (value === null) continue;
+    obj[key] = value;
   }
+
   return obj;
 }
 
@@ -39,7 +50,7 @@ export function objectToDredgeParams(
   Object.entries(object).forEach(([key, value]) => {
     if (Object.hasOwn(params, `:${key}`)) return;
 
-    params[`?${key}`] = value instanceof Array ? value : [value];
+    params[key] = value instanceof Array ? value : [value];
   });
 
   return params;
