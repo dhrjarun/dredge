@@ -26,10 +26,9 @@ export interface FetchOptions
         [key: string]: BodyParserFunction;
       }
     | MimeStore<BodyParserFunction>;
-  serializeParams?: (params: Record<string, any>) => Record<string, string>;
-  serializeQueries?: (
-    queries: Record<string, any[]>,
-  ) => Record<string, string[]>;
+  serializeParams?: (
+    params: Record<string, any | any[]>,
+  ) => Record<string, string | string[]>;
 }
 
 type DataSerializerFunction = (options: {
@@ -81,7 +80,6 @@ export interface NormalizedFetchOptions
     | "params"
     | "throwHttpErrors"
     | "serializeParams"
-    | "serializeQueries"
   > {
   queries: Record<string, any[]>;
   headers: Headers;
@@ -109,5 +107,4 @@ export type DefaultFetchOptions = Pick<
   | "dataSerializers"
   | "bodyParsers"
   | "serializeParams"
-  | "serializeQueries"
 >;

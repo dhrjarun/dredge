@@ -112,7 +112,7 @@ test("options.params infers based on schema passed to r.params()", () => {
 
   expectTypeOf<Params>().toEqualTypeOf<
     | {
-        b: string;
+        b: any;
       }
     | { readonly d: number; readonly e: "a" | "b" }
     | { readonly h: string; readonly i: boolean; readonly j: Date }
@@ -125,14 +125,14 @@ test("options.queries infers based on schema passed to r.queries()", () => {
   const router = dredgeRouter([
     r
       .path("/c")
-      .queries({
+      .params({
         d: z.number(),
         e: z.enum(["a", "b"]),
       })
       .get(),
     r
       .path("/f")
-      .queries({
+      .params({
         h: z.string(),
         i: z.boolean(),
         j: z.date(),
@@ -141,9 +141,9 @@ test("options.queries infers based on schema passed to r.queries()", () => {
   ]);
 
   type Router = inferRouterRoutes<typeof router>;
-  type Queries = inferDredgeClientOption<Router[number]>["queries"];
+  type Params = inferDredgeClientOption<Router[number]>["params"];
 
-  expectTypeOf<Queries>().toEqualTypeOf<
+  expectTypeOf<Params>().toEqualTypeOf<
     | {
         readonly d: number | number[];
         readonly e: "a" | "b" | ("a" | "b")[];

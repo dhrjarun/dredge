@@ -1,4 +1,5 @@
 import { headerFn } from "./request";
+import type { RawResponse } from "dredge-types";
 
 export class DredgeResponse {
   #response: RawResponse;
@@ -22,12 +23,4 @@ export class DredgeResponse {
   header(headerName?: string) {
     return headerFn(this.#response.headers)(headerName) as any;
   }
-}
-
-export interface RawResponse {
-  status?: number;
-  statusText?: string;
-  dataType?: string;
-  data?: any;
-  headers: Record<string, string>;
 }

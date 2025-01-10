@@ -44,8 +44,7 @@ export class D {
     method?: string;
     dataType?: string;
     data?: any;
-    params?: Record<string, any>;
-    queries?: Record<string, any[]>;
+    params?: Record<string, any | any[]>;
     headers?: Record<string, string | null>;
   }) {
     const {
@@ -54,7 +53,6 @@ export class D {
       dataType = this.#request.dataType,
       data = this.#request.data,
       params = {},
-      queries = {},
       headers = {},
     } = reqUpdate;
 
@@ -62,15 +60,18 @@ export class D {
     this.#request.method = method;
     this.#request.dataType = dataType;
     this.#request.data = data;
-    this.#request.params = {
-      ...this.#request.params,
-      ...params,
-    };
-    this.#request.queries = {
-      ...this.#request.queries,
-      ...queries,
-    };
     this.#request.headers = mergeDredgeHeaders(this.#request.headers, headers);
+
+    Object.entries(params).forEach(([key, value]) => {
+      const isParam = Object.hasOwn(this.#context.schema.params, `:${key}`);
+
+      if (isParam) {
+        this.#request.params[`:${key}`] = value;
+      } else {
+        this.#request.params[`?${key}`] = value;
+      }
+    });
+
     return this;
   }
 

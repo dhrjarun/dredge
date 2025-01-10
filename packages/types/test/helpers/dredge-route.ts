@@ -27,4 +27,6 @@ function createRouteBuilder() {
       };
     },
   });
+
+  return proxy;
 }

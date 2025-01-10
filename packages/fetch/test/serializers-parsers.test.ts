@@ -275,10 +275,14 @@ test("no content-type matches in bodyParser and dataSerializers", async () => {}
 test("serializeParams", async () => {
   const _client = client.extends({
     serializeParams: (params) => {
-      const newParams: Record<string, string> = {};
+      const newParams: any = {};
 
       Object.entries(params).forEach(([key, value]) => {
-        newParams[key] = `s-${value}`;
+        if (Array.isArray(value)) {
+          newParams[key] = value.map((v) => `s-${v}`);
+        } else {
+          newParams[key] = `s-${value}`;
+        }
       });
 
       return newParams;
@@ -290,47 +294,21 @@ test("serializeParams", async () => {
       a: "apple",
       b: "banana",
       c: "carrot",
+      d: "dog",
+      e: ["elephant", "ant"],
     },
     method: "get",
     fetch: echoUrl,
   });
 
-  expect(await response.text()).toBe(
-    "https://a.com/test/s-apple/s-banana/s-carrot",
-  );
-});
+  const url = new URL(await response.text());
+  expect(
+    url.href.startsWith("https://a.com/test/s-apple/s-banana/s-carrot"),
+  ).toBeTruthy();
 
-test("serializeQueries", async () => {
-  const _client = client.extends({
-    serializeQueries: (params) => {
-      const newParams: Record<string, string[]> = {};
-      Object.entries(params).forEach(([key, value]) => {
-        newParams[key] = [];
-        value.forEach((v) => {
-          newParams[key]?.push(`s-${v}`);
-        });
-      });
-
-      return newParams;
-    },
-  });
-  const response = await _client(":/test", {
-    queries: {
-      a: "apple",
-      b: ["banana", "ball"],
-      c: "carrot",
-    },
-    method: "get",
-    fetch: echoUrl,
-  });
-
-  const url = await response.text();
-  const sp = new URL(url).searchParams;
-
-  expect(sp.get("a")).toBe("s-apple");
-  expect(sp.get("b")).toBe("s-banana");
-  expect(sp.get("c")).toBe("s-carrot");
-  expect(sp.getAll("b")).toStrictEqual(["s-banana", "s-ball"]);
+  const sp = new URLSearchParams(url.search);
+  expect(sp.get("d")).toBe("s-dog");
+  expect(sp.getAll("e")).toStrictEqual(["s-elephant", "s-ant"]);
 });
 
 test.todo("default serializeParams", async () => {});

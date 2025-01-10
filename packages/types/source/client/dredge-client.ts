@@ -25,7 +25,7 @@ import {
 export type DirectClientOptions = DredgeClientOptions;
 export type DefaultDirectClientOptions = DefaultDredgeClientOptions;
 
-type ParamsForOmit<P> = P extends `:${string}` ? never : "params";
+type GetParamsType<P> = P extends `:${string}` ? ":" | "?" : "?";
 
 type DredgeClientShortcutMethod<
   Routes extends AnyRoute[],
@@ -40,8 +40,8 @@ type DredgeClientShortcutMethod<
     ...args: IsNever<
       RequiredKeys<
         DistributiveOmit<
-          inferDredgeClientOption<R, Options>,
-          "method" | ParamsForOmit<P>
+          inferDredgeClientOption<R, GetParamsType<P>, Options>,
+          "method"
         >
       >
     > extends true
@@ -49,8 +49,8 @@ type DredgeClientShortcutMethod<
           path: P,
           options?: Simplify<
             DistributiveOmit<
-              _inferDredgeClientOption<R, Options>,
-              "method" | ParamsForOmit<P>
+              _inferDredgeClientOption<R, GetParamsType<P>, Options>,
+              "method"
             >
           >,
         ]
@@ -58,8 +58,8 @@ type DredgeClientShortcutMethod<
           path: IsNever<P> extends true ? string : P,
           options: Simplify<
             DistributiveOmit<
-              _inferDredgeClientOption<R, Options>,
-              "method" | ParamsForOmit<P>
+              _inferDredgeClientOption<R, GetParamsType<P>, Options>,
+              "method"
             >
           >,
         ]
@@ -72,8 +72,8 @@ type DredgeClientShortcutMethod<
     ...args: IsNever<
       RequiredKeys<
         DistributiveOmit<
-          inferDredgeClientOption<R, Options>,
-          "method" | ParamsForOmit<P>
+          inferDredgeClientOption<R, GetParamsType<P>, Options>,
+          "method"
         >
       >
     > extends true
@@ -81,8 +81,8 @@ type DredgeClientShortcutMethod<
           path: P,
           options?: Simplify<
             DistributiveOmit<
-              _inferDredgeClientOption<R, Options>,
-              "method" | ParamsForOmit<P>
+              _inferDredgeClientOption<R, GetParamsType<P>, Options>,
+              "method"
             >
           >,
         ]
@@ -90,8 +90,8 @@ type DredgeClientShortcutMethod<
           path: IsNever<P> extends true ? string : P,
           options: Simplify<
             DistributiveOmit<
-              _inferDredgeClientOption<R, Options>,
-              "method" | ParamsForOmit<P>
+              _inferDredgeClientOption<R, GetParamsType<P>, Options>,
+              "method"
             >
           >,
         ]
@@ -113,8 +113,8 @@ export type DredgeClient<Router, DefaultOptions, Options, Response> =
           path: P,
           options: Simplify<
             { method: M } & DistributiveOmit<
-              inferDredgeClientOption<R, Options>,
-              "method" | ParamsForOmit<P>
+              inferDredgeClientOption<R, GetParamsType<P>, Options>,
+              "method"
             >
           >,
         ): inferDredgeResponsePromise<R, Response>;
@@ -131,8 +131,8 @@ export type DredgeClient<Router, DefaultOptions, Options, Response> =
           path: P,
           options: Simplify<
             { method: M } & DistributiveOmit<
-              inferDredgeClientOption<R, Options>,
-              "method" | ParamsForOmit<P>
+              inferDredgeClientOption<R, GetParamsType<P>, Options>,
+              "method"
             >
           >,
         ): inferDredgeResponsePromise<R, Response>;

@@ -177,7 +177,7 @@ describe("req", () => {
       .use(({ req }) => {
         expectTypeOf(req.param("paramI")).toBeString();
         expectTypeOf(req.param("paramII")).toEqualTypeOf<"a" | "b">();
-        expectTypeOf(req.param("x")).toEqualTypeOf<string | undefined>();
+        expectTypeOf(req.param("x")).toEqualTypeOf<any | undefined>();
 
         /** DO NOT TRY THIS: https://stackoverflow.com/questions/68799234/typescript-pick-only-specific-method-from-overload-to-be-passed-to-parameterst
          expectTypeOf(req.param)
@@ -188,13 +188,13 @@ describe("req", () => {
         expectTypeOf(req.param()).toEqualTypeOf<{
           paramI: string;
           readonly paramII: "a" | "b";
-          [x: string]: string;
+          [x: string]: any;
         }>();
       })
       .error(({ req }) => {
-        expectTypeOf(req.param("x")).toEqualTypeOf<string | undefined>();
+        expectTypeOf(req.param("x")).toEqualTypeOf<any | undefined>();
         expectTypeOf(req.param()).toEqualTypeOf<{
-          [x: string]: string;
+          [x: string]: any;
         }>();
       });
   });
@@ -202,47 +202,49 @@ describe("req", () => {
   test("req.query() and req.queries", () => {
     dredgeRoute()
       .path("/test")
-      .queries({
+      .params({
         queryI: z.string(),
         queryII: z.enum(["a", "b"]),
       })
       .params({
-        paramII: z.enum(["a", "b"]),
+        queryIII: z.enum(["x", "y"]),
       })
       .use(({ req }) => {
-        expectTypeOf(req.query("queryI")).toBeString();
-        expectTypeOf(req.query("queryII")).toEqualTypeOf<"a" | "b">();
-        expectTypeOf(req.query("x")).toBeAny();
+        expectTypeOf(req.param("queryI")).toBeString();
+        expectTypeOf(req.param("queryII")).toEqualTypeOf<"a" | "b">();
+        expectTypeOf(req.param("x")).toBeAny();
 
-        expectTypeOf(req.queries("queryI")).toEqualTypeOf<string[]>();
-        expectTypeOf(req.queries("queryII")).toEqualTypeOf<("a" | "b")[]>();
-        expectTypeOf(req.queries("x")).toEqualTypeOf<any[]>();
+        expectTypeOf(req.params("queryI")).toEqualTypeOf<string[]>();
+        expectTypeOf(req.params("queryII")).toEqualTypeOf<("a" | "b")[]>();
+        expectTypeOf(req.params("x")).toEqualTypeOf<any[]>();
 
         // https://stackoverflow.com/questions/68799234/typescript-pick-only-specific-method-from-overload-to-be-passed-to-parameterst
         // expectTypeOf(req.searchParam)
         //   .parameter(0)
         //   .toEqualTypeOf<"queryI" | "queryII">();
 
-        expectTypeOf(req.query()).toEqualTypeOf<{
+        expectTypeOf(req.param()).toEqualTypeOf<{
           readonly queryI: string;
           readonly queryII: "a" | "b";
+          readonly queryIII: "x" | "y";
           [x: string]: any;
         }>();
 
-        expectTypeOf(req.queries()).toEqualTypeOf<{
+        expectTypeOf(req.params()).toEqualTypeOf<{
+          readonly queryIII: ("x" | "y")[];
           readonly queryI: string[];
           readonly queryII: ("a" | "b")[];
           [x: string]: any[];
         }>();
       })
       .error(({ req }) => {
-        expectTypeOf(req.query("x")).toBeAny();
-        expectTypeOf(req.queries("x")).toEqualTypeOf<any[]>();
+        expectTypeOf(req.param("x")).toBeAny();
+        expectTypeOf(req.params("x")).toEqualTypeOf<any[]>();
 
-        expectTypeOf(req.query()).toEqualTypeOf<{
+        expectTypeOf(req.param()).toEqualTypeOf<{
           [x: string]: any;
         }>();
-        expectTypeOf(req.queries()).toEqualTypeOf<{
+        expectTypeOf(req.params()).toEqualTypeOf<{
           [x: string]: any[];
         }>();
       });

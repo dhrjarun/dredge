@@ -27,12 +27,10 @@ export type inferRouteEData<R> = R extends Route<
   any,
   any,
   any,
-  any,
   infer EData extends Parser
 >
   ? inferParserType<EData>
   : R extends Route<
-        any,
         any,
         any,
         any,
@@ -54,13 +52,11 @@ export type inferRouteOData<R> = R extends Route<
   any,
   any,
   any,
-  any,
   infer OData extends Parser,
   any
 >
   ? inferParserType<OData>
   : R extends Route<
-        any,
         any,
         any,
         any,

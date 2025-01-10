@@ -10,7 +10,7 @@ export function getPathParams(routePath: string[]) {
     const params: Record<string, string> = routePath.reduce(
       (acc: any, item: string, index: number) => {
         if (item.startsWith(":")) {
-          acc[item.replace(":", "")] = pathArray[index];
+          acc[item] = pathArray[index];
         }
         return acc;
       },
