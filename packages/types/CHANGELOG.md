@@ -1,5 +1,15 @@
 # dredge-types
 
+## 2.0.0
+
+### Major Changes
+
+- f25bb59: replace searchParam(s) to query/queries
+- 4e2aa47: add route.input() and route.output()
+  route.<method>(parser) no longer work
+- f951cde: `ctx` is now `state`
+  In route middleware, `req`, `res` no longer exist as parameter. Instead `context` and `d` exist now. `context` include `req`, `res`, `error`, `state`. `d` is used to mutate the `res`, `state`.
+
 ## 1.0.0
 
 ### Major Changes

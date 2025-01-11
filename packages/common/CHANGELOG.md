@@ -1,5 +1,17 @@
 # dredge-common
 
+## 1.0.0
+
+### Major Changes
+
+- 164b922: Remove utils like `getDataType`, `extractContentTypeHeader`, `getContentTypeHeader` and `getAcceptHeader`
+- f25bb59: replace searchParam(s) to query/queries
+
+### Minor Changes
+
+- d8fd40a: Implement DataTypes class
+  MimeStore.get() now takes contentType as an argument instead of mediaType
+
 ## 0.6.0
 
 ### Minor Changes
