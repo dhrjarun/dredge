@@ -1,4 +1,9 @@
-import { otherSchemaToDredgeSchema } from "./dredge-schema";
+import {
+  DredgeArray,
+  DredgeSchema,
+  DredgeTuple,
+  otherSchemaToDredgeSchema,
+} from "./dredge-schema";
 
 export function deserializeParams(
   params: Record<string, string | string[]>,
@@ -9,30 +14,32 @@ export function deserializeParams(
   for (const [key, value] of Object.entries(params)) {
     const sc = schema[key];
 
-    if (!sc) {
-      result[key] = value;
-      continue;
-    }
-
     const mySchema = otherSchemaToDredgeSchema(sc);
-
-    if (Array.isArray(value)) {
-      if (mySchema?.type === "number") result[key] = value.map(Number);
-      else if (mySchema?.type === "boolean")
-        result[key] = value.map((v) => (v === "true" ? true : false));
-      else if (mySchema?.type === "date")
-        result[key] = value.map((v) => new Date(v));
-      else result[key] = value;
-
-      continue;
-    }
-
-    if (mySchema?.type === "number") result[key] = Number(value);
-    else if (mySchema?.type === "boolean")
-      result[key] = value === "true" ? true : false;
-    else if (mySchema?.type === "date") result[key] = new Date(value);
-    else result[key] = value;
+    result[key] = deserializeParamValue(value, mySchema);
   }
 
   return result;
+}
+
+function deserializeParamValue(
+  value: string | string[],
+  schema?: DredgeSchema | null,
+): any {
+  if (!schema) return value;
+
+  if (Array.isArray(value)) {
+    if (schema.type === "array") {
+      const itemSchema = (schema as DredgeArray).innerType;
+      return value.map((v) => deserializeParamValue(v, itemSchema));
+    }
+    if (schema.type === "tuple") {
+      const tupleTypes = (schema as DredgeTuple).items;
+      return value.map((v, index) =>
+        deserializeParamValue(v, tupleTypes[index]),
+      );
+    }
+  } else if (schema.type === "number") return Number(value);
+  else if (schema.type === "boolean") return value === "true" ? true : false;
+  else if (schema.type === "date") return new Date(value);
+  else return value;
 }
