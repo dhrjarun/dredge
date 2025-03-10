@@ -1,16 +1,23 @@
-import { DataTypes, trimSlashes } from "dredge-common";
-import type { AnyRoute, Route, Parser } from "dredge-types";
-import { validateInput, validateOutput, validateParams } from "./validate";
+import {
+  DataTypes,
+  DredgeSchema,
+  convertToDredgeSchema,
+  trimSlashes,
+} from "dredge-common";
+import type { AnyRoute, Parser, Route } from "dredge-types";
+import { RawResponse } from "dredge-types";
 import { composeMiddlewares } from "./compose";
-import { RawRequest, RawResponse } from "dredge-types";
+import { Context } from "./context";
+import { D } from "./d";
+import { validateInput, validateOutput, validateParams } from "./validate";
 
 export type RouteBuilderDef = {
   method?: string;
   paths: string[];
-  params: Record<string, Parser | null>;
+  params: Record<string, DredgeSchema | null>;
   dataTypes: DataTypes;
-  input?: Parser;
-  output?: Parser;
+  input?: DredgeSchema;
+  output?: DredgeSchema;
   middlewares: Function[];
   errorMiddlewares: Function[];
 };
@@ -32,6 +39,36 @@ export function dredgeRoute<Context extends Record<string, any> = {}>() {
   >;
 }
 
+function cloneRouteBuilder(
+  initDef: Partial<RouteBuilderDef> = {},
+  def: RouteBuilderDef,
+) {
+  const {
+    method,
+    middlewares = [],
+    errorMiddlewares = [],
+    paths = [],
+    params = {},
+    dataTypes,
+    input,
+    output,
+  } = initDef;
+
+  return createRouteBuilder({
+    method: method ?? def.method,
+    middlewares: [...def.middlewares, ...middlewares],
+    errorMiddlewares: [...def.errorMiddlewares, ...errorMiddlewares],
+    paths: [...def.paths, ...paths],
+    params: { ...def.params, ...params },
+    dataTypes: new DataTypes({
+      ...def.dataTypes.toRecord(),
+      ...dataTypes?.toRecord(),
+    }),
+    input: input ?? def.input,
+    output: output ?? def.output,
+  });
+}
+
 export function createRouteBuilder(
   initDef: Partial<RouteBuilderDef> = {},
 ): AnyRoute {
@@ -42,7 +79,8 @@ export function createRouteBuilder(
     paths = [],
     params = {},
     dataTypes = new DataTypes(),
-    ...rest
+    input,
+    output,
   } = initDef;
 
   const _def: RouteBuilderDef = {
@@ -52,23 +90,9 @@ export function createRouteBuilder(
     params,
     method,
     dataTypes,
-    ...rest,
+    input,
+    output,
   };
-
-  async function validateRequest(rawRequest: RawRequest) {
-    const validateRequest = { ...rawRequest };
-
-    validateRequest.params = await validateParams(
-      _def.params,
-      validateRequest.params,
-    );
-    validateRequest.data = await validateInput(
-      _def.input!!,
-      validateRequest.data,
-    );
-
-    return validateRequest;
-  }
 
   const builder: AnyRoute = {
     async _handle(rawcontext) {
@@ -80,7 +104,7 @@ export function createRouteBuilder(
           throw rawcontext.error;
         }
 
-        const validatedRequest = await validateRequest(rawcontext.request);
+        const request = rawcontext.request;
 
         const successFn = composeMiddlewares(_def.middlewares);
         const successContext = {
@@ -88,21 +112,17 @@ export function createRouteBuilder(
             ...rawcontext.state,
           },
           response: rawcontext.response || defaultResponse,
-          request: validatedRequest,
+          request: request,
           dataTypes: _def.dataTypes,
           schema: this._schema,
         };
         await successFn(successContext, () => {});
 
-        const validatedResponse = {
+        const response = {
           ...successContext.response,
         };
 
-        validatedResponse.data = await validateOutput(
-          _def.output!,
-          successContext.response.data,
-        );
-        return validatedResponse;
+        return response;
       } catch (error) {
         const errorFn = composeMiddlewares(_def.errorMiddlewares);
         const errorContext = {
@@ -152,7 +172,7 @@ export function createRouteBuilder(
       const _params = _def.params;
 
       const paths = trimSlashes(path).split("/");
-      const params: Record<string, Parser | null> = {};
+      const params: Record<string, DredgeSchema | null> = {};
 
       const pathRegex = /[a-z A-Z 0-9 . - _ ~ ! $ & ' ( ) * + , ; = : @]+/;
       paths.forEach((item) => {
@@ -163,22 +183,20 @@ export function createRouteBuilder(
 
       const newParamPaths = paths.reduce((acc: string[], item) => {
         if (item.startsWith(":")) {
-          if (_params[item]) {
-            throw new TypeError(`param '${item}' is used more than once`);
-          }
-
-          if (Object.hasOwn(_params, item.replace(":", "?"))) {
+          if (Object.hasOwn(_params, item.slice(1))) {
             throw new TypeError(
-              `A query param is already defined with this name: ${item.replace(":", "")}`,
+              `A param is already defined with this name: ${item.slice(1)}`,
             );
           }
 
           if (acc.includes(item)) {
-            throw new TypeError(`param '${item}' is used more than once`);
+            throw new TypeError(
+              `param '${item.slice(1)}' is used more than once`,
+            );
           }
 
           acc.push(item);
-          params[item] = null;
+          params[item.slice(1)] = null;
         }
 
         return acc;
@@ -201,35 +219,34 @@ export function createRouteBuilder(
     },
 
     params(paramsInit) {
-      const _params = _def.params;
-
-      const params: Record<string, Parser | null> = {};
-
-      Object.entries(paramsInit).forEach(([param]) => {
-        if (_params[`:${param}`]) {
-          throw `${param} param schema already defined`;
+      const paramsSchema: Record<string, DredgeSchema | null> = {};
+      for (const [key, schema] of Object.entries(paramsInit)) {
+        if (_def.params[key]) {
+          throw `${key} param already defined`;
         }
 
-        if (_params[`?${param}`]) {
-          throw `${param} query schema already defined`;
+        if (schema === null) {
+          paramsSchema[key] = null;
+          continue;
         }
+        paramsSchema[key] = convertToDredgeSchema(schema);
+      }
 
-        const isParam = Object.hasOwn(_params, `:${param}`);
+      const middleware = (ctx: Context, d: D) => {
+        const validated = validateParams(paramsInit, ctx.req.params);
 
-        if (isParam) {
-          params[`:${param}`] = paramsInit[param] ?? null;
-        } else {
-          params[`?${param}`] = paramsInit[param] ?? null;
-        }
-      });
+        d.req({
+          params: validated,
+        });
+      };
 
-      return createRouteBuilder({
-        ..._def,
-        params: {
-          ..._params,
-          ...params,
+      return cloneRouteBuilder(
+        {
+          middlewares: [middleware],
+          params: paramsSchema,
         },
-      });
+        _def,
+      );
     },
 
     use(cb: Function) {
@@ -289,10 +306,21 @@ export function createRouteBuilder(
         throw "Request data schema is already defined";
       }
 
-      return createRouteBuilder({
-        ..._def,
-        input: parser,
-      });
+      const middleware = (ctx: Context, d: D) => {
+        const validated = validateInput(parser, ctx.req.data);
+
+        d.req({
+          data: validated,
+        });
+      };
+
+      return cloneRouteBuilder(
+        {
+          middlewares: [middleware],
+          input: convertToDredgeSchema(parser) || undefined,
+        },
+        _def,
+      );
     },
 
     output(parser: Parser) {
@@ -302,10 +330,22 @@ export function createRouteBuilder(
         throw "Response data schema is already defined";
       }
 
-      return createRouteBuilder({
-        ..._def,
-        output: parser,
-      });
+      const middleware = async (ctx: Context, d: D) => {
+        await d.next();
+        const validated = validateOutput(parser, ctx.res.data);
+
+        d.res({
+          data: validated,
+        });
+      };
+
+      return cloneRouteBuilder(
+        {
+          middlewares: [middleware],
+          output: convertToDredgeSchema(parser) || undefined,
+        },
+        _def,
+      );
     },
   };
 

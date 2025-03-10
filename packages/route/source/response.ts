@@ -1,4 +1,3 @@
-import { headerFn } from "./request";
 import type { RawResponse } from "dredge-types";
 
 export class DredgeResponse {
@@ -20,7 +19,7 @@ export class DredgeResponse {
   get data() {
     return this.#response.data;
   }
-  header(headerName?: string) {
-    return headerFn(this.#response.headers)(headerName) as any;
+  get headers() {
+    return this.#response.headers;
   }
 }

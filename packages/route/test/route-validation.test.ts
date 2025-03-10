@@ -1,48 +1,86 @@
 import { expect, test } from "vitest";
 import z from "zod";
 import {
-  validateParams,
   validateInput,
   validateOutput,
+  validateParams,
 } from "../source/validate";
 
 test("validateParams", () => {
   const schema = {
-    ":string": z.string(),
-    ":number": z.number(),
-    ":boolean": z.boolean(),
+    string: z.string(),
+    number: z.number(),
+    boolean: z.boolean(),
+    list: z.array(z.string()),
+    tuple: z.tuple([z.string(), z.number()]),
   };
 
   expect(
     validateParams(schema, {
-      ":string": "hello",
-      ":number": 1,
-      ":boolean": true,
+      string: "hello",
+      number: 1,
+      boolean: true,
+      list: ["a", "b", "c"],
+      tuple: ["a", 1],
     }),
   ).resolves.toStrictEqual({
-    ":string": "hello",
-    ":number": 1,
-    ":boolean": true,
+    string: "hello",
+    number: 1,
+    boolean: true,
+    list: ["a", "b", "c"],
+    tuple: ["a", 1],
   });
 });
 
-test("validateQueries", () => {
-  const schema = {
-    "?string": z.string(),
-    "?number": z.number(),
-    "?boolean": z.boolean(),
+test("passthrough when parser is null or undefined", () => {
+  const schema: any = {
+    string: null,
+    number: undefined,
+    boolean: z.boolean(),
   };
 
   expect(
     validateParams(schema, {
-      "?string": ["hello"],
-      "?number": [1],
-      "?boolean": [true],
+      string: "hello",
+      number: 1,
+      boolean: true,
     }),
   ).resolves.toStrictEqual({
-    "?string": ["hello"],
-    "?number": [1],
-    "?boolean": [true],
+    string: "hello",
+    number: 1,
+    boolean: true,
+  });
+});
+
+test("optional searchParam should work", async () => {
+  const schema = {
+    required: z.string(),
+    optional: z.string().optional(),
+  };
+
+  expect(
+    validateParams(schema, {
+      required: "i am required",
+    }),
+  ).resolves.toMatchObject({
+    required: "i am required",
+  });
+});
+
+test("unSpecified key in schema should not be passed", async () => {
+  const schema = {
+    i: z.number(),
+    o: z.string().optional(),
+  };
+
+  const validated = await validateParams(schema, {
+    i: 1,
+    a: "apple",
+    b: "ball",
+  });
+
+  expect(validated).toStrictEqual({
+    i: 1,
   });
 });
 
@@ -64,38 +102,4 @@ test("validateOutput", () => {
   expect(validateOutput(schema, "c")).resolves.toBe("c");
 
   expect(validateOutput(schema, "d")).rejects.toThrowError();
-});
-
-test("optional searchParam should work", async () => {
-  const schema = {
-    required: z.string(),
-    optional: z.string().optional(),
-  };
-
-  expect(
-    validateParams(schema, {
-      required: ["i am required"],
-    }),
-  ).resolves.toMatchObject({
-    required: ["i am required"],
-  });
-});
-
-test("unSpecified searchParam should work", async () => {
-  const schema = {
-    "?i": z.number(),
-    "?o": z.string().optional(),
-  };
-
-  const validated = await validateParams(schema, {
-    "?i": [1],
-    "?a": ["apple"],
-    "?b": ["ball"],
-  });
-
-  expect(validated).toStrictEqual({
-    "?i": [1],
-    "?a": ["apple"],
-    "?b": ["ball"],
-  });
 });

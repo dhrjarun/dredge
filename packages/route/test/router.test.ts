@@ -15,13 +15,13 @@ const router = dredgeRouter([
 ]);
 
 test("it will return null, if method and path did not matched", async () => {
-  expect(router.find("post", ["test-i", "param", "end"])).toBeNull();
+  expect(router.find("post", "test-i/param/end")).toBeNull();
 
-  expect(router.find("post", ["test-i", "param", "end"])).toBeNull();
+  expect(router.find("post", "test-i/param/end")).toBeNull();
 
-  expect(router.find("post", ["user"])).toBeNull();
+  expect(router.find("post", "user")).toBeNull();
 
-  expect(router.find("post", ["test-iii"])).toBeNull();
+  expect(router.find("post", "/test-iii")).toBeNull();
 });
 
 test("it will return route, if method and path matched", async () => {
@@ -40,22 +40,22 @@ test("it will return route, if method and path matched", async () => {
     dredgeRoute().path("/post").post(),
   ]);
 
-  expect(router.find("get", ["user", "1"])!._schema).toMatchObject({
+  expect(router.find("get", "user/1")!._schema).toMatchObject({
     method: "get",
     paths: ["user", ":id"],
   });
 
-  expect(router.find("delete", ["user", "1"])!._schema).toMatchObject({
+  expect(router.find("delete", "user/1")!._schema).toMatchObject({
     method: "delete",
     paths: ["user", ":id"],
   });
 
-  expect(router.find("get", ["post"])!._schema).toMatchObject({
+  expect(router.find("get", "post/")!._schema).toMatchObject({
     method: "get",
     paths: ["post"],
   });
 
-  expect(router.find("post", ["post"])!._schema).toMatchObject({
+  expect(router.find("post", "/post")!._schema).toMatchObject({
     method: "post",
     paths: ["post"],
   });

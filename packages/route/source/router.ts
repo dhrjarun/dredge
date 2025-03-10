@@ -1,3 +1,4 @@
+import { trimSlashes } from "dredge-common";
 import type {
   AnyRoute,
   AnyValidRoute,
@@ -10,7 +11,7 @@ export function getPathParams(routePath: string[]) {
     const params: Record<string, string> = routePath.reduce(
       (acc: any, item: string, index: number) => {
         if (item.startsWith(":")) {
-          acc[item] = pathArray[index];
+          acc[item.slice(1)] = pathArray[index];
         }
         return acc;
       },
@@ -109,14 +110,19 @@ class DredgeRouterClass implements DredgeRouter {
     name: "$root",
   });
 
-  find(method: string, paths: string[]) {
+  find(method: string, url: string, prefixUrl?: string) {
+    const _PrefixUrl = new URL(prefixUrl || "relative:///", "relative:///");
+    const _url = new URL(url, _PrefixUrl);
+    const path = trimSlashes(_url.pathname.slice(_PrefixUrl.pathname.length));
+
+    const pathArray = path.split("/");
     let current = this.root;
 
     if (!method) {
       return null;
     }
 
-    for (const item of paths) {
+    for (const item of pathArray) {
       const child = current.getStaticChild(item) || current.getDynamicChild();
 
       if (!child) {
