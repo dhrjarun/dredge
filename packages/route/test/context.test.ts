@@ -1,7 +1,7 @@
-import { expect, test, describe } from "vitest";
+import { DataTypes } from "dredge-common";
+import { describe, expect, test } from "vitest";
 import { Context } from "../source/context";
 import { createRawContext } from "../source/utils";
-import { DataTypes } from "dredge-common";
 
 describe("context.req", () => {
   test("method", () => {
@@ -68,55 +68,29 @@ describe("context.req", () => {
     const context = createRawContext({
       request: {
         params: {
-          ":a": "apple",
-          "?b": ["ball", "bat"],
-          "?c": ["cat", "dog"],
-          ":d": "donkey",
+          a: "apple",
+          b: ["ball", "bat"],
+          c: ["cat", "dog"],
+          d: "donkey",
         },
       },
     });
     const c = new Context(context);
 
-    expect(c.req.param()).toStrictEqual({
+    expect(c.req.params).toStrictEqual({
       a: "apple",
-      b: "ball",
-      c: "cat",
+      b: ["ball", "bat"],
+      c: ["cat", "dog"],
       d: "donkey",
     });
 
-    expect(c.req.param("a")).toBe("apple");
-    expect(c.req.param("b")).toStrictEqual("ball");
-    expect(c.req.param("c")).toStrictEqual("cat");
-    expect(c.req.param("d")).toBe("donkey");
+    expect(c.req.params.a).toBe("apple");
+    expect(c.req.params.b).toStrictEqual(["ball", "bat"]);
+    expect(c.req.params.c).toStrictEqual(["cat", "dog"]);
+    expect(c.req.params.d).toBe("donkey");
   });
 
-  test("params()", () => {
-    const context = createRawContext({
-      request: {
-        params: {
-          ":a": "apple",
-          "?b": ["ball", "bat"],
-          "?c": ["cat", "dog"],
-          ":d": "donkey",
-        },
-      },
-    });
-    const c = new Context(context);
-
-    expect(c.req.params()).toStrictEqual({
-      a: ["apple"],
-      b: ["ball", "bat"],
-      c: ["cat", "dog"],
-      d: ["donkey"],
-    });
-
-    expect(c.req.params("a")).toStrictEqual(["apple"]);
-    expect(c.req.params("b")).toStrictEqual(["ball", "bat"]);
-    expect(c.req.params("c")).toStrictEqual(["cat", "dog"]);
-    expect(c.req.params("d")).toStrictEqual(["donkey"]);
-  });
-
-  test("header()", () => {
+  test("headers", () => {
     const context = createRawContext({
       request: {
         headers: {
@@ -131,7 +105,7 @@ describe("context.req", () => {
     });
     const c = new Context(context);
 
-    expect(c.req.header()).toStrictEqual({
+    expect(c.req.headers).toStrictEqual({
       "content-type": "application/json",
       "transfer-encoding": "chunked",
     });
@@ -152,8 +126,8 @@ describe("context.req", () => {
     });
     const c = new Context(context);
 
-    expect(c.req.header("content-type")).toBe("application/json");
-    expect(c.req.header("transfer-encoding")).toBe("chunked");
+    expect(c.req.headers["content-type"]).toBe("application/json");
+    expect(c.req.headers["transfer-encoding"]).toBe("chunked");
   });
 });
 
@@ -220,7 +194,7 @@ describe("context.res", () => {
     });
   });
 
-  test("header()", () => {
+  test("headers", () => {
     const context = createRawContext({
       response: {
         headers: {
@@ -235,29 +209,13 @@ describe("context.res", () => {
     });
     const c = new Context(context);
 
-    expect(c.res.header()).toStrictEqual({
+    expect(c.res.headers["content-type"]).toBe("application/json");
+    expect(c.res.headers["transfer-encoding"]).toBe("chunked");
+
+    expect(c.res.headers).toStrictEqual({
       "content-type": "application/json",
       "transfer-encoding": "chunked",
     });
-  });
-
-  test("header(headerName)", () => {
-    const context = createRawContext({
-      response: {
-        headers: {
-          "content-type": "application/json",
-          "transfer-encoding": "chunked",
-        },
-      },
-      dataTypes: new DataTypes({
-        json: "application/json",
-        form: "multipart/form-data",
-      }),
-    });
-    const c = new Context(context);
-
-    expect(c.res.header("content-type")).toBe("application/json");
-    expect(c.res.header("transfer-encoding")).toBe("chunked");
   });
 });
 

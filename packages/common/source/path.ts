@@ -1,4 +1,6 @@
+import { deserializeValue } from "./deserialize-params";
 import { dredgeParamsToSearchParams } from "./params";
+import { DredgeSchema } from "./schema/schema";
 
 export function isSinglePathValid(...paths: string[]) {
   const pathRegex = /^[a-zA-Z0-9\.\-_~]+$/g;
@@ -79,4 +81,57 @@ export function getSimplePath(
   });
 
   return `/${simplePathArray.join("/")}`;
+}
+
+export function deserializePath(
+  url: string,
+  schema: {
+    paths: string[];
+    params: Record<string, DredgeSchema | null>;
+    prefixUrl?: string;
+  },
+) {
+  const _prefixUrl = new URL(
+    schema.prefixUrl || "relative:///",
+    "relative:///",
+  );
+  const _url = new URL(url, _prefixUrl);
+  const pathname = trimSlashes(_url.pathname.slice(_prefixUrl.pathname.length));
+  const searchParams = _url.searchParams;
+
+  const pathArray = pathname.split("/");
+
+  const params: Record<string, any> = {};
+
+  for (const [index, item] of schema.paths.entries()) {
+    if (!item.startsWith(":")) {
+      continue;
+    }
+
+    const s = schema.params[item.slice(1)];
+    const value = pathArray[index];
+
+    if (!s || !value) {
+      continue;
+    }
+
+    params[item.slice(1)] = deserializeValue(value, s);
+  }
+
+  for (const key of searchParams.keys()) {
+    const s = schema.params[key];
+
+    if (!s) {
+      continue;
+    }
+
+    params[key] = deserializeValue(
+      s.type === "array"
+        ? searchParams.getAll(key)
+        : searchParams.get(key) || "",
+      s,
+    );
+  }
+
+  return params;
 }

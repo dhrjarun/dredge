@@ -110,10 +110,10 @@ test("updates context", async () => {
 
   middlewares.push(async (c, d) => {
     d.header("content-type", "text/plain");
-    updates.push(c.res.header("content-type"));
+    updates.push(c.res.headers["content-type"]);
     await d.next();
     d.header("content-type", "application/json");
-    updates.push(c.res.header("content-type"));
+    updates.push(c.res.headers["content-type"]);
   });
 
   const fn = composeMiddlewares(middlewares);

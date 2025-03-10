@@ -81,26 +81,8 @@ export interface MiddlewareRequest<DataType, Method, Params, Data> {
   readonly method: Method;
   readonly dataType?: DataType;
   readonly data: Method extends "get" | "delete" | "head" ? undefined : Data;
-  header: {
-    (headerName: string): string | undefined;
-    (): Record<string, string>;
-  };
-  param: {
-    (): Simplify<Params & Record<string, any>>;
-    <T extends keyof Params>(
-      key: T,
-    ): Params extends { [key in T]: any } ? Params[T] : any | undefined;
-    <T extends string>(key: T): any | undefined;
-  };
-  params: {
-    (): Simplify<
-      { [key in keyof Params]: Params[key][] } & Record<string, any[]>
-    >;
-    <T extends keyof Params>(
-      key: T,
-    ): Params extends { [key in T]: any } ? Params[T][] : any[];
-    <T extends string>(key: T): any[];
-  };
+  readonly headers: Record<string, string>;
+  readonly params: Params;
 }
 
 export interface MiddlewareResponse<DataType, Data = any> {
@@ -108,10 +90,7 @@ export interface MiddlewareResponse<DataType, Data = any> {
   readonly statusText?: string;
   readonly dataType?: DataType;
   readonly data: Data;
-  header: {
-    (): Record<string, string>;
-    (headerName: string): string | undefined;
-  };
+  readonly headers: Record<string, string>;
 }
 
 export interface AnyMiddlewareRequest
@@ -293,21 +272,13 @@ export type BodyFn = {
   <As extends BodyAs>(as: As): Promise<BodyTypesMap[As]>;
 };
 
-type ModifyParams<T, Params> = {
-  [key in keyof T as `:${string & key}` extends keyof Params
-    ? `:${string & key}`
-    : `?${string & key}`]: T[key];
-};
-
-type MergeParams<Params, T> = Merge<Params, ModifyParams<T, Params>>;
-
 export interface RawRequest {
   url: string;
   method: string;
   dataType?: string;
   data?: any;
   headers: Record<string, string>;
-  params: Record<string, any | any[]>;
+  params: Record<string, any>;
 }
 
 export interface RawResponse {
@@ -321,9 +292,9 @@ export interface RawResponse {
 export interface DredgeRouteSchema {
   method: string | null;
   paths: string[];
-  params: Record<string, Parser | null>;
-  input: Parser | null;
-  output: Parser | null;
+  params: Record<string, any | null>;
+  input: any | null;
+  output: any | null;
 }
 
 export interface Route<
@@ -376,23 +347,18 @@ export interface Route<
     ErrorContext,
     Method,
     Paths extends Array<string> ? [...Paths, ...A] : A,
-    Params & {
-      [key in A[number] as key extends `:${infer N}` ? `:${N}` : never]: never;
-    },
+    Merge<
+      {
+        [key in A[number] as key extends `:${infer N}` ? N : never]: never;
+      },
+      Params
+    >,
     IBody,
     OBody,
     EBody
   >;
 
-  params<
-    const T extends {
-      [key in keyof Params as IsNever<Params[key]> extends true
-        ? key extends `:${infer N}`
-          ? N
-          : string
-        : string]?: Parser;
-    },
-  >(
+  params<const T extends Record<string, Parser>>(
     arg: T,
   ): Route<
     Options,
@@ -400,7 +366,7 @@ export interface Route<
     ErrorContext,
     Method,
     Paths,
-    MergeParams<Params, T>,
+    Merge<Params, T>,
     IBody,
     OBody,
     EBody
@@ -590,9 +556,9 @@ export interface AnyRouteOptions {
 }
 
 type inferParamsType<Params> = Simplify<{
-  [key in keyof Params as key extends `:${infer N}` | `?${infer N}`
-    ? N
-    : never]: Params[key] extends null ? string : inferParserType<Params[key]>;
+  [key in keyof Params]: IsNever<Params[key]> extends true
+    ? any
+    : inferParserType<Params[key]>;
 }>;
 
 export type inferDataTypes<Options> = Options extends {
