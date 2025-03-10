@@ -1,5 +1,30 @@
 # dredge-fetch
 
+## 1.0.0
+
+### Major Changes
+
+- 3f39f53: BodyParserFunction and DataSerializerFunction now contain contentType in option instead of mediaType, charset and boundary
+- f25bb59: replace searchParam(s) to query/queries
+
+### Minor Changes
+
+- 164b922: `dataTypes` field now accept contentType instead of mediaType
+
+### Patch Changes
+
+- Updated dependencies [164b922]
+- Updated dependencies [f25bb59]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [d8fd40a]
+- Updated dependencies [4e2aa47]
+- Updated dependencies [f951cde]
+  - dredge-common@1.0.0
+  - dredge-types@2.0.0
+
 ## 0.5.10
 
 ### Patch Changes

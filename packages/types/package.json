@@ -1,6 +1,6 @@
 {
   "name": "dredge-types",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Types for dredge, Internal package",
   "author": "Dhiraj Arun (https://github.com/dhrjarun)",
   "license": "MIT",
