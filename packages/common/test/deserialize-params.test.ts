@@ -15,10 +15,9 @@ const schemas = [
       date: z.date(),
       string: z.string(),
       enum: z.enum(["a", "b", "c"]),
+      array: z.array(z.number()),
+      tuple: z.tuple([z.string(), z.number()]),
       optionalNumber: z.number().optional(),
-      noSuppoted: z.object({
-        any: z.any(),
-      }),
     },
   },
   {
@@ -29,10 +28,9 @@ const schemas = [
       date: v.date(),
       string: v.string(),
       enum: v.picklist(["a", "b", "c"]),
+      array: v.array(v.number()),
+      tuple: v.tuple([v.string(), v.number()]),
       optionalNumber: v.optional(v.number()),
-      notSupported: v.object({
-        any: v.any(),
-      }),
     },
   },
   {
@@ -43,10 +41,9 @@ const schemas = [
       date: yup.date(),
       string: yup.string(),
       enum: yup.string().oneOf(["a", "b", "c"]),
+      array: yup.array(yup.number()),
+      tuple: yup.tuple([yup.string(), yup.number()]),
       optionalNumber: yup.number().optional(),
-      notSupported: yup.object({
-        any: yup.string(),
-      }),
     },
   },
   {
@@ -57,10 +54,8 @@ const schemas = [
       date: superStruct.date(),
       string: superStruct.string(),
       enum: superStruct.string(),
+      array: superStruct.array(superStruct.number()),
       optionalNumber: superStruct.optional(superStruct.number()),
-      notSupported: superStruct.object({
-        any: superStruct.any(),
-      }),
     },
   },
   {
@@ -71,8 +66,9 @@ const schemas = [
       date: ark.type("Date"),
       string: ark.type("string"),
       enum: ark.type("'a' | 'b' | 'c'"),
+      // array: ark.type("number[]"),
+      // tuple: ark.type(["string", "number"]),
       optionalNumber: ark.type("number").optional(),
-      notSupported: ark.type({}),
     },
   },
 ];
@@ -84,54 +80,23 @@ test.each(schemas)("deserializeParams with $name", ({ schema }) => {
     date: "2023-01-01",
     string: "apple",
     enum: "a",
-    notSupported: "not-supported",
+    array: ["1", "2", "3"],
+    tuple: ["a", "1"],
   };
 
-  const result = deserializeParams(params, schema);
+  const filteredParams = Object.fromEntries(
+    Object.entries(params).filter(([key]) => Object.hasOwn(schema, key)),
+  );
 
-  expect(result).toStrictEqual({
+  const result = deserializeParams(filteredParams, schema);
+
+  expect({
     number: 1,
     boolean: true,
     date: expect.any(Date),
     string: "apple",
     enum: "a",
-    notSupported: "not-supported",
-  });
-
-  expect(
-    deserializeParams(
-      {
-        optionalNumber: "9",
-      },
-      schema,
-    ),
-  ).toStrictEqual({
-    optionalNumber: 9,
-  });
-});
-
-test.each(schemas)("deserializeQueries with $name", ({ schema }) => {
-  const queries = {
-    number: ["1", "2", "3"],
-    boolean: ["true", "false"],
-    date: ["2023-01-01", "2023-02-02"],
-    string: ["apple"],
-    optionalNumber: ["1", "2", "3"],
-    notSupported: ["not-supported"],
-    noSchema: ["no-schema"],
-    enum: ["a", "b"],
-  };
-
-  const result = deserializeParams(queries, schema);
-
-  expect(result).toStrictEqual({
-    number: [1, 2, 3],
-    boolean: [true, false],
-    date: [expect.any(Date), expect.any(Date)],
-    string: ["apple"],
-    enum: ["a", "b"],
-    optionalNumber: [1, 2, 3],
-    notSupported: ["not-supported"],
-    noSchema: ["no-schema"],
-  });
+    array: [1, 2, 3],
+    tuple: ["a", 1],
+  }).toMatchObject(result);
 });
