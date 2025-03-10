@@ -1,5 +1,37 @@
 # dredge-route
 
+## 2.0.0
+
+### Major Changes
+
+- f25bb59: replace searchParam(s) to query/queries
+- a0c09fa: Replace request, response param and header method with headers and params field
+- a0c09fa: router.find() now takes url and prefixUrl instead of pathArray
+- a0c09fa: validation logic in route is now middleware
+- a0c09fa: add route.\_schema.(params.\* | input | output) fields returns DredgeSchema
+- 4e2aa47: add route.input() and route.output()
+  route.<method>(parser) no longer work
+- f951cde: `ctx` is now `state`
+  In route middleware, `req`, `res` no longer exist as parameter. Instead `context` and `d` exist now. `context` include `req`, `res`, `error`, `state`. `d` is used to mutate the `res`, `state`.
+
+### Minor Changes
+
+- 164b922: `dataTypes` field now accept contentType instead of mediaType
+
+### Patch Changes
+
+- Updated dependencies [164b922]
+- Updated dependencies [f25bb59]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [a0c09fa]
+- Updated dependencies [d8fd40a]
+- Updated dependencies [4e2aa47]
+- Updated dependencies [f951cde]
+  - dredge-common@1.0.0
+  - dredge-types@2.0.0
+
 ## 1.0.0
 
 ### Major Changes
